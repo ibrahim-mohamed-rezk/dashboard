@@ -10,7 +10,6 @@ export const useAuth = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
-  // ✅ Sign In Function
   const signIn = async (email: string, password: string) => {
     try {
       const response = await loginUser(email, password);
@@ -18,11 +17,7 @@ export const useAuth = () => {
       if (response.status && response.token) {
         const { token, data: user } = response;
         login(token, user);
-
-        localStorage.setItem("authToken", token);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        router.replace("/"); // Redirect to dashboard or home
+        router.replace("/"); // Go to dashboard or home
       } else {
         console.error("Login failed", response.msg);
       }
@@ -32,7 +27,6 @@ export const useAuth = () => {
     }
   };
 
-  // ✅ Fetch User Data if Token Exists
   const fetchUser = () => {
     const storedToken = localStorage.getItem("authToken");
     const storedUser = localStorage.getItem("user");
@@ -42,7 +36,12 @@ export const useAuth = () => {
     }
   };
 
-  // ✅ Hydrate State on Load
+  const signOut = async () => {
+    setLoading(true);
+    await logout();
+    setLoading(false);
+  };
+
   useEffect(() => {
     hydrate();
     const storedToken = localStorage.getItem("authToken");
@@ -51,8 +50,8 @@ export const useAuth = () => {
       fetchUser();
     }
 
-    setLoading(false); // Mark as loaded after fetching user
+    setLoading(false);
   }, [isAuthenticated, hydrate]);
 
-  return { user, token, isAuthenticated, signIn, fetchUser, loading, logout };
+  return { user, token, isAuthenticated, signIn, fetchUser, loading, logout: signOut };
 };

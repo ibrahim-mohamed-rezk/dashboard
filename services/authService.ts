@@ -8,10 +8,11 @@ export const loginUser = async (email: string, password: string) => {
   });
 
   if (!response.ok) {
-    throw new Error("Invalid credentials");
+    const error = await response.json();
+    throw new Error(error?.msg || "Invalid credentials");
   }
 
-  return response.json(); // Expected response: { token, user }
+  return response.json();
 };
 
 export const getUserProfile = async (token: string) => {
@@ -24,5 +25,5 @@ export const getUserProfile = async (token: string) => {
     throw new Error("Failed to fetch user data");
   }
 
-  return response.json(); // Expected response: { id, email }
+  return response.json();
 };

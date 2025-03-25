@@ -47,7 +47,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "yellow-oryx-132975.hostingersite.com",
+        hostname:"safezone-co.top",
       },
       {
         protocol: "https",

@@ -28,11 +28,10 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoaded: boolean;
   login: (token: string, user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   hydrate: () => void;
 }
 
-// ✅ Add Default Image URL
 const DEFAULT_IMAGE = "https://placehold.co/600x400";
 
 export const useAuthStore = create<AuthState>()(
@@ -41,27 +40,50 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      isLoaded: false, 
+      isLoaded: false,
 
-      // ✅ Enhanced Login Action with Default Image
       login: (token, user) => {
-        // Check if the user image exists, if not set a default image
         const userWithImage = {
           ...user,
-          image : DEFAULT_IMAGE,
+          image: user.image || DEFAULT_IMAGE,
         };
 
-        set({ token, user: userWithImage, isAuthenticated: true, isLoaded: true });
+        set({
+          token,
+          user: userWithImage,
+          isAuthenticated: true,
+          isLoaded: true,
+        });
+
         localStorage.setItem("authToken", token);
         localStorage.setItem("user", JSON.stringify(userWithImage));
       },
 
-      logout: () => {
-        set({ token: null, user: null, isAuthenticated: false, isLoaded: false });
-        localStorage.removeItem("auth-storage");
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("user");
-        window.location.href = "/ar/auth/login"; // Redirect to login page
+      logout: async () => {
+        const token = localStorage.getItem("authToken");
+
+        try {
+          const response = await fetch("https://safezone-co.top/api/v1/dashboard/logout", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (response.ok) {
+            set({ token: null, user: null, isAuthenticated: false, isLoaded: false });
+            localStorage.removeItem("auth-storage");
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("user");
+
+            window.location.href = "/ar/auth/login";
+          } else {
+            console.error("Logout failed", await response.json());
+          }
+        } catch (error) {
+          console.error("Logout error", error);
+        }
       },
 
       hydrate: () => {
