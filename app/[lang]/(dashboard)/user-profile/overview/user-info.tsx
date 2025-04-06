@@ -65,7 +65,7 @@ const UserInfo = () => {
         );
 
         if (response.data.status) {
-          const userData = response.data.data;
+          const userData = response.data.data; // Access the 'data' field
           localStorage.setItem("user", JSON.stringify(userData));
           setUser(userData);
           setForm({
@@ -86,25 +86,7 @@ const UserInfo = () => {
       }
     };
 
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setForm({
-        full_name: parsedUser.full_name || "",
-        phone: parsedUser.phone || "",
-        email: parsedUser.email || "",
-        father_phone: parsedUser.father_phone || "",
-        image: parsedUser.image || "",
-        level_id: parsedUser.level_id || 0,
-        governorate_id: parsedUser.governorate_id || 0,
-        area_id: parsedUser.area_id || 0,
-        school_name: parsedUser.school_name || "",
-      });
-      setImagePreview(parsedUser.image);
-    } else {
-      fetchUser();
-    }
+    fetchUser();
   }, []);
 
   const handleUpdate = async () => {
