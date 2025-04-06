@@ -1,15 +1,26 @@
 import axios from "axios";
-import { log } from "console";
 
-const API_URL = "https://yellow-oryx-132975.hostingersite.com/api/v1/dashboard/books";
-const TOKEN = "215|mzqKpmN2w3GdVBs77jDd7XYysI6iQQ0EOTAk8Lya0cc7551e";
+const API_URL = `${process.env.NEXT_PUBLIC_API_ENDPOINT}/books`;
 
-// ✅ Fetch All Users
+const getAuthToken = () => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("authToken");
+  }
+  return null;
+};
+
+// ✅ Fetch All Books
 export const fetchBooks = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    console.error("No auth token found in localStorage.");
+    return [];
+  }
+
   try {
     const response = await axios.get(API_URL, {
       headers: {
-        Authorization: `Bearer ${TOKEN}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
@@ -17,26 +28,31 @@ export const fetchBooks = async () => {
     if (response.status === 200) {
       return response.data.data;
     } else {
-      console.error("Failed to fetch data", response);
+      console.error("Failed to fetch books", response);
       return [];
     }
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("Error fetching books:", error);
     return [];
   }
 };
 
-// ✅ Add New User
-export const AddBook = async (newUser: {
+// ✅ Add New Book
+export const addBook = async (book: {
   full_name: string;
   email: string;
   phone: string;
   role: string;
 }) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("No auth token found in localStorage.");
+  }
+
   try {
-    const response = await axios.post(API_URL, newUser, {
+    const response = await axios.post(API_URL, book, {
       headers: {
-        Authorization: `Bearer ${TOKEN}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
@@ -44,11 +60,11 @@ export const AddBook = async (newUser: {
     if (response.status === 201) {
       return response.data;
     } else {
-      console.error("Failed to add user", response);
-      throw new Error("Failed to add user");
+      console.error("Failed to add book", response);
+      throw new Error("Failed to add book");
     }
   } catch (error) {
-    console.error("Error adding user:", error);
+    console.error("Error adding book:", error);
     throw error;
   }
 };

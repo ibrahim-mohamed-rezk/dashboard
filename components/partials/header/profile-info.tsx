@@ -47,7 +47,7 @@ const ProfileInfo = () => {
           {userData.image && (
             <Image
               src={userData.image}
-              alt={userData.name}
+              alt={user.full_name}
               width={36}
               height={36}
               className="rounded-full"
@@ -60,21 +60,21 @@ const ProfileInfo = () => {
           {userData.image && (
             <Image
               src={userData.image}
-              alt={userData.name}
-              width={36}
-              height={36}
-              className="rounded-full"
+              alt={user.full_name}
+              width={40}
+              height={10}
+              className="rounded-lg"
             />
           )}
           <div>
             <div className="text-sm font-medium text-default-800 capitalize">
-              {userData.name}
+              {user.full_name}
             </div>
             <Link
               href="/dashboard"
               className="text-xs text-default-600 hover:text-primary"
             >
-              @{userData.username}
+              {user.email}
             </Link>
           </div>
         </DropdownMenuLabel>
@@ -95,11 +95,11 @@ const ProfileInfo = () => {
               icon: "heroicons:paper-airplane",
               href: "/dashboard",
             },
-            {
-              name: "Keyboard shortcuts",
-              icon: "heroicons:language",
-              href: "/dashboard",
-            },
+            // {
+            //   name: "Keyboard shortcuts",
+            //   icon: "heroicons:language",
+            //   href: "/dashboard",
+            // },
           ].map((item, index) => (
             <Link
               href={item.href}
@@ -113,7 +113,7 @@ const ProfileInfo = () => {
             </Link>
           ))}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
+        {/* <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <Link href="/dashboard" className="cursor-pointer">
             <DropdownMenuItem className="flex items-center gap-2 text-sm font-medium text-default-600 capitalize px-3 py-1.5 dark:hover:bg-background cursor-pointer">
@@ -187,7 +187,7 @@ const ProfileInfo = () => {
             </DropdownMenuPortal>
           </DropdownMenuSub>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator className="mb-0 dark:bg-background" />
+        <DropdownMenuSeparator className="mb-0 dark:bg-background" /> */}
         <DropdownMenuItem
           onSelect={logout} // Call the logout function
           className="flex items-center gap-2 text-sm font-medium text-default-600 capitalize my-1 px-3 dark:hover:bg-background cursor-pointer"
