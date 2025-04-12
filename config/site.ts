@@ -2,13 +2,13 @@
 
 
 export const siteConfig = {
-  name: "DashTail Next js Admin Template",
+  name: "Academix.com",
   description: null,
   theme: "violet",
   layout: "vertical",
   // semi-box, horizontal, vertical
   hideSideBar: false,
-  sidebarType: "module",
+  sidebarType: "classic",
   // popover, classic, module
   sidebarColor: null,
   navbarType: "sticky",

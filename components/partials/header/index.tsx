@@ -20,11 +20,11 @@ const NavTools = ({ isDesktop, isMobile, sidebarType }: { isDesktop: boolean; is
   return (
     <div className="nav-tools flex items-center  gap-2">
       {isDesktop && <Language />}
-      {isDesktop && <FullScreen />}
+      {/* {isDesktop && <FullScreen />} */}
 
       <ThemeButton />
-      <Inbox />
-      <NotificationMessage />
+      {/* <Inbox /> */}
+      {/* <NotificationMessage /> */}
 
       <div className="ltr:pl-2 rtl:pr-2">
         <ProfileInfo />
