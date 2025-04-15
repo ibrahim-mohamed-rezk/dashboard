@@ -1,12 +1,10 @@
 import React from "react";
 import { cn, translate } from "@/lib/utils";
 
-const MenuLabel = ({ item, className, trans }: {
+const MenuLabel = ({ item, className }: {
   item: any,
   className?: string,
-  trans: any
 }) => {
-  const { title } = item;
   return (
     <div
       className={cn(
@@ -14,7 +12,7 @@ const MenuLabel = ({ item, className, trans }: {
         className
       )}
     >
-      {translate(title, trans)}
+      {item.title}
     </div>
   );
 };

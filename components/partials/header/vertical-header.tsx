@@ -1,13 +1,20 @@
+"use client";
 import React from "react";
 import { useSidebar, useThemeStore } from "@/store";
 import { cn } from "@/lib/utils";
-import { Icon } from "@iconify/react";
 import { Search } from "lucide-react";
 import { SiteLogo } from "@/components/svg";
 import Link from "next/link";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import HeaderSearch from "@/components/header-search";
 
-const MenuBar = ({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed: (value: boolean) => void; }) => {
+const MenuBar = ({
+  collapsed,
+  setCollapsed,
+}: {
+  collapsed: boolean;
+  setCollapsed: (value: boolean) => void;
+}) => {
   return (
     <button
       className="relative group  disabled:cursor-not-allowed opacity-50"
@@ -54,10 +61,7 @@ const MenuBar = ({ collapsed, setCollapsed }: { collapsed: boolean, setCollapsed
   );
 };
 
-type VerticalHeaderProps = {
-  handleOpenSearch: () => void;
-};
-const VerticalHeader: React.FC<VerticalHeaderProps> = ({ handleOpenSearch }) => {
+const VerticalHeader = () => {
   const { collapsed, setCollapsed, subMenu, sidebarType } = useSidebar();
   const { layout } = useThemeStore();
   const isDesktop = useMediaQuery("(min-width: 1280px)");
@@ -65,6 +69,7 @@ const VerticalHeader: React.FC<VerticalHeaderProps> = ({ handleOpenSearch }) => 
   let LogoContent = null;
   let menuBarContent = null;
   let searchButtonContent = null;
+  const [open, setOpen] = React.useState(false);
 
   const MainLogo = (
     <Link href="/dashboard" className=" text-primary ">
@@ -76,7 +81,7 @@ const VerticalHeader: React.FC<VerticalHeaderProps> = ({ handleOpenSearch }) => 
       <button
         type="button"
         className=" inline-flex  gap-2 items-center text-default-600 text-sm"
-        onClick={handleOpenSearch}
+        onClick={() => setOpen(true)}
       >
         <span>
           <Search className=" h-4 w-4" />
@@ -130,6 +135,7 @@ const VerticalHeader: React.FC<VerticalHeaderProps> = ({ handleOpenSearch }) => 
         {menuBarContent}
         {searchButtonContent}
       </div>
+      <HeaderSearch open={open} setOpen={setOpen} />
     </>
   );
 };

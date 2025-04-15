@@ -1,16 +1,15 @@
-import ProfileLayout from "./profile-layout"
+import Header from "./components/header";
 export const metadata = {
   title: "User Profile",
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <ProfileLayout>
+    <>
+      <Header />
       {children}
-    </ProfileLayout>
-  )
+    </>
+  );
 };
 
 export default Layout;
-
-

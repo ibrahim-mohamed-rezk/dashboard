@@ -1,11 +1,7 @@
 "use client";
 
-import * as React from "react";
 import {
   ColumnDef,
-  SortingState,
-  VisibilityState,
-  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -50,6 +46,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { fetchCourses, addCourse, deleteCourse } from "@/services/courseService";
+import { useEffect, useState } from "react";
 
 interface Course {
   id: number;
@@ -167,8 +164,8 @@ const columns: ColumnDef<Course>[] = [
 ];
 
 export function CoursesTable() {
-  const [data, setData] = React.useState<Course[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
+  const [data, setData] = useState<Course[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const {
     register,
@@ -180,7 +177,7 @@ export function CoursesTable() {
     mode: "all",
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       const courses = await fetchCourses();

@@ -6,7 +6,7 @@ import MobileFooter from "./mobile-footer";
 import FooterLayout from "./footer-layout";
 import { useMounted } from "@/hooks/use-mounted";
 
-const Footer = ({ handleOpenSearch }: { handleOpenSearch: () => void }) => {
+const Footer = () => {
   const { collapsed, sidebarType } = useSidebar();
   const { layout, footerType } = useThemeStore();
   const mounted = useMounted();
@@ -16,7 +16,7 @@ const Footer = ({ handleOpenSearch }: { handleOpenSearch: () => void }) => {
     return null;
   }
   if (!isMobile && sidebarType === "module") {
-    return <MobileFooter handleOpenSearch={handleOpenSearch} />;
+    return <MobileFooter />;
   }
 
   if (footerType === "hidden") {

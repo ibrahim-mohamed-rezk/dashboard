@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
