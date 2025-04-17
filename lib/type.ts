@@ -17,3 +17,27 @@ export type Shadow = "none" | "sm" | "md" | "lg" | "xl" | "2xl"
 
 export type Radius = "none" | "sm" | "md" | "lg" | "xl"
 
+export interface User {
+  id: number;
+  full_name: string;
+  avatar: string;
+  phone: string;
+  gender: string | null;
+  email: string;
+  role: string;
+  teachers: Teacher[];
+}
+
+export interface Teacher {
+  id: number;
+  full_name: string;
+  avatar: string;
+  phone: string;
+  gender: string | null;
+  email: string;
+  role: string;
+  teachers: any[];
+}
+
+
+

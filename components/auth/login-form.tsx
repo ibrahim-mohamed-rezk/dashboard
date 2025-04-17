@@ -32,7 +32,7 @@ const LogInForm = () => {
 
       await axios.post(
         "/api/auth/setToken",
-        { token: response.token },
+        { token: response.token, user: JSON.stringify(response.data) },
         {
           headers: { "Content-Type": "application/json" },
         }

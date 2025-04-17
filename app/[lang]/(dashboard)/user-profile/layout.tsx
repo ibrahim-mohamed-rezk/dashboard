@@ -1,4 +1,4 @@
-import Header from "./components/header";
+
 export const metadata = {
   title: "User Profile",
 };
@@ -6,7 +6,6 @@ export const metadata = {
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
-      <Header />
       {children}
     </>
   );

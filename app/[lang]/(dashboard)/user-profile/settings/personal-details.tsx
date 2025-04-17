@@ -2,25 +2,32 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { postData } from "@/lib/axios/server";
-const PersonalDetails = ({ token }: { token: string }) => {
+import { User } from "@/lib/type";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+
+const PersonalDetails = ({
+  token,
+  user,
+}: {
+  token: string | null;
+  user: User;
+}) => {
   const formData = new FormData();
   formData.append("_method", "PUT");
   const [data, setData] = useState({
-    full_name: "",
-    phone: "",
-    email: "",
-    avatar: "",
-    imageFile: null,
+    full_name: user.full_name || "",
+    phone: user.phone || "",
+    email: user.email || "",
   });
-
-  useEffect(() => {}, [token]);
+  const router = useRouter();
 
   const handleUpdate = async () => {
     try {
-      const token = localStorage.getItem("authToken");
       if (!token) {
         alert("No token found. Please log in again.");
         return;
@@ -34,20 +41,24 @@ const PersonalDetails = ({ token }: { token: string }) => {
       formData.append("phone", data.phone);
       formData.append("email", data.email);
 
-      // If a new image is selected, append it as a file
-      if (data.imageFile) {
-        formData.append("avatar", data.imageFile);
-      }
-
       const response = await postData("profile/update", formData, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
 
-      localStorage.setItem("user", JSON.stringify(response.data));
-      console.log(response.data);
+      await axios.post(
+        "/api/auth/setToken",
+        { user: JSON.stringify(response.data) },
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      toast.success("تم التعديل بنجاح");
+      router.push("/user-profile");
     } catch (err) {
       console.error("Update error:", err);
+      toast.error("حدث خطأ أثناء التعديل");
     }
   };
 
@@ -62,6 +73,7 @@ const PersonalDetails = ({ token }: { token: string }) => {
             <Input
               id="firstName"
               type="text"
+              value={data.full_name}
               onChange={(e) => setData({ ...data, full_name: e.target.value })}
             />
           </div>
@@ -73,6 +85,7 @@ const PersonalDetails = ({ token }: { token: string }) => {
               onChange={(e) => {
                 setData({ ...data, phone: e.target.value });
               }}
+              value={data.phone}
               id="phoneNumber"
               type="number"
             />
@@ -83,13 +96,14 @@ const PersonalDetails = ({ token }: { token: string }) => {
             </Label>
             <Input
               id="email"
+              value={data.email}
               type="email"
               onChange={(e) => setData({ ...data, email: e.target.value })}
             />
           </div>
         </div>
         <div className="flex justify-end gap-4 mt-6">
-          <Button>Save</Button>
+          <Button onClick={handleUpdate}>حفظ</Button>
         </div>
       </CardContent>
     </Card>

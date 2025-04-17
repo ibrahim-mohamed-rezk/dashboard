@@ -28,7 +28,6 @@ interface UserData {
 }
 
 const UserInfo = () => {
-  const [user, setUser] = useState<UserData | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
@@ -44,44 +43,6 @@ const UserInfo = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("authToken");
-      if (!token) return;
-
-      try {
-        const response = await getData(
-          "profile",
-          {},
-          {
-            Authorization: `Bearer ${token}`,
-          }
-        );
-
-        if (response.status) {
-          const userData = response.data; // Access the 'data' field
-          localStorage.setItem("user", JSON.stringify(userData));
-          setUser(userData);
-          setForm({
-            full_name: userData.full_name || "",
-            phone: userData.phone || "",
-            email: userData.email || "",
-            father_phone: userData.father_phone || "",
-            image: userData.image || "",
-            level_id: userData.level_id || 0,
-            governorate_id: userData.governorate_id || 0,
-            area_id: userData.area_id || 0,
-            school_name: userData.school_name || "",
-          });
-          setImagePreview(userData.image);
-        }
-      } catch (err) {
-        console.error("Failed to fetch profile:", err);
-      }
-    };
-
-    fetchUser();
-  }, []);
 
   const handleUpdate = async () => {
     try {
@@ -117,7 +78,6 @@ const UserInfo = () => {
 
       if (response.status) {
         localStorage.setItem("user", JSON.stringify(response.data));
-        setUser(response.data);
         setOpen(false);
       }
     } catch (err) {
@@ -133,46 +93,10 @@ const UserInfo = () => {
     }
   };
 
-  if (!user) return <div>Loading...</div>;
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-medium text-default-800">
-            User Information
-          </CardTitle>
-
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-4 mt-4">
-            <li className="flex items-center">
-              <User className="w-4 h-4 text-primary mr-2" />
-              <span className="font-medium text-default-800 w-32">
-                Full Name:
-              </span>
-              <span>{user.full_name}</span>
-            </li>
-            <li className="flex items-center">
-              <Phone className="w-4 h-4 text-primary mr-2" />
-              <span className="font-medium text-default-800 w-32">Phone:</span>
-              <span>{user.phone}</span>
-            </li>
-            <li className="flex items-center">
-              <span className="font-medium text-default-800 w-32">Email:</span>
-              <span>{user.email}</span>
-            </li>
-            <li className="flex items-center">
-              <span className="font-medium text-default-800 w-32">Role:</span>
-              <span>{user.role}</span>
-            </li>
-          </ul>
-
-          <div className="mt-6">
-            <Button onClick={() => setOpen(true)}>Edit Profile</Button>
-          </div>
-        </CardContent>
-      </Card>
+      
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

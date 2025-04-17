@@ -11,7 +11,7 @@ const layout = async ({
   params: { lang: any };
 }) => {
   const trans = await getDictionary(lang);
-  const cookiesData = cookies();
+  const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
 
   if (!token) {

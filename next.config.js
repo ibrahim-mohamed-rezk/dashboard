@@ -32,14 +32,18 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-        port: '8000',
-        pathname: '/storage/files/**',
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "8000",
+        pathname: "/storage/files/**",
       },
       {
-        protocol: 'https',
-        hostname: 'placehold.co',
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+      {
+        protocol: "https",
+        hostname: "ui-avatars.com",
       },
       {
         protocol: "https",
@@ -47,7 +51,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname:"safezone-co.top",
+        hostname: "safezone-co.top",
       },
       {
         protocol: "https",

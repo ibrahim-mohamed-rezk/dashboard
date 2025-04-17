@@ -1,13 +1,11 @@
 import Image from "next/image";
-import { Icon } from "@iconify/react";
 import background from "@/public/images/auth/line.png";
-import { Button } from "@/components/ui/button";
 import LogInForm from "@/components/auth/login-form";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const LoginPage = async () => {
-  const cookiesData = cookies();
+  const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
 
   if (token) {
