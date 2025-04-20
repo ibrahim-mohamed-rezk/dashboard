@@ -17,7 +17,6 @@ const NestedMenus = ({
   locationName,
   toggleMulti,
   multiIndex,
-  trans,
 }: {
   nestedIndex: number | null;
   index: number;
@@ -25,7 +24,6 @@ const NestedMenus = ({
   locationName: string;
   toggleMulti: any;
   multiIndex: number | null;
-  trans: any
 }) => {
   return (
     <Collapsible open={nestedIndex === index}>
@@ -52,7 +50,7 @@ const NestedMenus = ({
 
               >
                 <div className={cn("pl-3  text-sm capitalize  font-normal ")}>
-                  {translate(item.title, trans)}
+                  hi1
                 </div>
               </LinkButton>
               <MultiNestedMenus
@@ -60,7 +58,6 @@ const NestedMenus = ({
                 multiIndex={multiIndex}
                 index={j}
                 locationName={locationName}
-                trans={trans}
               />
             </li>
           ))}

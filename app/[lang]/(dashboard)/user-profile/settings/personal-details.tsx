@@ -29,7 +29,8 @@ const PersonalDetails = ({
   const handleUpdate = async () => {
     try {
       if (!token) {
-        alert("No token found. Please log in again.");
+        toast.error("login expired. Please log in again.");
+        router.push("/auth/login");
         return;
       }
 

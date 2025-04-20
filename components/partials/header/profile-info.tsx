@@ -6,28 +6,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { User } from "@/lib/type";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
 import Link from "next/link";
-import { redirect, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import avatar from "@/public/images/avatar/user.png";
 
-const ProfileInfo = () => {
-  // Fetch user data from localStorage
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+const ProfileInfo = ({ user }: { user: User }) => {
   const router = useRouter();
-
-  // Fallback data if user is not found in localStorage
-  const fallbackUser = {
-    id: "67a8f61bad19ec497b51874a",
-    name: "CEO",
-    email: "admin@academix.com",
-    role: "admin",
-    image: "https://placehold.co/600x400", // Dummy avatar
-    username: "admin", // Fallback username
-  };
-
-  // Merge localStorage data with fallback data
-  const userData = { ...fallbackUser, ...user };
 
   // Get logout function from the store
   const logout = async () => {
@@ -44,10 +31,10 @@ const ProfileInfo = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild className="cursor-pointer">
-        <div className="flex items-center">
-          {userData.image && (
+        <div className="flex  items-center">
+          {user.avatar && (
             <Image
-              src={userData.image}
+              src={user.avatar ? user.avatar : avatar}
               alt={user.full_name}
               width={36}
               height={36}
@@ -58,9 +45,9 @@ const ProfileInfo = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 p-0" align="end">
         <DropdownMenuLabel className="flex gap-2 items-center mb-1 p-3">
-          {userData.image && (
+          {user.avatar && (
             <Image
-              src={userData.image}
+              src={user.avatar ? user.avatar : avatar}
               alt={user.full_name}
               width={40}
               height={10}

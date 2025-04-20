@@ -5,10 +5,9 @@ import Link from "next/link";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useThemeStore } from "@/store";
 
-function NavLink({ childItem, locationName, trans }: {
+function NavLink({ childItem, locationName }: {
   childItem: any;
   locationName: string;
-  trans: any
 }) {
   const { href, icon, title, badge } = childItem;
   return (
@@ -30,7 +29,7 @@ function NavLink({ childItem, locationName, trans }: {
           <childItem.icon className=" h-5 w-5" />
         </span>
       )}
-      <div className="flex-grow truncate">{translate(title, trans)}</div>
+      <div className="flex-grow truncate">{title}</div>
       {badge && <Badge className="rounded h-min ">{badge}</Badge>}
     </Link>
   );
@@ -42,16 +41,13 @@ const MenuItem = ({
   nestedIndex,
   index,
   locationName,
-  trans,
 }: {
   childItem: any;
   toggleNested: (subIndex: number) => void;
   nestedIndex: number | null;
   index: number;
   locationName: string;
-  trans: any;
 }) => {
-  const { icon, title } = childItem;
   const { isRtl } = useThemeStore();
   return (
     <div>
@@ -72,7 +68,7 @@ const MenuItem = ({
               <childItem.icon className=" h-5 w-5" />
             </span>
             <span className="flex-grow truncate">
-              {translate(title, trans)}
+              hi6
             </span>
           </div>
           {childItem.nested && (
@@ -98,7 +94,7 @@ const MenuItem = ({
           <NavLink
             childItem={childItem}
             locationName={locationName}
-            trans={trans}
+           
           />
         </div>
       )}

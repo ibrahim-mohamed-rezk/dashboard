@@ -2,21 +2,17 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  TooltipArrow,
 } from "@/components/ui/tooltip";
 import Link from "next/link";
-import { translate } from "@/lib/utils";
-const SingleIconMenu = ({ index, activeIndex, item, locationName, trans }: {
+const SingleIconMenu = ({ index, activeIndex, item, locationName }: {
   index: number;
   activeIndex: number | null;
   item: any;
   locationName: string;
-  trans: any;
 }) => {
-  const { icon, title, href } = item;
+  const {  href } = item;
   return (
     <>
       <TooltipProvider>
@@ -52,9 +48,6 @@ const SingleIconMenu = ({ index, activeIndex, item, locationName, trans }: {
               </button>
             )}
           </TooltipTrigger>
-          <TooltipContent side="right" className=" capitalize">
-            {translate(title, trans)}
-          </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </>

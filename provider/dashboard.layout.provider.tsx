@@ -9,8 +9,17 @@ import Footer from "@/components/partials/footer";
 import MobileSidebar from "@/components/partials/sidebar/mobile-sidebar";
 import { useMounted } from "@/hooks/use-mounted";
 import LayoutLoader from "@/components/layout-loader";
+import { User } from "@/lib/type";
 
-const DashBoardLayoutProvider = ({ children, trans }: { children: React.ReactNode, trans: any }) => {
+const DashBoardLayoutProvider = ({
+  children,
+  trans,
+  user,
+}: {
+  children: React.ReactNode;
+  trans: any;
+  user: User;
+}) => {
   const { collapsed } = useSidebar();
   const location = usePathname();
   const mounted = useMounted();
@@ -19,8 +28,8 @@ const DashBoardLayoutProvider = ({ children, trans }: { children: React.ReactNod
   }
   return (
     <>
-      <Header  />
-      <Sidebar trans={trans} />
+      <Header user={user} />
+      <Sidebar />
 
       <div
         className={cn("content-wrapper transition-all duration-150 ", {
@@ -28,17 +37,8 @@ const DashBoardLayoutProvider = ({ children, trans }: { children: React.ReactNod
           "ltr:xl:ml-[72px] rtl:xl:mr-[72px]": collapsed,
         })}
       >
-        <div
-          className={cn(
-            " layout-padding px-6 pt-6  page-min-height ",
-
-          )}
-        >
-          <LayoutWrapper
-            location={location}
-          >
-            {children}
-          </LayoutWrapper>
+        <div className={cn(" layout-padding px-6 pt-6  page-min-height ")}>
+          <LayoutWrapper location={location}>{children}</LayoutWrapper>
         </div>
       </div>
       <Footer />

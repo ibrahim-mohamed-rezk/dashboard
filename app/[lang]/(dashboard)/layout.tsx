@@ -13,13 +13,14 @@ const layout = async ({
   const trans = await getDictionary(lang);
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
+  const user = JSON.parse(cookiesData.get("user")?.value || "{}");
 
   if (!token) {
     return redirect("/auth/login");
   }
 
   return (
-    <DashBoardLayoutProvider trans={trans}>{children}</DashBoardLayoutProvider>
+    <DashBoardLayoutProvider user={user} trans={trans}>{children}</DashBoardLayoutProvider>
   );
 };
 

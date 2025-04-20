@@ -13,13 +13,11 @@ const MultiNestedMenus = ({
   index,
   menus,
   locationName,
-  trans,
 }: {
   multiIndex: number | null;
   index: number;
   menus: any;
   locationName: string;
-  trans: any
 }) => {
   return (
     <Collapsible open={multiIndex === index}>
@@ -55,8 +53,8 @@ const MultiNestedMenus = ({
                             isLocationMatch(item.href, locationName),
                         }
                       )}
-                    ></span>
-                    <span>{translate(item.title, trans)}</span>
+                    >hi3</span>
+                    <span>hi2</span>
                   </div>
                 </div>
               </Link>
