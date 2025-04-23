@@ -99,7 +99,7 @@ const schema = z.object({
   meta_keywords: z.string().optional(),
 });
 
-export function BlogTable() {
+function BlogTable() {
   const [data, setData] = React.useState<Blog[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [globalFilter, setGlobalFilter] = React.useState("");

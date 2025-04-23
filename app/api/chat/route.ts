@@ -2,9 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 
 import { profileUser, contacts, chats } from "./data";
 
-
-
-export async function GET(request: NextRequest, response: NextResponse) {
+export async function GET(request: NextRequest) {
   const contactsData = contacts; // Assuming this fetches all contacts data
 
   const chatsContacts = contactsData.map((contact) => {

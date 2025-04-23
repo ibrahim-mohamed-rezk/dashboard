@@ -23,9 +23,12 @@ const VerfiyForm = () => {
       }
     }
   };
-  const handleKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    event: KeyboardEvent<HTMLInputElement>
+  ) => {
     if (event.key === "Backspace" && otp[index] === "" && index > 0) {
-      setOtp(prevOtp => {
+      setOtp((prevOtp) => {
         const newOtp = [...prevOtp];
         newOtp[index - 1] = "";
         return newOtp;
@@ -70,7 +73,7 @@ const VerfiyForm = () => {
               onKeyDown={(event) => handleKeyDown(index, event)}
               maxLength={1}
               className="w-10 h-10 sm:w-[60px] sm:h-16 rounded border-default-300 text-center text-2xl font-medium text-default-900"
-              ref={(ref) => (inputRefs.current[index] = ref)}
+              ref={(ref) => void (inputRefs.current[index] = ref)}
             />
           ))}
         </div>

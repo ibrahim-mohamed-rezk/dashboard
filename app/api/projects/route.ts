@@ -1,11 +1,11 @@
 import { NextResponse, NextRequest } from "next/server";
 import { projects } from "./data";
 export const dynamic = "force-dynamic";
-export async function GET(request: NextRequest, response: NextResponse) {
+export async function GET(request: NextRequest) {
   return NextResponse.json(projects, { status: 200 });
 }
 
-export async function POST(request: NextRequest, response: NextResponse) {
+export async function POST(request: NextRequest) {
   const newItem = await request.json();
 
   // Assign a new ID to the item (assuming there's no unique ID generation yet)

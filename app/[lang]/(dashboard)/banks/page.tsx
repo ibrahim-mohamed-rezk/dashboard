@@ -65,7 +65,7 @@ const schema = z.object({
   price: z.union([z.number().positive().nullable(), z.string().length(0).transform(() => null)]),
 });
 
-export function BankTable() {
+function BankTable() {
   const [data, setData] = React.useState<Bank[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [globalFilter, setGlobalFilter] = React.useState("");

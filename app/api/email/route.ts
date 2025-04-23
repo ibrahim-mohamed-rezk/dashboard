@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { mails } from "./data";
 
-export async function GET(request: NextRequest, response: NextResponse) {
+export async function GET(request: NextRequest) {
   try {
     return NextResponse.json({
       status: "success",
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, response: NextResponse) {
   }
 }
 
-export async function POST(request: NextRequest, response: NextResponse) {
+export async function POST(request: NextRequest) {
   try {
     let reqBody = await request.json();
     reqBody.id = mails.length + 1;

@@ -23,8 +23,6 @@ const ModuleSidebar = () => {
   const [menuOverlay, setMenuOverlay] = useState<boolean>(false);
   const isDesktop = useMediaQuery("(min-width: 1280px)");
 
-  // location
-
   const pathname = usePathname();
   const locationName = getDynamicPath(pathname);
 

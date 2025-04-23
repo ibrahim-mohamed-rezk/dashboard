@@ -2,9 +2,6 @@
 import * as React from "react";
 import {
   ColumnDef,
-  SortingState,
-  VisibilityState,
-  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -106,7 +103,7 @@ const schema = z.object({
   teacher: z.union([z.number(), z.null()]).optional(),
 });
 
-export function BannerTable() {
+function BannerTable() {
   const [data, setData] = React.useState<Banner[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
 

@@ -110,6 +110,7 @@ const ListItem = React.forwardRef<HTMLAnchorElement, any>(
   ({ className, children, title, childItem, ...props }, forwardedRef) => (
     <NavigationMenu.Link asChild>
       <Link
+        href={"#"}
         className={cn(
           " select-none   text-base  font-medium text-default-600 rounded-md flex  items-center gap-2 mb-4 last:mb-0  leading-none no-underline outline-none transition-colors  hover:text-primary  focus:text-primary",
           className

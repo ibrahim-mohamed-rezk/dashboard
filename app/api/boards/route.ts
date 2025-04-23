@@ -1,12 +1,13 @@
-import { NextResponse,  NextRequest} from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { demoBoards } from "./data";
+
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest, response: NextResponse) {
+export async function GET(request: NextRequest) {
   return NextResponse.json(demoBoards, { status: 200 });
 }
 
-export async function POST(request: NextRequest, response: NextResponse) {
+export async function POST(request: NextRequest) {
   const newItem = await request.json();
   newItem.id = demoBoards.length + 1;
   demoBoards.push(newItem);
@@ -14,18 +15,14 @@ export async function POST(request: NextRequest, response: NextResponse) {
   return NextResponse.json(newItem, { status: 201 });
 }
 
-export async function PATCH(request: NextRequest, response: any) {
+export async function PATCH(request: NextRequest) {
   const payloadItem = await request.json();
   const { activeBoardId, overBoardId } = payloadItem;
 
-  const activeIndex = demoBoards.findIndex(
-    (item) => item.id === activeBoardId
-  );
-  const overIndex = demoBoards.findIndex(
-    (item) => item.id === overBoardId
-  );
+  const activeIndex = demoBoards.findIndex((item) => item.id === activeBoardId);
+  const overIndex = demoBoards.findIndex((item) => item.id === overBoardId);
+
   if (activeIndex !== -1 && overIndex !== -1) {
-    // // swap boards
     [demoBoards[activeIndex], demoBoards[overIndex]] = [
       demoBoards[overIndex],
       demoBoards[activeIndex],

@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Icon } from "@iconify/react";
@@ -50,7 +49,7 @@ const breadcrumbsVariants = cva(" flex flex-wrap list-none max-w-fit ", {
       default: "default-style",
       solid: " bg-muted p-3 rounded",
       bordered: "border-2 border-border rounded p-3",
-    }
+    },
   },
 
   defaultVariants: {
@@ -58,25 +57,21 @@ const breadcrumbsVariants = cva(" flex flex-wrap list-none max-w-fit ", {
   },
 });
 
-
-interface BreadcrumbsProps extends React.HTMLAttributes<HTMLOListElement>,
-  VariantProps<typeof breadcrumbsVariants> {
-
-  maxItems?: number
-  itemsBeforeCollapse?: any
-  itemsAfterCollapse?: any
-  renderEllipsis?: React.ReactNode
-  separator?: React.ReactNode
-  itemClasses?: string
-  disabled?: boolean
-  variant?: "solid" | "default" | "bordered"
-  underline?: string
-  ellipsisClass?: string
-  size?: any
-  color?: any
-
-
-
+interface BreadcrumbsProps
+  extends React.HTMLAttributes<HTMLOListElement>,
+    VariantProps<typeof breadcrumbsVariants> {
+  maxItems?: number;
+  itemsBeforeCollapse?: any;
+  itemsAfterCollapse?: any;
+  renderEllipsis?: React.ReactNode;
+  separator?: React.ReactNode;
+  itemClasses?: string;
+  disabled?: boolean;
+  variant?: "solid" | "default" | "bordered";
+  underline?: string;
+  ellipsisClass?: string;
+  size?: any;
+  color?: any;
 }
 const Breadcrumbs = React.forwardRef<HTMLOListElement, BreadcrumbsProps>(
   (
@@ -89,7 +84,9 @@ const Breadcrumbs = React.forwardRef<HTMLOListElement, BreadcrumbsProps>(
       color,
       size,
       disabled,
-      separator = <Icon icon="heroicons:chevron-right" className="rtl:rotate-180" />,
+      separator = (
+        <Icon icon="heroicons:chevron-right" className="rtl:rotate-180" />
+      ),
       variant,
       underline,
       renderEllipsis,
@@ -99,7 +96,6 @@ const Breadcrumbs = React.forwardRef<HTMLOListElement, BreadcrumbsProps>(
     },
     ref
   ) => {
-
     const breadcrumbItems = React.Children.toArray(children);
     const totalItems = breadcrumbItems.length;
 
@@ -129,7 +125,8 @@ const Breadcrumbs = React.forwardRef<HTMLOListElement, BreadcrumbsProps>(
         {visibleItems.map((child, index) => {
           const islast = index === visibleItems.length - 1;
 
-          const iscurrent = islast || (child as React.ReactElement)?.props?.iscurrent;
+          const iscurrent =
+            islast || (child as React.ReactElement)?.props?.iscurrent;
           if (child === null) {
             return (
               <li
@@ -196,10 +193,6 @@ const Breadcrumbs = React.forwardRef<HTMLOListElement, BreadcrumbsProps>(
 
 Breadcrumbs.displayName = "Breadcrumbs";
 
-
-
-
-
 const BreadcrumbItem = React.forwardRef<HTMLSpanElement, any>(
   (
     {
@@ -244,7 +237,7 @@ const BreadcrumbItem = React.forwardRef<HTMLSpanElement, any>(
                 disabled && !iscurrent,
             }
           )}
-          aria-current={ariaCurrent}
+          {...(ariaCurrent ? { "aria-current": ariaCurrent } : {})}
           data-state={dataState}
           data-disabled={dataDisabled}
           onClick={handleClick}

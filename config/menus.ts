@@ -52,7 +52,6 @@ export interface MenuItemProps {
   child?: MenuItemProps[];
   megaMenu?: MenuItemProps[];
   multi_menu? : MenuItemProps[]
-  nested?: MenuItemProps[]
   onClick: () => void;
 
   
@@ -999,35 +998,20 @@ export const menusConfig = {
             icon: Graph,
           },
           {
-            title: "مستخدمين",
+            title: "مدرسين",
             href: "/users",
             icon: Cart,
           },
-          {
-            title: "كتب",
-            href: "/books",
-            icon: Cart,
-          },
-          {
-            title: "لوحات اعلانيه",
-            href: "/banners",
-            icon: Cart,
-          },
-          {
-            title: "بنوك",
-            href: "/banks",
-            icon: Cart,
-          },
-          {
-            title: "كورسات",
-            href: "/courses",
-            icon: Cart,
-          },
-          {
-            title: "منتديات",
-            href: "/blogs",
-            icon: Cart,
-          },
+          // {
+          //   title: "لوحات اعلانيه",
+          //   href: "/banners",
+          //   icon: Cart,
+          // },
+          // {
+          //   title: "منتديات",
+          //   href: "/blogs",
+          //   icon: Cart,
+          // },
         ],
       },
     ],

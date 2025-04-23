@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { calendarEvents } from "./data";
 
-export async function GET(request:NextRequest , response: NextResponse) {
+export async function GET(request: NextRequest) {
   try {
     return NextResponse.json({
       status: "success",
-      message: "Event created successfully",
+      message: "Event fetched successfully",
       data: calendarEvents,
     });
   } catch (error) {
@@ -18,7 +18,7 @@ export async function GET(request:NextRequest , response: NextResponse) {
   }
 }
 
-export async function POST(request: NextRequest, response: NextResponse) {
+export async function POST(request: NextRequest) {
   try {
     let reqBody = await request.json();
     reqBody.id = calendarEvents.length + 1;
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, response: NextResponse) {
 
     return NextResponse.json({
       status: "success",
-      message: "User created successfully",
+      message: "Event created successfully",
       data: reqBody,
     });
   } catch (error) {

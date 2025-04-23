@@ -1,10 +1,6 @@
 "use client";
-import * as React from "react";
 import {
   ColumnDef,
-  SortingState,
-  VisibilityState,
-  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -40,6 +36,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect, useState } from "react";
 
 interface User {
   id: number;
@@ -50,61 +47,55 @@ interface User {
   role: string;
 }
 
-interface DashboardPageViewProps {
-    trans: {
-      [key: string]: string;
-    };
-  }
-  const DEFAULT_IMAGE = "https://via.placeholder.com/150";
-  const columns: ColumnDef<User>[] = [
-    {
-      accessorKey: "full_name",
-      header: "الاسم الكامل",
-      cell: ({ row }) => {
-        const user = row.original;
-        return (
-          <div className="flex items-center gap-3">
-            <Avatar className="rounded-full">
-              <AvatarImage
-                src={user.image || DEFAULT_IMAGE}
-                alt={user.full_name}
-                onError={(e) => {
-                  e.currentTarget.onerror = null; // Prevents infinite loop
-                  e.currentTarget.src = DEFAULT_IMAGE;
-                }}
-              />
-              <AvatarFallback>{user.full_name?.[0] ?? "?"}</AvatarFallback>
-            </Avatar>
-            <span>{user.full_name}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "email",
-      header: "الايميل",
-      cell: ({ row }) => (
-        <div className="lowercase whitespace-nowrap">
-          {row.getValue("email") ?? "N/A"}
+const DEFAULT_IMAGE = "https://via.placeholder.com/150";
+const columns: ColumnDef<User>[] = [
+  {
+    accessorKey: "full_name",
+    header: "الاسم الكامل",
+    cell: ({ row }) => {
+      const user = row.original;
+      return (
+        <div className="flex items-center gap-3">
+          <Avatar className="rounded-full">
+            <AvatarImage
+              src={user.image || DEFAULT_IMAGE}
+              alt={user.full_name}
+              onError={(e) => {
+                e.currentTarget.onerror = null; // Prevents infinite loop
+                e.currentTarget.src = DEFAULT_IMAGE;
+              }}
+            />
+            <AvatarFallback>{user.full_name?.[0] ?? "?"}</AvatarFallback>
+          </Avatar>
+          <span>{user.full_name}</span>
         </div>
-      ),
+      );
     },
-    {
-      accessorKey: "phone",
-      header: "الهاتف",
-      cell: ({ row }) => <div>{row.getValue("phone") ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "role",
-      header: "دور",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="capitalize">
-          {row.getValue("role")}
-        </Badge>
-      ),
-    },
-  ];
-  
+  },
+  {
+    accessorKey: "email",
+    header: "الايميل",
+    cell: ({ row }) => (
+      <div className="lowercase whitespace-nowrap">
+        {row.getValue("email") ?? "N/A"}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "phone",
+    header: "الهاتف",
+    cell: ({ row }) => <div>{row.getValue("phone") ?? "N/A"}</div>,
+  },
+  {
+    accessorKey: "role",
+    header: "دور",
+    cell: ({ row }) => (
+      <Badge variant="outline" className="capitalize">
+        {row.getValue("role")}
+      </Badge>
+    ),
+  },
+];
 
 const schema = z.object({
   full_name: z.string().min(2, "Name is required"),
@@ -113,9 +104,9 @@ const schema = z.object({
   role: z.enum(["admin", "teacher", "student"]),
 });
 
-export function BasicDataTable({ trans }: DashboardPageViewProps) {
-  const [data, setData] = React.useState<User[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
+function BasicDataTable() {
+  const [data, setData] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const {
     register,
@@ -127,7 +118,7 @@ export function BasicDataTable({ trans }: DashboardPageViewProps) {
     mode: "all",
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       const users = await fetchUsers();
@@ -164,7 +155,9 @@ export function BasicDataTable({ trans }: DashboardPageViewProps) {
       <div className=" flex items-center gap-2 px-4 mb-4">
         <Input
           placeholder="Filter by name..."
-          value={(table.getColumn("full_name")?.getFilterValue() as string) || ""}
+          value={
+            (table.getColumn("full_name")?.getFilterValue() as string) || ""
+          }
           onChange={(event) =>
             table.getColumn("full_name")?.setFilterValue(event.target.value)
           }
@@ -183,7 +176,10 @@ export function BasicDataTable({ trans }: DashboardPageViewProps) {
                 <Input {...register("full_name")} placeholder="Full Name" />
                 <Input {...register("email")} placeholder="Email" />
                 <Input {...register("phone")} placeholder="Phone" />
-                <select {...register("role")} className="w-full p-2 border rounded">
+                <select
+                  {...register("role")}
+                  className="w-full p-2 border rounded"
+                >
                   <option value="admin">Admin</option>
                   <option value="teacher">Teacher</option>
                   <option value="student">Student</option>
@@ -226,7 +222,10 @@ export function BasicDataTable({ trans }: DashboardPageViewProps) {
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>

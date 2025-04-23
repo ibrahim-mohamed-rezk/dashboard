@@ -163,7 +163,7 @@ const columns: ColumnDef<Course>[] = [
   },
 ];
 
-export function CoursesTable() {
+ function CoursesTable() {
   const [data, setData] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
