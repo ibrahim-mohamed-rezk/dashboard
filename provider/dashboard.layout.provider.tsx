@@ -13,11 +13,9 @@ import { User } from "@/lib/type";
 
 const DashBoardLayoutProvider = ({
   children,
-  trans,
   user,
 }: {
   children: React.ReactNode;
-  trans: any;
   user: User;
 }) => {
   const { collapsed } = useSidebar();
@@ -29,7 +27,7 @@ const DashBoardLayoutProvider = ({
   return (
     <>
       <Header user={user} />
-      <Sidebar />
+      <Sidebar user={user} />
 
       <div
         className={cn("content-wrapper transition-all duration-150 ", {

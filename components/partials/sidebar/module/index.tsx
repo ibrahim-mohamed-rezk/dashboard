@@ -7,12 +7,15 @@ import { useSidebar } from "@/store";
 import MenuItem from "./menu-item";
 import Link from "next/link";
 import FooterMenu from "./footer-menu";
-import { SiteLogo } from "@/components/svg";
+import { Settings, SiteLogo } from "@/components/svg";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
+import { User } from "@/lib/type";
+import { BanIcon, File } from "lucide-react";
+import Image from "next/image";
 
-const ModuleSidebar = () => {
+const ModuleSidebar = ({ user }: { user: User }) => {
   const menus = menusConfig?.sidebarNav?.modern || [];
   const { subMenu, setSubmenu, collapsed, setCollapsed, sidebarBg } =
     useSidebar();
@@ -186,6 +189,24 @@ const ModuleSidebar = () => {
                     />
                   </li>
                 ))}
+                {user.modules.map((item) => {
+                  if (item.access === false) return;
+                  return (
+                    <li className="mb-1.5 last:mb-0">
+                      <MenuItem
+                        childItem={{
+                          href: item.id === 5 ? "/banners" : "/blogs",
+                          title: item.id === 5 ? "البنرات" : "المقالات",
+                          icon: item.id === 5 ? Image : File,
+                        }}
+                        toggleNested={toggleNested}
+                        index={1}
+                        nestedIndex={nestedIndex}
+                        locationName={locationName}
+                      />
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </ScrollArea>

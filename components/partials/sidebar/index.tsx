@@ -1,10 +1,11 @@
 "use client";
+import { User } from "@/lib/type";
 import ModuleSidebar from "./module";
 
-const Sidebar = () => {
+const Sidebar = ({user}: {user: User}) => {
   return (
     <div>
-      <ModuleSidebar />
+      <ModuleSidebar user={user} />
     </div>
   );
 };
