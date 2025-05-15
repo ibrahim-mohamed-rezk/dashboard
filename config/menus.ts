@@ -999,7 +999,7 @@ export const menusConfig = {
           },
           {
             title: "مدرسين",
-            href: "/users",
+            href: "/teachers",
             icon: Cart,
           },
           // {

@@ -22,7 +22,7 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { fetchUsers, addUser } from "@/services/userService";
+import { addUser } from "@/services/userService";
 
 import {
   Dialog,
@@ -37,14 +37,20 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState } from "react";
+import { getData } from "@/lib/axios/server";
+import axios from "axios";
+import Link from "next/link";
 
 interface User {
   id: number;
-  full_name: string;
-  image: string;
-  phone: string;
-  email: string;
-  role: string;
+  user: {
+    id: number;
+    avatar: string;
+    role: string;
+    full_name: string;
+    phone: string;
+    email: string;
+  };
 }
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/150";
@@ -55,20 +61,23 @@ const columns: ColumnDef<User>[] = [
     cell: ({ row }) => {
       const user = row.original;
       return (
-        <div className="flex items-center gap-3">
+        <Link
+          href={"/teacher-profile/" + user.user.id}
+          className="flex items-center gap-3"
+        >
           <Avatar className="rounded-full">
             <AvatarImage
-              src={user.image || DEFAULT_IMAGE}
-              alt={user.full_name}
+              src={user.user.avatar || DEFAULT_IMAGE}
+              alt={user.user.full_name}
               onError={(e) => {
                 e.currentTarget.onerror = null; // Prevents infinite loop
                 e.currentTarget.src = DEFAULT_IMAGE;
               }}
             />
-            <AvatarFallback>{user.full_name?.[0] ?? "?"}</AvatarFallback>
+            <AvatarFallback>{user.user.full_name?.[0] ?? "?"}</AvatarFallback>
           </Avatar>
-          <span>{user.full_name}</span>
-        </div>
+          <span>{user.user.full_name}</span>
+        </Link>
       );
     },
   },
@@ -77,59 +86,76 @@ const columns: ColumnDef<User>[] = [
     header: "الايميل",
     cell: ({ row }) => (
       <div className="lowercase whitespace-nowrap">
-        {row.getValue("email") ?? "N/A"}
+        {row.original.user.email ?? "N/A"}
       </div>
     ),
   },
   {
     accessorKey: "phone",
     header: "الهاتف",
-    cell: ({ row }) => <div>{row.getValue("phone") ?? "N/A"}</div>,
+    cell: ({ row }) => <div>{row.original.user.phone ?? "N/A"}</div>,
   },
   {
     accessorKey: "role",
     header: "دور",
     cell: ({ row }) => (
       <Badge variant="outline" className="capitalize">
-        {row.getValue("role")}
+        {row.original.user.role}
       </Badge>
     ),
   },
 ];
 
-const schema = z.object({
-  full_name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email"),
-  phone: z.string().min(8, "Phone is required"),
-  role: z.enum(["admin", "teacher", "student"]),
-});
-
 function BasicDataTable() {
   const [data, setData] = useState<User[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [token, setToken] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
+  // get token from next api
+  useEffect(() => {
+    const feachData = async () => {
+      try {
+        const response = await axios.get("/api/auth/getToken");
+        setToken(response.data.token);
+      } catch (error) {
+        throw error;
+      }
+    };
+
+    feachData();
+  });
+
+  // feach users from api
+  useEffect(() => {
+    const feachData = async () => {
+      try {
+        const response = await getData(
+          "teachers",
+          {},
+          {
+            Authorization: `Bearer ${token}`,
+          }
+        );
+        setData(response);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    feachData();
+  }, [token]);
+
+  // add user
+  const schema = z.object({
+    full_name: z.string().min(2, "Name is required"),
+    email: z.string().email("Invalid email"),
+    phone: z.string().min(8, "Phone is required"),
+    role: z.enum(["admin", "teacher", "student"]),
+  });
+
+  const { register, handleSubmit, reset } = useForm({
     resolver: zodResolver(schema),
     mode: "all",
   });
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const users = await fetchUsers();
-      console.log("Fetched Users:", users); // Debugging line
-      setData(users);
-      setLoading(false);
-    };
-
-    fetchData();
-  }, []);
-
   const onSubmit = async (formData: any) => {
     try {
       await addUser(formData);
@@ -153,6 +179,7 @@ function BasicDataTable() {
   return (
     <>
       <div className=" flex items-center gap-2 px-4 mb-4">
+        {/* search input */}
         <Input
           placeholder="Filter by name..."
           value={
@@ -163,6 +190,7 @@ function BasicDataTable() {
           }
           className="max-w-sm min-w-[200px] h-10"
         />
+        {/* add user button */}
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline">اضافه مستخدم</Button>
@@ -198,6 +226,7 @@ function BasicDataTable() {
         </Dialog>
       </div>
 
+      {/* users table */}
       <div className="overflow-x-auto">
         <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
           <TableHeader>
