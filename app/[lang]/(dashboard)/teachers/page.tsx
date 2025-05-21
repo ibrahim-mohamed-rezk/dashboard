@@ -62,7 +62,7 @@ const columns: ColumnDef<User>[] = [
       const user = row.original;
       return (
         <Link
-          href={"/teacher-profile/" + user.user.id}
+          href={"/teacher-profile/" + user.id}
           className="flex items-center gap-3"
         >
           <Avatar className="rounded-full">

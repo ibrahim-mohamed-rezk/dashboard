@@ -1,14 +1,36 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, User } from "@/components/svg";
-import { cookies } from "next/headers";
 import Header from "./components/header";
-const Overview = async () => {
+import { getData } from "@/lib/axios/server";
+import { cookies } from "next/headers";
+const Overview = async ({
+  params,
+}: {
+  params: Promise<{ teacherId: string }>;
+}) => {
+  const { teacherId } = await params;
   const cookiesData = await cookies();
-  const user = JSON.parse(cookiesData.get("user")?.value || "{}");
+  const token = cookiesData.get("token")?.value;
+  const feachData = async () => {
+    try {
+      const response = await getData(
+        `teachers/${teacherId}`,
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const user = await feachData();
 
   return (
     <>
-      <Header />
+      <Header user={user?.user} teacherId={teacherId} />
       <div className="py-5">
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
@@ -24,14 +46,14 @@ const Overview = async () => {
                 <span className="font-medium text-default-800 w-32">
                   الاسم:{" "}
                 </span>
-                <span className="text-white">{user?.full_name}</span>
+                <span className="">{user?.user.full_name}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <Phone className="w-5 h-5 text-primary mr-3" />
                 <span className="font-medium text-default-800 w-32">
                   رقم الهاتف:
                 </span>
-                <span className="text-white">{user?.phone}</span>
+                <span className="">{user?.user.phone}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <svg
@@ -50,7 +72,7 @@ const Overview = async () => {
                 <span className="font-medium text-default-800 w-32">
                   البريد الإلكتروني:
                 </span>
-                <span className="text-white">{user?.email}</span>
+                <span className="">{user.user?.email}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <svg
@@ -69,7 +91,7 @@ const Overview = async () => {
                 <span className="font-medium text-default-800 w-32">
                   الدور:
                 </span>
-                <span className="text-white">{user?.role}</span>
+                <span className="">{user?.user.role}</span>
               </li>
             </ul>
           </CardContent>

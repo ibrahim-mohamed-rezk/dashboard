@@ -24,14 +24,14 @@ const Overview = async () => {
                 <span className="font-medium text-default-800 w-32">
                   الاسم:{" "}
                 </span>
-                <span className="text-white">{user?.full_name}</span>
+                <span className="">{user?.full_name}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <Phone className="w-5 h-5 text-primary mr-3" />
                 <span className="font-medium text-default-800 w-32">
                   رقم الهاتف:
                 </span>
-                <span className="text-white">{user?.phone}</span>
+                <span className="">{user?.phone}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <svg
@@ -50,7 +50,7 @@ const Overview = async () => {
                 <span className="font-medium text-default-800 w-32">
                   البريد الإلكتروني:
                 </span>
-                <span className="text-white">{user?.email}</span>
+                <span className="">{user?.email}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <svg
@@ -69,7 +69,7 @@ const Overview = async () => {
                 <span className="font-medium text-default-800 w-32">
                   الدور:
                 </span>
-                <span className="text-white">{user?.role}</span>
+                <span className="">{user?.role}</span>
               </li>
             </ul>
           </CardContent>
