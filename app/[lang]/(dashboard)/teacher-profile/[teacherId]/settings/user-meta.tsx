@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,18 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
-const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
+const UserMeta = ({
+  token,
+  user,
+  id,
+  currentUser,
+}: {
+  token: string | null;
+  user: User;
+  id: string;
+  currentUser: User;
+}) => {
   const [preview, setPreview] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const router = useRouter();
 
   const handleUpdate = async (e?: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,7 +38,6 @@ const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
       // Handle image change if event is provided
       if (e?.target.files?.[0]) {
         const selectedFile = e.target.files[0];
-        setFile(selectedFile);
         const reader = new FileReader();
         reader.onloadend = () => {
           setPreview(reader.result as string);
@@ -46,18 +54,19 @@ const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
           formData.append("avatar", selectedFile);
         }
 
-        const response = await postData("profile/update", formData, {
+        const response = await postData(`teachers/${id}`, formData, {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         });
 
-        await axios.post(
-          "/api/auth/setToken",
-          { user: JSON.stringify(response.data) },
-          {
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+        currentUser.role === "teacher" &&
+          (await axios.post(
+            "/api/auth/setToken",
+            { user: JSON.stringify(response.data) },
+            {
+              headers: { "Content-Type": "application/json" },
+            }
+          ));
 
         toast.success("تم التعديل بنجاح");
         router.push("/user-profile");

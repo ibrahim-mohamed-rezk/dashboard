@@ -26,7 +26,7 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { fetchUsers, addUser } from "@/services/userService";
+import { addUser } from "@/services/userService";
 
 import {
   Dialog,
@@ -126,7 +126,14 @@ export function BasicDataTable() {
   React.useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const users = await fetchUsers();
+      const users = [{
+        id: 1,
+        full_name: "أحمد محمد",
+        image: "https://images.unsplash.com/photo-1499714608240-22fc6ad53fb2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1480&q=80",
+        phone: "0123456789",
+        email: "ahmed@example.com",
+        role: "teacher",
+      }];
       setData(users);
       setLoading(false);
     };
@@ -159,7 +166,9 @@ export function BasicDataTable() {
       <div className="flex items-center gap-2 px-4 mb-4">
         <Input
           placeholder="Filter by name..."
-          value={(table.getColumn("full_name")?.getFilterValue() as string) || ""}
+          value={
+            (table.getColumn("full_name")?.getFilterValue() as string) || ""
+          }
           onChange={(event) =>
             table.getColumn("full_name")?.setFilterValue(event.target.value)
           }
@@ -178,7 +187,10 @@ export function BasicDataTable() {
                 <Input {...register("full_name")} placeholder="Full Name" />
                 <Input {...register("email")} placeholder="Email" />
                 <Input {...register("phone")} placeholder="Phone" />
-                <select {...register("role")} className="w-full p-2 border rounded">
+                <select
+                  {...register("role")}
+                  className="w-full p-2 border rounded"
+                >
                   <option value="admin">Admin</option>
                   <option value="teacher">Teacher</option>
                   <option value="student">Student</option>
@@ -206,7 +218,10 @@ export function BasicDataTable() {
                   <TableHead key={header.id} className="px-4 py-2">
                     {header.isPlaceholder
                       ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -223,14 +238,20 @@ export function BasicDataTable() {
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="text-white px-4 py-2">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center text-white">
+                <TableCell
+                  colSpan={columns.length}
+                  className="text-center text-white"
+                >
                   No results found.
                 </TableCell>
               </TableRow>

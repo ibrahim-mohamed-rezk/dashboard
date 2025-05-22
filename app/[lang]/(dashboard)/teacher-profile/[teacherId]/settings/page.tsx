@@ -10,6 +10,7 @@ const Settings = async ({ params }: { params: Promise<{ teacherId: string }> }) 
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
   const { teacherId } = await params;
+  const currentUser = JSON.parse(cookiesData.get("user")?.value || "{}");
 
     const feachData = async () => {
       try {
@@ -47,7 +48,12 @@ const Settings = async ({ params }: { params: Promise<{ teacherId: string }> }) 
       <Header user={user.user} teacherId={teacherId} />
       <div className="grid grid-cols-12 gap-6 mt-6">
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <UserMeta token={token as string} user={user.user} />
+          <UserMeta
+            token={token as string}
+            user={user.user}
+            id={teacherId}
+            currentUser={currentUser}
+          />
         </div>
         <div className="col-span-12 lg:col-span-8">
           <Tabs defaultValue="personal" className="p-0 px-1">
