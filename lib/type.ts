@@ -72,3 +72,9 @@ export interface Teacher {
   role: string;
   modules: Module[];
 }
+
+export interface SubjectsData {
+  id: number;
+  name: string;
+  description: string;
+}

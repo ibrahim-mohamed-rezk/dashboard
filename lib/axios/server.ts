@@ -36,4 +36,16 @@ export const postData = async (endpoint: string, data: any, headers?: any) => {
   }
 };
 
+export const deleteData = async (endpoint: string, headers?: any) => {
+  try {
+    const response = await backendServer.delete(endpoint, {
+      headers: { ...headers },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting data:", error);
+    throw error;
+  }
+};
+
 export default backendServer;
