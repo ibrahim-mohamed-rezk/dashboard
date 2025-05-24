@@ -7,12 +7,12 @@ import { useSidebar } from "@/store";
 import MenuItem from "./menu-item";
 import Link from "next/link";
 import FooterMenu from "./footer-menu";
-import { Settings, SiteLogo } from "@/components/svg";
+import { SiteLogo } from "@/components/svg";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
 import { User } from "@/lib/type";
-import { BanIcon, File } from "lucide-react";
+import {  File, Video } from "lucide-react";
 import Image from "next/image";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -189,7 +189,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                     />
                   </li>
                 ))}
-                {user.modules.map((item) => {
+                {user.role === "admin" && user.modules.map((item) => {
                   if (item.access === false) return;
                   return (
                     <li className="mb-1.5 last:mb-0">
@@ -207,6 +207,23 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                     </li>
                   );
                 })}
+                {
+                  user.role === "teacher" && (
+                    <li className="mb-1.5 last:mb-0">
+                      <MenuItem
+                        childItem={{
+                          href: "/courses",
+                          title: "الكورسات",
+                          icon: Video,
+                        }}
+                        toggleNested={toggleNested}
+                        index={1}
+                        nestedIndex={nestedIndex}
+                        locationName={locationName}
+                      />
+                    </li>
+                  )
+                }
               </ul>
             </div>
           </ScrollArea>

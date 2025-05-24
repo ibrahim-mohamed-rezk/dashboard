@@ -69,20 +69,27 @@ const ProfileInfo = ({ user }: { user: User }) => {
         <DropdownMenuGroup>
           {[
             {
-              name: "Profile",
+              name: "الملف الشخصي",
               icon: "heroicons:user",
-              href: "/user-profile",
+              href:
+                user.role === "student"
+                  ? "/student-profile"
+                  : user.role === "teacher"
+                  ? "/teacher-profile"
+                  : user.role === "admin"
+                  ? "/user-profile"
+                  : "",
             },
-            {
-              name: "Billing",
-              icon: "heroicons:megaphone",
-              href: "/dashboard",
-            },
-            {
-              name: "Settings",
-              icon: "heroicons:paper-airplane",
-              href: "/dashboard",
-            },
+            // {
+            //   name: "Billing",
+            //   icon: "heroicons:megaphone",
+            //   href: "/dashboard",
+            // },
+            // {
+            //   name: "Settings",
+            //   icon: "heroicons:paper-airplane",
+            //   href: "/dashboard",
+            // },
           ].map((item, index) => (
             <Link
               href={item.href}
@@ -101,7 +108,7 @@ const ProfileInfo = ({ user }: { user: User }) => {
           className="flex items-center gap-2 text-sm font-medium text-default-600 capitalize my-1 px-3 dark:hover:bg-background cursor-pointer"
         >
           <Icon icon="heroicons:power" className="w-4 h-4" />
-          Log out
+          تسجيل الخروج
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
