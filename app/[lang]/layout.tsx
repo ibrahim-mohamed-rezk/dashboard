@@ -1,5 +1,6 @@
 import "../assets/scss/globals.scss";
 import "../assets/scss/theme.scss";
+import "./globals.css";
 import { siteConfig } from "@/config/site";
 import Providers from "@/provider/providers";
 import "simplebar-react/dist/simplebar.min.css";

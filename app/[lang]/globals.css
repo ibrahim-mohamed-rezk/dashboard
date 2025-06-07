@@ -1,0 +1,8 @@
+html[dir="rtl"] input, html[dir="rtl"] text{
+    direction: rtl !important;
+}
+
+html[dir="rtl"] label{
+    direction: rtl !important;
+    text-align: start !important;
+}

@@ -8,13 +8,13 @@ const Overview = async ({
 }: {
   params: Promise<{ teacherId: string }>;
 }) => {
-  const { teacherId } = await params;
+  const paramsData = await params;
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
   const feachData = async () => {
     try {
       const response = await getData(
-        `teachers/${teacherId}`,
+        `teachers/${paramsData.teacherId}`,
         {},
         {
           Authorization: `Bearer ${token}`,
@@ -30,7 +30,7 @@ const Overview = async ({
 
   return (
     <>
-      <Header user={user?.user} teacherId={teacherId} />
+      <Header user={user?.user} teacherId={paramsData.teacherId} />
       <div className="py-5">
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">

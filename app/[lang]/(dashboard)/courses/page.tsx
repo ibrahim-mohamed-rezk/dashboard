@@ -49,6 +49,7 @@ import { useEffect, useState } from "react";
 import axios, { AxiosHeaders } from "axios";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 function generateSlug(title: string): string {
   // Convert title to lowercase and replace spaces with hyphens
@@ -303,7 +304,13 @@ function CoursesTable() {
     {
       accessorKey: "title",
       header: "العنوان",
-      cell: ({ row }) => row.getValue("title"),
+      cell: ({ row }) => {
+        return (
+          <Link href={`/courses/${row.original.id}`} className="lowercase whitespace-nowrap">
+            {row.original.title}
+          </Link>
+        );
+      },
     },
     {
       accessorKey: "cour_no",
@@ -322,7 +329,7 @@ function CoursesTable() {
     },
     {
       accessorKey: "cover",
-      header: "الغطاء",
+      header: "الغلاف",
       cell: ({ row }) => {
         const imageUrl: string = row.getValue("cover") || DEFAULT_IMAGE;
         return (

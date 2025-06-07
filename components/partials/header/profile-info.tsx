@@ -71,14 +71,7 @@ const ProfileInfo = ({ user }: { user: User }) => {
             {
               name: "الملف الشخصي",
               icon: "heroicons:user",
-              href:
-                user.role === "student"
-                  ? "/student-profile"
-                  : user.role === "teacher"
-                  ? "/teacher-profile"
-                  : user.role === "admin"
-                  ? "/user-profile"
-                  : "",
+              href: "/user-profile",
             },
             // {
             //   name: "Billing",
