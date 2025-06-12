@@ -9,7 +9,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -22,75 +21,24 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useEffect, useState } from "react";
-import { deleteData, getData, postData } from "@/lib/axios/server";
+import { getData, postData } from "@/lib/axios/server";
 import axios from "axios";
-import Link from "next/link";
-import { SubjectsData } from "@/lib/type";
-import { Upload, X } from "lucide-react";
-import { toast } from "react-hot-toast";
-
-interface User {
-  id: number;
-  user: {
-    id: number;
-    avatar: string;
-    role: string;
-    full_name: string;
-    phone: string;
-    email: string;
-  } | null;
-  level_id: number;
-  stu_no: string;
-  governorate_id: number;
-  area_id: number;
-  school_name: string;
-  father_phone: string;
-  status: string;
-}
-
-type FormData = {
-  full_name: string;
-  email: string;
-  phone: string;
-  role: string;
-  password: string;
-  subject_id?: string;
-  cover: string | File | null;
-  avatar: string | File | null;
-};
-
-const DEFAULT_IMAGE = "https://via.placeholder.com/150x150";
+import { StudentTypes } from "@/lib/type";
 
 function BasicDataTable() {
-  const [data, setData] = useState<User[]>([]);
-  const [subjects, setSubjects] = useState<SubjectsData[]>([]);
+  const [data, setData] = useState<StudentTypes[]>([]);
   const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<FormData>({
-    full_name: "",
-    email: "",
-    phone: "",
-    role: "teacher",
-    cover: "",
-    password: "",
-    avatar: "",
-  });
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // refetch users
   const refetchUsers = async () => {
@@ -126,31 +74,43 @@ function BasicDataTable() {
     feachData();
   });
 
+  // Function to generate student code
+  const generateStudentCode = async () => {
+    try {
+      const response = await postData(
+        "students/generate-code",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setGeneratedCode(response.code);
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error("Error generating student code:", error);
+    }
+  };
+
   // columns of table
-  const columns: ColumnDef<User>[] = [
+  const columns: ColumnDef<StudentTypes>[] = [
     {
       accessorKey: "full_name",
       header: "الاسم الكامل",
       cell: ({ row }) => {
         const user = row.original;
         return (
-          <Link
-            href={"/teacher-profile/" + user.id}
-            className="flex items-center gap-3"
-          >
+          <div className="flex items-center gap-3">
             <Avatar className="rounded-full">
-              <AvatarFallback>
-                {user.user?.full_name?.[0] ?? "?"}
-              </AvatarFallback>
+              <AvatarFallback>{user.user?.avatar}</AvatarFallback>
             </Avatar>
-            <span>{user.user?.full_name ?? "N/A"}</span>
-          </Link>
+            <span>{user.user?.name ?? "N/A"}</span>
+          </div>
         );
       },
     },
     {
       accessorKey: "stu_no",
-      header: "رقم الطالب",
+      header: "كود الطالب",
       cell: ({ row }) => <div>{row.original.stu_no}</div>,
     },
     {
@@ -209,19 +169,46 @@ function BasicDataTable() {
 
   return (
     <>
-      <div className=" flex items-center gap-2 px-4 mb-4">
-        {/* search input */}
-        <Input
-          placeholder="Filter by name..."
-          value={
-            (table.getColumn("full_name")?.getFilterValue() as string) || ""
-          }
-          onChange={(event) =>
-            table.getColumn("full_name")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm min-w-[200px] h-10"
-        />
+      <div className="flex items-center justify-between gap-2 px-4 mb-4">
+        <div className="flex items-center gap-2">
+          {/* search input */}
+          <Input
+            placeholder="Filter by name..."
+            value={
+              (table.getColumn("full_name")?.getFilterValue() as string) || ""
+            }
+            onChange={(event) =>
+              table.getColumn("full_name")?.setFilterValue(event.target.value)
+            }
+            className="max-w-sm min-w-[200px] h-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={generateStudentCode}
+            variant="outline"
+            className="h-10"
+          >
+            إنشاء كود طالب
+          </Button>
+        </div>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>كود الطالب </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="text-center text-2xl font-bold tracking-wider">
+              {generatedCode}
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-2">
+              يرجى حفظ هذا الكود. لن يتم عرضه مرة أخرى.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* users table */}
       <div className="overflow-x-auto">

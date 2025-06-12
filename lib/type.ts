@@ -62,12 +62,20 @@ export interface Module {
 
 export interface Teacher {
   id: number;
-  full_name: string;
-  avatar: string;
-  phone: string;
-  gender: string | null;
-  email: string;
-  role: string;
+  user: {
+    id: number;
+    full_name: string;
+    avatar: string;
+    phone: string;
+    gender: string | null;
+    email: string;
+    role: string;
+  };
+  tech_no: string;
+  subject: string;
+  description: string | null;
+  about: string | null;
+  cover: string;
   modules: Module[];
 }
 
@@ -131,4 +139,37 @@ export interface CoursesData {
   position?: string;
   slug?: string;
   modules: CoursModules[];
+}
+
+export interface StudentTypes {
+  id: number;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    avatar?: string;
+  } | null;
+  level_id: number;
+  stu_no: string;
+  governorate_id: number;
+  area_id: number;
+  school_name: string;
+  father_phone: string;
+  status: "active" | "inactive";
+}
+
+
+
+export interface AdminTypes {
+  id: number;
+  full_name: string;
+  avatar: string;
+  phone: string;
+  gender: string | null;
+  email: string;
+  role: string;
+  teachers: Teacher[];
+  modules: Module[];
 }
