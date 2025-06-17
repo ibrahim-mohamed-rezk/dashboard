@@ -27,22 +27,29 @@ const UsersDataTable = ({ users }: UsersDataTableProps) => {
         <Table className="border border-default-200">
           <TableHeader>
             <TableRow className="border-b border-default-200">
-              <TableHead className="text-sm h-10 font-medium text-default-800">Top Countries</TableHead>
-              <TableHead className="text-sm h-10 font-medium text-default-800 text-right">Users</TableHead>
+              <TableHead className="text-sm h-10 font-medium text-default-800 text-right">
+                نوع المستخدم
+              </TableHead>
+              <TableHead className="text-sm h-10 font-medium text-default-800 !text-right">
+                المستخدمين
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((item) => (
               <TableRow key={item.id} className="border-b border-default-200">
-                <TableCell className="text-xs text-default-600 py-2">{item.country}</TableCell>
-                <TableCell className="text-xs text-default-600 text-right pr-6 py-2">{item.count}</TableCell>
+                <TableCell className="text-xs text-default-600 py-2 text-right">
+                  {item.country}
+                </TableCell>
+                <TableCell className="text-xs text-default-600 !text-right py-2">
+                  {item.count}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </ScrollArea>
     </div>
-
   );
 };
 

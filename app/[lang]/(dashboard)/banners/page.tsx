@@ -71,52 +71,56 @@ function BannerTable() {
   const columns: ColumnDef<Banner>[] = [
     {
       accessorKey: "image",
-      header: "صوره",
+      header: "الصورة",
       cell: ({ row }) => {
         const banner = row.original;
         return (
           <Avatar className="rounded-md w-24 h-24">
             <AvatarImage
               src={banner.image || DEFAULT_IMAGE}
-              alt="Banner"
+              alt="بانر"
               onError={(e) => {
                 e.currentTarget.onerror = null;
                 e.currentTarget.src = DEFAULT_IMAGE;
               }}
             />
-            <AvatarFallback>Img</AvatarFallback>
+            <AvatarFallback>صورة</AvatarFallback>
           </Avatar>
         );
       },
     },
     {
       accessorKey: "status",
-      header: "موضوع",
+      header: "الحالة",
       cell: ({ row }) => (
         <Badge variant="outline" className="capitalize">
-          {row.getValue("status")}
+          {row.getValue("status") === "banner"
+            ? "بانر"
+            : row.getValue("status")}
         </Badge>
       ),
     },
     {
       accessorKey: "type",
-      header: "نوع",
+      header: "النوع",
       cell: ({ row }) => (
         <Badge variant="outline" className="capitalize">
-          {row.getValue("type")}
+          {row.getValue("type") === "online" ? "اونلاين" : "اوفلاين"}
         </Badge>
       ),
     },
     {
       accessorKey: "teacher",
-      header: "مدرس",
+      header: "المدرس",
       cell: ({ row }) => (
-        <div>{row.getValue("teacher") ? row.getValue("teacher") : "N/A"}</div>
+        <div>
+          {row.getValue("teacher") ? row.getValue("teacher") : "غير محدد"}
+        </div>
       ),
     },
     {
       id: "actions",
-      header: "Actions",
+      header: "الإجراءات",
       cell: ({ row }) => {
         const banner = row.original;
         return (
@@ -126,7 +130,7 @@ function BannerTable() {
               size="sm"
               onClick={() => handleEdit(banner)}
             >
-              Edit
+              تعديل
             </Button>
             <Button
               variant="outline"
@@ -134,7 +138,7 @@ function BannerTable() {
               className="bg-red-500 hover:bg-red-600 text-white"
               onClick={() => handleDelete(banner.id)}
             >
-              Delete
+              حذف
             </Button>
           </div>
         );
@@ -225,21 +229,22 @@ function BannerTable() {
       formDataToSend.append("image", formData.image);
       formDataToSend.append("type", formData.type);
       formDataToSend.append("status", "banner");
-      formDataToSend.append("_method", "PUT");
       if (formData.teacher) {
         formDataToSend.append("teacher", formData.teacher);
       }
 
       if (editingBanner) {
+        formDataToSend.append("_method", "PUT");
+
         await postData(`banners/${editingBanner.id}`, formDataToSend, {
           Authorization: `Bearer ${token}`,
         });
-        toast.success("Banner updated successfully!");
+        toast.success("تم تحديث البانر بنجاح!");
       } else {
         await postData("banners", formDataToSend, {
           Authorization: `Bearer ${token}`,
         });
-        toast.success("Banner added successfully!");
+        toast.success("تم إضافة البانر بنجاح!");
       }
 
       fetchBanners();
@@ -249,7 +254,7 @@ function BannerTable() {
       setIsEditDialogOpen(false);
     } catch (error) {
       toast.error(
-        editingBanner ? "Failed to update banner." : "Failed to add banner."
+        editingBanner ? "فشل في تحديث البانر." : "فشل في إضافة البانر."
       );
     }
   };
@@ -259,7 +264,7 @@ function BannerTable() {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         // 5MB limit
-        toast.error("Image size should be less than 5MB");
+        toast.error("يجب أن يكون حجم الصورة أقل من 5 ميجابايت");
         return;
       }
       setValue("image", file);
@@ -286,10 +291,10 @@ function BannerTable() {
       await deleteData(`banners/${bannerId}`, {
         Authorization: `Bearer ${token}`,
       });
-      toast.success("Banner deleted successfully!");
+      toast.success("تم حذف البانر بنجاح!");
       fetchBanners();
     } catch (error) {
-      toast.error("Failed to delete banner.");
+      toast.error("فشل في حذف البانر.");
     }
   };
 
@@ -314,7 +319,7 @@ function BannerTable() {
     <>
       <div className="flex items-center gap-2 px-4 mb-4">
         <Input
-          placeholder="Search banners..."
+          placeholder="البحث في البانرات..."
           value={globalFilter ?? ""}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="max-w-sm min-w-[200px] h-10"
@@ -329,13 +334,13 @@ function BannerTable() {
                 setImagePreview(null);
               }}
             >
-              Add Banner
+              إضافة بانر
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingBanner ? "Edit Banner" : "Add Banner"}
+                {editingBanner ? "تعديل البانر" : "إضافة بانر"}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)}>
@@ -350,7 +355,7 @@ function BannerTable() {
                   {imagePreview && (
                     <img
                       src={imagePreview}
-                      alt="Preview"
+                      alt="معاينة"
                       className="mt-2 w-32 h-32 object-cover rounded"
                     />
                   )}
@@ -364,15 +369,15 @@ function BannerTable() {
                   {...register("type")}
                   className="w-full p-2 border rounded"
                 >
-                  <option value="online">Online</option>
-                  <option value="offline">Offline</option>
+                  <option value="online">اونلاين</option>
+                  <option value="offline">اوفلاين</option>
                 </select>
                 {watchType === "offline" && (
                   <select
                     {...register("teacher")}
                     className="w-full p-2 border rounded"
                   >
-                    <option value="">Select Teacher</option>
+                    <option value="">اختر المدرس</option>
                     {teachers.map((teacher) => (
                       <option key={teacher.id} value={teacher.id}>
                         {teacher.user.full_name}
@@ -382,7 +387,7 @@ function BannerTable() {
                 )}
               </div>
               <Button type="submit" className="mt-4 w-full">
-                {editingBanner ? "Update" : "Submit"}
+                {editingBanner ? "تحديث" : "إرسال"}
               </Button>
               <DialogClose asChild>
                 <Button
@@ -394,7 +399,7 @@ function BannerTable() {
                     setImagePreview(null);
                   }}
                 >
-                  Cancel
+                  إلغاء
                 </Button>
               </DialogClose>
             </form>
@@ -437,7 +442,7 @@ function BannerTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-center">
-                  No banners found.
+                  لم يتم العثور على بانرات.
                 </TableCell>
               </TableRow>
             )}

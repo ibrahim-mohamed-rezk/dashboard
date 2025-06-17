@@ -184,3 +184,115 @@ export interface SubscriptionCodeTypes {
   updated_at: string;
   created_at: string;
 }
+
+
+export interface Statistics {
+  students: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  teachers: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  modules: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  subjects: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  courses: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  exams: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  videos: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  books: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  blogs: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  purchases: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  cobons: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  users: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+}
