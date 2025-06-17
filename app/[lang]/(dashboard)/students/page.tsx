@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,17 +28,47 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Copy } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
-import axios from "axios";
-import { StudentTypes } from "@/lib/type";
+import axios, { AxiosHeaders } from "axios";
+import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
+import toast from "react-hot-toast";
 
 function BasicDataTable() {
   const [data, setData] = useState<StudentTypes[]>([]);
   const [token, setToken] = useState("");
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [generatedCode, setGeneratedCode] = useState<
+    SubscriptionCodeTypes[] | null
+  >(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTeacherSelectOpen, setIsTeacherSelectOpen] = useState(false);
+
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+
+  const copyToClipboard = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success("تم نسخ الكود بنجاح");
+  };
+
+  // Fetch teachers for admin
+  const fetchTeachers = async () => {
+    if (user?.role !== "admin") return;
+    try {
+      const response = await getData(
+        "teachers",
+        {},
+        new AxiosHeaders({
+          Authorization: `Bearer ${token}`,
+        })
+      );
+      setTeachers(response);
+    } catch (error) {
+      console.log("Failed to fetch teachers");
+    }
+  };
 
   // refetch users
   const refetchUsers = async () => {
@@ -66,25 +96,58 @@ function BasicDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
+        if (userData.role === "admin") {
+          fetchTeachers();
+        }
       } catch (error) {
         throw error;
       }
     };
 
     feachData();
-  });
+  }, [token]);
 
   // Function to generate student code
   const generateStudentCode = async () => {
+    if (user?.role === "admin") {
+      setIsTeacherSelectOpen(true);
+      return;
+    }
+
     try {
       const response = await postData(
-        "students/generate-code",
-        {},
+        "subscription_codes",
+        {
+          count: 1,
+          teacher_id: user?.id,
+        },
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setGeneratedCode(response.code);
+      setGeneratedCode(response.data);
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error("Error generating student code:", error);
+    }
+  };
+
+  const handleTeacherSelect = async (teacherId: number) => {
+    try {
+      const response = await postData(
+        "subscription_codes",
+        {
+          count: 1,
+          teacher_id: teacherId,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setGeneratedCode(response.data);
+      setIsTeacherSelectOpen(false);
       setIsDialogOpen(true);
     } catch (error) {
       console.error("Error generating student code:", error);
@@ -200,12 +263,48 @@ function BasicDataTable() {
             <DialogTitle>كود الطالب </DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <div className="text-center text-2xl font-bold tracking-wider">
-              {generatedCode}
-            </div>
+            {generatedCode?.map((code) => (
+              <div
+                key={code.id}
+                className="flex items-center justify-center gap-2 mb-2"
+              >
+                <div className="text-center text-2xl font-bold tracking-wider">
+                  {code.code}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => copyToClipboard(code.code)}
+                  className="h-8 w-8"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
             <p className="text-center text-sm text-muted-foreground mt-2">
               يرجى حفظ هذا الكود. لن يتم عرضه مرة أخرى.
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTeacherSelectOpen} onOpenChange={setIsTeacherSelectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>اختر المعلم</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <select
+              className="w-full p-2 border rounded-md"
+              onChange={(e) => handleTeacherSelect(Number(e.target.value))}
+            >
+              <option value="">اختر المعلم</option>
+              {teachers.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher?.user.full_name}
+                </option>
+              ))}
+            </select>
           </div>
         </DialogContent>
       </Dialog>

@@ -160,8 +160,6 @@ export interface StudentTypes {
   status: "active" | "inactive";
 }
 
-
-
 export interface AdminTypes {
   id: number;
   full_name: string;
@@ -172,4 +170,17 @@ export interface AdminTypes {
   role: string;
   teachers: Teacher[];
   modules: Module[];
+}
+
+export interface SubscriptionCodeTypes {
+  id: number;
+  student_id: number | null;
+  teacher_id: string;
+  code: string;
+  valid_from: string;
+  valid_to: string;
+  is_used: boolean;
+  status: string;
+  updated_at: string;
+  created_at: string;
 }

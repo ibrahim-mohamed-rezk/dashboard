@@ -59,6 +59,7 @@ const CourseModules = ({
     questions_count: 0,
     duration: 0,
     passing_score: 0,
+    exam_image: null as File | null,
     questions: [] as {
       question: string;
       options: { answer: string; is_correct: boolean }[];
@@ -176,6 +177,15 @@ const CourseModules = ({
     }
   };
 
+  const handleExamImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewModuleForm({
+        ...newModuleForm,
+        exam_image: e.target.files[0],
+      });
+    }
+  };
+
   console.log(modules);
 
   const handleAddModule = async () => {
@@ -196,16 +206,41 @@ const CourseModules = ({
         }
         endpoint = "videos";
       } else if (newModuleForm.type === "quiz") {
+        formData.append("title", newModuleForm.title);
+        formData.append("examtable_id", courseId);
+        formData.append("examtable_type", "course");
         formData.append(
           "questions_count",
           newModuleForm.questions_count.toString()
         );
-        formData.append("duration", newModuleForm.duration.toString());
-        formData.append(
-          "passing_score",
-          newModuleForm.passing_score.toString()
-        );
-        formData.append("questions", JSON.stringify(newModuleForm.questions));
+
+        newModuleForm.questions.forEach((question, index) => {
+          const questionNumber = index + 1;
+          formData.append(
+            `questions[${questionNumber}][question]`,
+            question.question
+          );
+
+          question.options.forEach((option, optIndex) => {
+            formData.append(
+              `questions[${questionNumber}][${optIndex + 1}]`,
+              option.answer
+            );
+          });
+
+          const correctAnswerIndex = question.options.findIndex(
+            (opt) => opt.is_correct
+          );
+          formData.append(
+            `questions[${questionNumber}][answer]`,
+            (correctAnswerIndex + 1).toString()
+          );
+        });
+
+        if (newModuleForm.exam_image) {
+          formData.append("image", newModuleForm.exam_image);
+        }
+
         endpoint = "exams";
       }
 
@@ -225,6 +260,7 @@ const CourseModules = ({
         questions_count: 0,
         duration: 0,
         passing_score: 0,
+        exam_image: null,
         questions: [],
       });
       toast.success("تم إضافة الدرس بنجاح");
@@ -752,6 +788,22 @@ const CourseModules = ({
               </>
             ) : (
               <>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    صورة الاختبار
+                  </label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleExamImageChange}
+                    className="cursor-pointer"
+                  />
+                  {newModuleForm.exam_image && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      تم اختيار: {newModuleForm.exam_image.name}
+                    </p>
+                  )}
+                </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     عدد الأسئلة
