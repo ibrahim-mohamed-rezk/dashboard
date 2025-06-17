@@ -7,16 +7,17 @@ import { cookies } from "next/headers";
 const Dashboard = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) => {
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
 
   const feachData = async () => {
     try {
-      const startDate = searchParams.start_date || "2025-02-01";
-      const endDate = searchParams.end_date || "2025-06-01";
-      const filterBy = searchParams.filter_by || "month";
+      const params = await searchParams;
+      const startDate = params.start_date || "2025-02-01";
+      const endDate = params.end_date || "2025-06-01";
+      const filterBy = params.filter_by || "month";
 
       const response = await getData(
         `statistics?start_date=${startDate}&end_date=${endDate}&filter_by=${filterBy}`,
