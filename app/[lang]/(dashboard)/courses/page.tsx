@@ -15,10 +15,8 @@ import {
 
 import {
   MoreHorizontal,
-  Upload,
   X,
   Search,
-  Filter,
   Download,
   Plus,
   Eye,
@@ -104,6 +102,9 @@ interface Course {
   subject_id: number;
   meta_description?: string;
   meta_keywords?: string;
+  is_purchased?: boolean;
+  is_favorite?: boolean;
+  modules?: any[];
 }
 
 interface Level {
@@ -124,6 +125,34 @@ interface FormData {
   meta_keywords: string;
   status: string;
   price: string;
+}
+
+interface PaginationMeta {
+  current_page: number;
+  from: number;
+  last_page: number;
+  links: {
+    url: string | null;
+    label: string;
+    active: boolean;
+  }[];
+  path: string;
+  per_page: number;
+  to: number;
+  total: number;
+}
+
+interface PaginationLinks {
+  first: string;
+  last: string;
+  prev: string | null;
+  next: string | null;
+}
+
+interface ApiResponse {
+  data: Course[];
+  links: PaginationLinks;
+  meta: PaginationMeta;
 }
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/150";
@@ -160,9 +189,13 @@ function CoursesTable() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [positionFilter, setPositionFilter] = useState("all");
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+    null
+  );
+  const [paginationLinks, setPaginationLinks] =
+    useState<PaginationLinks | null>(null);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -276,18 +309,21 @@ function CoursesTable() {
   }, [userRole, userId]);
 
   // fetch courses form api
-  const fetchData = async () => {
+  const fetchData = async (page: number = 1) => {
     if (!token) return;
     setIsLoading(true);
     try {
       const response = await getData(
-        "/courses",
+        `/courses?page=${page}`,
         {},
         new AxiosHeaders({
           Authorization: `Bearer ${token}`,
         })
       );
-      setData(response.data);
+      const apiResponse = response as ApiResponse;
+      setData(apiResponse.data);
+      setPaginationMeta(apiResponse.meta);
+      setPaginationLinks(apiResponse.links);
     } catch (error) {
       toast.error("Failed to fetch courses");
     } finally {
@@ -458,8 +494,6 @@ function CoursesTable() {
 
   const filteredData = useMemo(() => {
     return data.filter((course) => {
-      const matchesStatus =
-        statusFilter === "all" || course.status === statusFilter;
       const matchesType = typeFilter === "all" || course.type === typeFilter;
       const matchesPosition =
         positionFilter === "all" || course.position === positionFilter;
@@ -469,9 +503,9 @@ function CoursesTable() {
         course.subject.toLowerCase().includes(globalFilter.toLowerCase()) ||
         course.level.toLowerCase().includes(globalFilter.toLowerCase());
 
-      return matchesStatus && matchesType && matchesPosition && matchesGlobal;
+      return matchesType && matchesPosition && matchesGlobal;
     });
-  }, [data, statusFilter, typeFilter, positionFilter, globalFilter]);
+  }, [data, typeFilter, positionFilter, globalFilter]);
 
   const columns: ColumnDef<Course>[] = [
     {
@@ -546,11 +580,6 @@ function CoursesTable() {
           ? "أوفلاين"
           : "غير محدد";
       },
-    },
-    {
-      accessorKey: "status",
-      header: "الحالة",
-      cell: ({ row }) => getStatusBadge(row.getValue("status")),
     },
     {
       accessorKey: "cover",
@@ -928,18 +957,6 @@ function CoursesTable() {
             />
           </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="الحالة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الحالات</SelectItem>
-              <SelectItem value="active">نشط</SelectItem>
-              <SelectItem value="inactive">غير نشط</SelectItem>
-              <SelectItem value="draft">مسودة</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="النوع" />
@@ -1129,16 +1146,15 @@ function CoursesTable() {
       <div className="flex items-center justify-between text-sm text-gray-600">
         <div>
           عرض {filteredData.length} من {data.length} كورس
-          {(statusFilter !== "all" ||
-            typeFilter !== "all" ||
+          {(typeFilter !== "all" ||
             positionFilter !== "all" ||
             globalFilter) && <span className="text-blue-600"> (مفلتر)</span>}
         </div>
         <div className="flex items-center gap-2">
           <span>الصفحة</span>
           <span className="font-medium">
-            {table.getState().pagination.pageIndex + 1} من{" "}
-            {table.getPageCount()}
+            {paginationMeta?.current_page || 1} من{" "}
+            {paginationMeta?.last_page || 1}
           </span>
         </div>
       </div>
@@ -1317,39 +1333,61 @@ function CoursesTable() {
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">الصفوف في الصفحة</p>
-          <Select
-            value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(value) => {
-              table.setPageSize(Number(value));
-            }}
-          >
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => {
+              if (
+                paginationMeta?.current_page &&
+                paginationMeta.current_page > 1
+              ) {
+                fetchData(paginationMeta.current_page - 1);
+              }
+            }}
+            disabled={!paginationLinks?.prev}
           >
             السابق
           </Button>
+          <div className="flex items-center gap-1">
+            {paginationMeta?.links.map((link, index) => {
+              if (
+                link.label === "&laquo; Previous" ||
+                link.label === "Next &raquo;"
+              ) {
+                return null;
+              }
+              return (
+                <Button
+                  key={index}
+                  variant={link.active ? "soft" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (link.url) {
+                      const page = new URL(link.url).searchParams.get("page");
+                      if (page) {
+                        fetchData(parseInt(page));
+                      }
+                    }
+                  }}
+                  disabled={!link.url}
+                >
+                  {link.label}
+                </Button>
+              );
+            })}
+          </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => {
+              if (
+                paginationMeta?.current_page &&
+                paginationMeta.current_page < paginationMeta.last_page
+              ) {
+                fetchData(paginationMeta.current_page + 1);
+              }
+            }}
+            disabled={!paginationLinks?.next}
           >
             التالي
           </Button>

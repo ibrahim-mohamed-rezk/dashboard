@@ -51,6 +51,12 @@ function BasicDataTable() {
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 15,
+    total: 0,
+    lastPage: 1,
+  });
 
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -79,12 +85,20 @@ function BasicDataTable() {
     try {
       const response = await getData(
         "students",
-        {},
+        {
+          page: pagination.pageIndex + 1,
+          per_page: pagination.pageSize,
+        },
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response);
+      setData(response.data);
+      setPagination((prev) => ({
+        ...prev,
+        total: response.meta.total,
+        lastPage: response.meta.last_page,
+      }));
     } catch (error) {
       console.log(error);
     }
@@ -92,7 +106,7 @@ function BasicDataTable() {
   // feach users from api
   useEffect(() => {
     refetchUsers();
-  }, [token]);
+  }, [pagination.pageIndex, pagination.pageSize, token]);
 
   // get token from next api
   useEffect(() => {
@@ -300,6 +314,26 @@ function BasicDataTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    pageCount: pagination.lastPage,
+    state: {
+      pagination: {
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
+      },
+    },
+    onPaginationChange: (updater) => {
+      if (typeof updater === "function") {
+        const newState = updater({
+          pageIndex: pagination.pageIndex,
+          pageSize: pagination.pageSize,
+        });
+        setPagination((prev) => ({
+          ...prev,
+          pageIndex: newState.pageIndex,
+        }));
+      }
+    },
   });
 
   return (
@@ -453,6 +487,56 @@ function BasicDataTable() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-center py-6">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="h-9 px-4 font-medium"
+          >
+            السابق
+          </Button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center gap-2">
+            {Array.from({ length: pagination.lastPage }, (_, i) => i + 1).map(
+              (pageNumber) => (
+                <Button
+                  key={pageNumber}
+                  variant={
+                    pageNumber === table.getState().pagination.pageIndex + 1
+                      ? "soft"
+                      : "outline"
+                  }
+                  size="sm"
+                  onClick={() => table.setPageIndex(pageNumber - 1)}
+                  className={`w-9 h-9 font-medium transition-all duration-200 ${
+                    pageNumber === table.getState().pagination.pageIndex + 1
+                      ? "scale-110"
+                      : "hover:scale-105"
+                  }`}
+                >
+                  {pageNumber}
+                </Button>
+              )
+            )}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="h-9 px-4 font-medium"
+          >
+            التالي
+          </Button>
+        </div>
       </div>
     </>
   );

@@ -32,6 +32,28 @@ interface Blog {
   updated_at?: string;
 }
 
+interface PaginationMeta {
+  current_page: number;
+  from: number;
+  last_page: number;
+  per_page: number;
+  to: number;
+  total: number;
+}
+
+interface PaginationLinks {
+  first: string;
+  last: string;
+  prev: string | null;
+  next: string | null;
+}
+
+interface ApiResponse {
+  data: Blog[];
+  links: PaginationLinks;
+  meta: PaginationMeta;
+}
+
 interface FormData {
   title: string;
   description: string;
@@ -256,7 +278,10 @@ function BlogTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [blogToDelete, setBlogToDelete] = useState<Blog | null>(null);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -580,19 +605,22 @@ function BlogTable() {
     setLoading(true);
     try {
       const response = await getData(
-        "blogs",
+        `blogs?page=${currentPage}&per_page=${pageSize}`,
         {},
         new AxiosHeaders({
           Authorization: `Bearer ${token}`,
         })
       );
-      setData(response.data);
+      const apiResponse = response as ApiResponse;
+      setData(apiResponse.data);
+      setTotalPages(apiResponse.meta.last_page);
+      setTotalItems(apiResponse.meta.total);
     } catch (error) {
       toast.error("Failed to fetch blogs");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, currentPage, pageSize]);
 
   useEffect(() => {
     fetchData();
@@ -714,45 +742,43 @@ function BlogTable() {
         <div className="flex items-center justify-between px-2 py-4">
           <div className="text-sm text-gray-700">
             <span>
-              عرض {table.getState().pagination.pageIndex * pageSize + 1} إلى{" "}
-              {Math.min(
-                (table.getState().pagination.pageIndex + 1) * pageSize,
-                data.length
-              )}{" "}
-              من {data.length} مقال
+              عرض {(currentPage - 1) * pageSize + 1} إلى{" "}
+              {Math.min(currentPage * pageSize, totalItems)} من {totalItems}{" "}
+              مقال
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
               className="px-3 py-1 border rounded-lg disabled:opacity-50"
             >
               السابق
             </button>
 
             <div className="flex items-center gap-1">
-              {Array.from({ length: table.getPageCount() }, (_, i) => (
+              {Array.from({ length: totalPages }, (_, i) => (
                 <button
                   key={i}
-                  onClick={() => table.setPageIndex(i)}
-                  className="w-8 h-8 border rounded-lg"
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-8 h-8 border rounded-lg ${
+                    currentPage === i + 1 ? "bg-blue-500 text-white" : ""
+                  }`}
                 >
                   {i + 1}
                 </button>
               )).slice(
-                Math.max(0, table.getState().pagination.pageIndex - 2),
-                Math.min(
-                  table.getPageCount(),
-                  table.getState().pagination.pageIndex + 3
-                )
+                Math.max(0, currentPage - 3),
+                Math.min(totalPages, currentPage + 2)
               )}
             </div>
 
             <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
+              disabled={currentPage === totalPages}
               className="px-3 py-1 border rounded-lg disabled:opacity-50"
             >
               التالي
