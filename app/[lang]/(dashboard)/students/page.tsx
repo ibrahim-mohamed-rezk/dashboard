@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Copy } from "lucide-react";
+import { Copy, Printer } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
@@ -44,6 +44,10 @@ function BasicDataTable() {
   >(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTeacherSelectOpen, setIsTeacherSelectOpen] = useState(false);
+  const [codeCount, setCodeCount] = useState<string | number | null>(1);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(
+    null
+  );
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -120,7 +124,7 @@ function BasicDataTable() {
       const response = await postData(
         "subscription_codes",
         {
-          count: 1,
+          count: codeCount,
           teacher_id: user?.id,
         },
         {
@@ -135,12 +139,18 @@ function BasicDataTable() {
   };
 
   const handleTeacherSelect = async (teacherId: number) => {
+    setSelectedTeacherId(teacherId);
+  };
+
+  const handleGenerateCodes = async () => {
+    if (!selectedTeacherId) return;
+
     try {
       const response = await postData(
         "subscription_codes",
         {
-          count: 1,
-          teacher_id: teacherId,
+          count: codeCount,
+          teacher_id: selectedTeacherId,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -149,9 +159,71 @@ function BasicDataTable() {
       setGeneratedCode(response.data);
       setIsTeacherSelectOpen(false);
       setIsDialogOpen(true);
+      setSelectedTeacherId(null);
     } catch (error) {
       console.error("Error generating student code:", error);
     }
+  };
+
+  const printCodes = () => {
+    if (!generatedCode) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+        <head>
+          <title>Student Codes</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 20px;
+              text-align: center;
+            }
+            .codes-container {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .code {
+              font-size: 24px;
+              padding: 15px;
+              border: 1px solid #ccc;
+              border-radius: 4px;
+              background-color: #f9f9f9;
+            }
+            @media print {
+              .no-print {
+                display: none;
+              }
+              @page {
+                margin: 1cm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>أكواد الطلاب</h1>
+          <div class="codes-container">
+            ${generatedCode
+              .map(
+                (code) => `
+              <div class="code">${code.code}</div>
+            `
+              )
+              .join("")}
+          </div>
+          <div class="no-print">
+            <button style="margin-top: 20px;" onclick="window.print()">Print</button>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
   };
 
   // columns of table
@@ -281,6 +353,16 @@ function BasicDataTable() {
                 </Button>
               </div>
             ))}
+            <div className="flex justify-center mt-4">
+              <Button
+                onClick={printCodes}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                طباعة الأكواد
+              </Button>
+            </div>
             <p className="text-center text-sm text-muted-foreground mt-2">
               يرجى حفظ هذا الكود. لن يتم عرضه مرة أخرى.
             </p>
@@ -293,10 +375,11 @@ function BasicDataTable() {
           <DialogHeader>
             <DialogTitle>اختر المعلم</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 space-y-4">
             <select
               className="w-full p-2 border rounded-md"
               onChange={(e) => handleTeacherSelect(Number(e.target.value))}
+              value={selectedTeacherId || ""}
             >
               <option value="">اختر المعلم</option>
               {teachers.map((teacher) => (
@@ -305,6 +388,25 @@ function BasicDataTable() {
                 </option>
               ))}
             </select>
+            <div className="flex items-center gap-2">
+              <label className="text-sm">عدد الأكواد:</label>
+              <Input
+                type="number"
+                min="1"
+                value={codeCount as string}
+                onChange={(e) => {
+                  setCodeCount(e.target.value);
+                }}
+                className="w-20"
+              />
+            </div>
+            <Button
+              onClick={handleGenerateCodes}
+              disabled={!selectedTeacherId || !codeCount}
+              className="w-full"
+            >
+              إنشاء الأكواد
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
