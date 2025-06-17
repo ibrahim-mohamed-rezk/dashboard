@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
 import { User } from "@/lib/type";
-import {  File, UserIcon, Video } from "lucide-react";
+import { File, UserIcon, Video } from "lucide-react";
 import Image from "next/image";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -189,7 +189,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                     />
                   </li>
                 ))}
-                {user.role === "admin" && user.modules.map((item) => {
+                {user.modules.map((item) => {
                   if (item.access === false) return;
                   return (
                     <li className="mb-1.5 last:mb-0">
@@ -207,40 +207,33 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                     </li>
                   );
                 })}
-                {
-                  user.role === "teacher" && (
-                    <li className="mb-1.5 last:mb-0">
-                      <MenuItem
-                        childItem={{
-                          href: "/courses",
-                          title: "الكورسات",
-                          icon: Video,
-                        }}
-                        toggleNested={toggleNested}
-                        index={1}
-                        nestedIndex={nestedIndex}
-                        locationName={locationName}
-                      />
-                    </li>
-                  )
-                }
-                {
-                  user.role === "teacher" && (
-                    <li className="mb-1.5 last:mb-0">
-                      <MenuItem
-                        childItem={{
-                          href: "/students",
-                          title: "الطلاب",
-                          icon: UserIcon,
-                        }}
-                        toggleNested={toggleNested}
-                        index={1}
-                        nestedIndex={nestedIndex}
-                        locationName={locationName}
-                      />
-                    </li>
-                  )
-                }
+
+                <li className="mb-1.5 last:mb-0">
+                  <MenuItem
+                    childItem={{
+                      href: "/courses",
+                      title: "الكورسات",
+                      icon: Video,
+                    }}
+                    toggleNested={toggleNested}
+                    index={1}
+                    nestedIndex={nestedIndex}
+                    locationName={locationName}
+                  />
+                </li>
+                <li className="mb-1.5 last:mb-0">
+                  <MenuItem
+                    childItem={{
+                      href: "/students",
+                      title: "الطلاب",
+                      icon: UserIcon,
+                    }}
+                    toggleNested={toggleNested}
+                    index={1}
+                    nestedIndex={nestedIndex}
+                    locationName={locationName}
+                  />
+                </li>
               </ul>
             </div>
           </ScrollArea>
