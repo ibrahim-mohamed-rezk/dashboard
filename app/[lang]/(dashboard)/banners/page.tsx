@@ -242,7 +242,6 @@ function BannerTable() {
   const [user, setUser] = useState<User | null>(null);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [globalFilter, setGlobalFilter] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState<LoadingState>({
@@ -702,13 +701,6 @@ function BannerTable() {
       )}
 
       <div className="flex items-center gap-2 px-4 mb-4">
-        <Input
-          placeholder="البحث في البانرات..."
-          value={globalFilter ?? ""}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="max-w-sm min-w-[200px] h-10"
-          disabled={loading.banners}
-        />
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogTrigger asChild>
             <Button
