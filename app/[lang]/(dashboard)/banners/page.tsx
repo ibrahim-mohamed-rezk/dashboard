@@ -50,6 +50,7 @@ interface Banner {
   status: string;
   type: string;
   teacher: number | null;
+  teacher_id: number | null;
 }
 
 // Error state interface
@@ -583,8 +584,14 @@ function BannerTable() {
     try {
       setEditingBanner(banner);
       setValue("type", banner.type);
-      if (banner.teacher) {
-        setValue("teacher", banner.teacher.toString()); // Convert to string for select
+      // Set teacher value based on banner type and teacher
+      if (banner.type === "offline") {
+        setValue(
+          "teacher",
+          banner.teacher_id ? banner.teacher_id.toString() : ""
+        );
+      } else {
+        setValue("teacher", "");
       }
       setImagePreview(banner.image);
       setIsEditDialogOpen(true);
@@ -763,6 +770,7 @@ function BannerTable() {
                   <div>
                     <select
                       {...register("teacher")}
+                      defaultValue={editingBanner?.teacher?.toString() || ""}
                       className="w-full p-2 border rounded"
                       disabled={loading.submitting || loading.teachers}
                     >
