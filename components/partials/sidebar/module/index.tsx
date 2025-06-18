@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
 import { User } from "@/lib/type";
-import { File, UserIcon, Video, Image as ImageIcon, Code } from "lucide-react";
+import { File, UserIcon, Video, Image as ImageIcon, Code, UserCircle } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
   const menus = menusConfig?.sidebarNav?.modern || [];
@@ -196,6 +196,19 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       href: "/teachers",
                       title: "المعلمين",
                       icon: UserIcon,
+                    }}
+                    toggleNested={toggleNested}
+                    index={7}
+                    nestedIndex={nestedIndex}
+                    locationName={locationName}
+                  />
+                </li>
+                <li className="mb-1.5 last:mb-0">
+                  <MenuItem
+                    childItem={{
+                      href: "/admins",
+                      title: "الادمن",
+                      icon: UserCircle,
                     }}
                     toggleNested={toggleNested}
                     index={7}

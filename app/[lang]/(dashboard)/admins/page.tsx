@@ -129,8 +129,7 @@ function BasicDataTable() {
             Authorization: `Bearer ${token}`,
           }
         );
-        setTeachers(response);
-        console.log(response);
+        setTeachers(response.data);
       } catch (error) {
         console.log(error);
       }
