@@ -55,6 +55,26 @@ interface User {
   };
 }
 
+interface PaginationMeta {
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+interface PaginationLinks {
+  first: string;
+  last: string;
+  prev: string | null;
+  next: string | null;
+}
+
+interface ApiResponse {
+  data: User[];
+  meta: PaginationMeta;
+  links: PaginationLinks;
+}
+
 type FormData = {
   full_name: string;
   email: string;
@@ -75,6 +95,8 @@ function BasicDataTable() {
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
     email: "",
@@ -86,16 +108,18 @@ function BasicDataTable() {
   });
 
   // refetch users
-  const refetchUsers = async () => {
+  const refetchUsers = async (page: number = 1) => {
     try {
       const response = await getData(
-        "teachers",
+        `teachers?page=${page}`,
         {},
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response);
+      setData(response.data);
+      setTotalPages(response.meta.last_page);
+      setCurrentPage(response.meta.current_page);
     } catch (error) {
       console.log(error);
     }
@@ -225,8 +249,8 @@ function BasicDataTable() {
 
   // feach users from api
   useEffect(() => {
-    refetchUsers();
-  }, [token]);
+    refetchUsers(currentPage);
+  }, [token, currentPage]);
 
   // feach subjects from api
   useEffect(() => {
@@ -773,6 +797,52 @@ function BasicDataTable() {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-center py-6">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchUsers(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="h-9 px-4 font-medium"
+            >
+              السابق
+            </Button>
+
+            {/* Page Numbers */}
+            <div className="flex items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    variant={pageNumber === currentPage ? "soft" : "outline"}
+                    size="sm"
+                    onClick={() => refetchUsers(pageNumber)}
+                    className={`w-9 h-9 font-medium transition-all duration-200 ${
+                      pageNumber === currentPage
+                        ? "scale-110"
+                        : "hover:scale-105"
+                    }`}
+                  >
+                    {pageNumber}
+                  </Button>
+                )
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchUsers(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="h-9 px-4 font-medium"
+            >
+              التالي
+            </Button>
+          </div>
+        </div>
       </div>
     </>
   );

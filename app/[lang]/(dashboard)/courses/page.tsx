@@ -286,7 +286,7 @@ function CoursesTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setTeachers(response);
+      setTeachers(response.data);
     } catch (error) {
       toast.error("Failed to fetch teachers");
     }

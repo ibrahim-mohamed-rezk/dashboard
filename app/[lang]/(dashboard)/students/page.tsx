@@ -48,6 +48,8 @@ function BasicDataTable() {
   const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(
     null
   );
+  const [validFrom, setValidFrom] = useState<string>("");
+  const [validTo, setValidTo] = useState<string>("");
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -74,7 +76,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setTeachers(response);
+      setTeachers(response.data);
     } catch (error) {
       console.log("Failed to fetch teachers");
     }
@@ -140,6 +142,8 @@ function BasicDataTable() {
         {
           count: codeCount,
           teacher_id: user?.id,
+          valid_from: validFrom,
+          valid_to: validTo,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -165,6 +169,8 @@ function BasicDataTable() {
         {
           count: codeCount,
           teacher_id: selectedTeacherId,
+          valid_from: validFrom,
+          valid_to: validTo,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -174,6 +180,8 @@ function BasicDataTable() {
       setIsTeacherSelectOpen(false);
       setIsDialogOpen(true);
       setSelectedTeacherId(null);
+      setValidFrom("");
+      setValidTo("");
     } catch (error) {
       console.error("Error generating student code:", error);
     }
@@ -434,9 +442,31 @@ function BasicDataTable() {
                 className="w-20"
               />
             </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <label className="text-sm">تاريخ البداية:</label>
+                <Input
+                  type="date"
+                  value={validFrom}
+                  onChange={(e) => setValidFrom(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm">تاريخ النهاية:</label>
+                <Input
+                  type="date"
+                  value={validTo}
+                  onChange={(e) => setValidTo(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+            </div>
             <Button
               onClick={handleGenerateCodes}
-              disabled={!selectedTeacherId || !codeCount}
+              disabled={
+                !selectedTeacherId || !codeCount || !validFrom || !validTo
+              }
               className="w-full"
             >
               إنشاء الأكواد
