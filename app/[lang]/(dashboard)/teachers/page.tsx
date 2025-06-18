@@ -35,7 +35,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import Link from "next/link";
@@ -52,6 +52,7 @@ interface User {
     full_name: string;
     phone: string;
     email: string;
+    subject_id?: string;
   };
 }
 
@@ -97,6 +98,7 @@ function BasicDataTable() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const dialogCloseRef = useRef<HTMLButtonElement>(null);
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
     email: "",
@@ -175,6 +177,7 @@ function BasicDataTable() {
       reset();
       refetchUsers();
       toast.success("تم إضافة المستخدم بنجاح");
+      dialogCloseRef.current?.click();
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorData = error.response?.data?.errors;
@@ -283,6 +286,7 @@ function BasicDataTable() {
         cover: editingUser.user.avatar,
         password: "",
         avatar: editingUser.user.avatar,
+        subject_id: editingUser.user.subject_id?.toString() || "",
       });
     }
   }, [editingUser]);
@@ -507,22 +511,6 @@ function BasicDataTable() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="role">الصلاحيات</label>
-                  <select
-                    {...register("role")}
-                    id="role"
-                    className="w-full p-2 border rounded"
-                    name="role"
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                      setFormData((prev) => ({ ...prev, role: e.target.value }))
-                    }
-                  >
-                    <option value="">اختر صلاحية</option>
-                    <option value="teacher">معلم</option>
-                    <option value="student">طالب</option>
-                  </select>
-                </div>
-                <div>
                   <label htmlFor="subject_id">Subject</label>
                   <select
                     {...register("subject_id")}
@@ -558,7 +546,11 @@ function BasicDataTable() {
                   Submit
                 </Button>
                 <DialogClose asChild>
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    ref={dialogCloseRef}
+                    variant="outline"
+                    className="w-full"
+                  >
                     Cancel
                   </Button>
                 </DialogClose>
@@ -663,7 +655,7 @@ function BasicDataTable() {
                     placeholder="Enter full name"
                     name="full_name"
                     onChange={handleInputChange}
-                    defaultValue={editingUser.user.full_name}
+                    value={formData.full_name}
                   />
                 </div>
                 <div>
@@ -675,7 +667,7 @@ function BasicDataTable() {
                     placeholder="Enter email"
                     name="email"
                     onChange={handleInputChange}
-                    defaultValue={editingUser.user.email}
+                    value={formData.email}
                   />
                 </div>
                 <div>
@@ -686,28 +678,19 @@ function BasicDataTable() {
                     placeholder="Enter phone number"
                     name="phone"
                     onChange={handleInputChange}
-                    defaultValue={editingUser.user.phone}
+                    value={formData.phone}
                   />
                 </div>
                 <div>
-                  <label htmlFor="role">الصلاحيات</label>
-                  <select
-                    {...register("role")}
-                    id="role"
-                    className="w-full p-2 border rounded"
-                    name="role"
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        role: e.target.value,
-                      }))
-                    }
-                    defaultValue={editingUser.user.role}
-                  >
-                    <option value="">اختر صلاحية</option>
-                    <option value="teacher">معلم</option>
-                    <option value="student">طالب</option>
-                  </select>
+                  <label htmlFor="password">كلمة المرور</label>
+                  <Input
+                    {...register("password")}
+                    id="password"
+                    type="password"
+                    placeholder="Enter password"
+                    name="password"
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div>
                   <label htmlFor="subject_id">المادة</label>
@@ -722,6 +705,7 @@ function BasicDataTable() {
                         subject_id: e.target.value,
                       }))
                     }
+                    value={formData.subject_id}
                   >
                     <option value="">اختر المادة</option>
                     {subjects?.map((subject) => (
