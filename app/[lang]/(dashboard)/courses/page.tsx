@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  Upload,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import axios, { AxiosHeaders } from "axios";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import toast from "react-hot-toast";
@@ -125,6 +126,7 @@ interface FormData {
   meta_keywords: string;
   status: string;
   price: string;
+  cover?: File;
 }
 
 interface PaginationMeta {
@@ -183,6 +185,7 @@ function CoursesTable() {
     meta_keywords: "",
     status: "active",
     price: "0",
+    cover: undefined,
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -196,6 +199,7 @@ function CoursesTable() {
   );
   const [paginationLinks, setPaginationLinks] =
     useState<PaginationLinks | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -207,6 +211,15 @@ function CoursesTable() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData((prev) => ({
+        ...prev,
+        cover: e.target.files![0],
+      }));
+    }
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -229,6 +242,11 @@ function CoursesTable() {
       formDataToSend.append("status", formData.status);
       formDataToSend.append("price", formData.price);
 
+      // Add cover file if exists
+      if (formData.cover) {
+        formDataToSend.append("cover", formData.cover);
+      }
+
       await postData("/courses", formDataToSend, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
@@ -249,6 +267,7 @@ function CoursesTable() {
         meta_keywords: "",
         status: "active",
         price: "0",
+        cover: undefined,
       });
       await fetchData();
     } catch (error: any) {
@@ -377,6 +396,7 @@ function CoursesTable() {
       meta_keywords: course.meta_keywords || "",
       status: course.status || "active",
       price: course.price || "0",
+      cover: undefined,
     };
     setFormData(courseData);
 
@@ -665,6 +685,61 @@ function CoursesTable() {
 
   const formGrid = (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-2 md:col-span-2">
+        <label className="text-sm font-medium">صورة الغلاف</label>
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-full max-w-[300px] aspect-video rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary/50 dark:hover:border-primary/50 transition-colors">
+            {formData.cover ? (
+              <>
+                <img
+                  src={URL.createObjectURL(formData.cover)}
+                  alt="Cover preview"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, cover: undefined }))
+                  }
+                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
+                  <Upload className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  قم بسحب وإفلات الصورة هنا أو
+                </p>
+                <label className="cursor-pointer">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
+                    variant="outline"
+                    className="text-sm"
+                  >
+                    اختر صورة
+                  </Button>
+                </label>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                  PNG, JPG أو GIF حتى 5MB
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {userRole === "admin" && (
         <div className="space-y-2">
           <label
@@ -878,7 +953,10 @@ function CoursesTable() {
           <option value="active" className="dark:bg-gray-800 dark:!text-white">
             نشط
           </option>
-          <option value="inactive" className="dark:bg-gray-800 dark:!text-white">
+          <option
+            value="inactive"
+            className="dark:bg-gray-800 dark:!text-white"
+          >
             غير نشط
           </option>
           <option value="draft" className="dark:bg-gray-800 dark:!text-white">
@@ -948,6 +1026,11 @@ function CoursesTable() {
       formDataToSend.append("price", formData.price);
       formDataToSend.append("_method", "PUT");
 
+      // Add cover file if exists
+      if (formData.cover) {
+        formDataToSend.append("cover", formData.cover);
+      }
+
       await postData(`/courses/${id}`, formDataToSend, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
@@ -969,6 +1052,7 @@ function CoursesTable() {
         meta_keywords: "",
         status: "active",
         price: "0",
+        cover: undefined,
       });
       await fetchData();
     } catch (error: any) {
