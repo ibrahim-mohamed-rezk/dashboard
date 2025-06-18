@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
 import { User } from "@/lib/type";
-import { File, UserIcon, Video, Image as ImageIcon, Code, UserCircle } from "lucide-react";
+import { File, UserIcon, Video, Image as ImageIcon, Code, UserCircle, Percent } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
   const menus = menusConfig?.sidebarNav?.modern || [];
@@ -268,6 +268,19 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       href: "/codes",
                       title: "الاكواد",
                       icon: Code,
+                    }}
+                    toggleNested={toggleNested}
+                    index={1}
+                    nestedIndex={nestedIndex}
+                    locationName={locationName}
+                  />
+                </li>
+                <li className="mb-1.5 last:mb-0">
+                  <MenuItem
+                    childItem={{
+                      href: "/coupons",
+                      title: "كوبونات الخصم",
+                      icon: Percent,
                     }}
                     toggleNested={toggleNested}
                     index={1}
