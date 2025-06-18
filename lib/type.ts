@@ -179,7 +179,7 @@ export interface SubscriptionCodeTypes {
   code: string;
   valid_from: string;
   valid_to: string;
-  is_used: boolean;
+  is_used: number;
   status: string;
   updated_at: string;
   created_at: string;
