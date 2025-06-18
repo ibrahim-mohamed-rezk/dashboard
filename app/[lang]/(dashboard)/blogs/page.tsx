@@ -17,6 +17,7 @@ import toast from "react-hot-toast";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
 import { Upload, X } from "lucide-react";
+import { Editor } from "@tinymce/tinymce-react";
 
 interface Blog {
   id: number;
@@ -195,14 +196,48 @@ const BlogForm = ({
       >
         المحتوى *
       </label>
-      <textarea
-        id="content"
-        name="content"
+      <Editor
+        apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
         value={formData.content}
-        onChange={handleInputChange}
-        placeholder="محتوى المقال كاملاً"
-        className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg min-h-[200px] focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-        required
+        onEditorChange={(content: string) => {
+          setFormData((prev) => ({ ...prev, content }));
+        }}
+        init={{
+          height: 500,
+          menubar: true,
+          directionality: "rtl",
+          skin: "oxide-dark",
+          content_css: "dark",
+          plugins: [
+            "advlist",
+            "autolink",
+            "lists",
+            "link",
+            "image",
+            "charmap",
+            "preview",
+            "anchor",
+            "searchreplace",
+            "visualblocks",
+            "code",
+            "fullscreen",
+            "insertdatetime",
+            "media",
+            "table",
+            "code",
+            "help",
+            "wordcount",
+          ],
+          toolbar:
+            "undo redo | blocks | " +
+            "bold italic forecolor | alignleft aligncenter " +
+            "alignright alignjustify | bullist numlist outdent indent | " +
+            "removeformat | help",
+          content_style:
+            "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+          branding: false,
+          promotion: false,
+        }}
       />
     </div>
 
@@ -804,7 +839,7 @@ function BlogTable() {
       {/* Create Dialog */}
       {isCreateDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-7xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold dark:text-white">
                 إضافة مقال جديد

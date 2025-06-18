@@ -61,6 +61,7 @@
     "@tanstack/react-query": "^5.8.3",
     "@tanstack/react-query-devtools": "^5.8.3",
     "@tanstack/react-table": "^8.9.8",
+    "@tinymce/tinymce-react": "^6.2.1",
     "@types/cleave.js": "^1.4.12",
     "@types/mdx": "^2.0.11",
     "@types/negotiator": "^0.6.3",

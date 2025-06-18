@@ -667,13 +667,16 @@ function CoursesTable() {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {userRole === "admin" && (
         <div className="space-y-2">
-          <label htmlFor="teacher" className="text-sm font-medium">
+          <label
+            htmlFor="teacher"
+            className="text-sm font-medium dark:text-gray-200"
+          >
             المعلم *
           </label>
           <select
             id="teacher"
             name="teacher_id"
-            className="w-full rounded-md text-[#000000] border border-input bg-background px-3 py-2"
+            className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
             value={formData.teacher_id ? formData.teacher_id.toString() : ""}
             onChange={(e) => {
               setFormData((prev) => ({
@@ -683,10 +686,12 @@ function CoursesTable() {
             }}
             required
           >
-            <option value="">اختر المعلم</option>
+            <option value="" className="dark:bg-gray-800 dark:!text-white">
+              اختر المعلم
+            </option>
             {teachers.map((teacher) => (
               <option
-                className="text-[#000000]"
+                className="text-[#000000] dark:!text-white dark:bg-gray-800"
                 key={teacher.id}
                 value={teacher.id}
               >
@@ -718,7 +723,7 @@ function CoursesTable() {
         <select
           id="subject"
           name="subject_id"
-          className="w-full rounded-md text-[#000000] border border-input bg-background px-3 py-2"
+          className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
           value={formData.subject_id ? formData.subject_id.toString() : ""}
           onChange={(e) => {
             setFormData((prev) => ({
@@ -728,11 +733,21 @@ function CoursesTable() {
           }}
           required
         >
-          <option value="">اختر المادة</option>
-          <option value="1">رياضيات</option>
-          <option value="2">علوم</option>
-          <option value="3">لغة عربية</option>
-          <option value="4">لغة إنجليزية</option>
+          <option value="" className="dark:bg-gray-800 dark:!text-white">
+            اختر المادة
+          </option>
+          <option value="1" className="dark:bg-gray-800 dark:!text-white">
+            رياضيات
+          </option>
+          <option value="2" className="dark:bg-gray-800 dark:!text-white">
+            علوم
+          </option>
+          <option value="3" className="dark:bg-gray-800 dark:!text-white">
+            لغة عربية
+          </option>
+          <option value="4" className="dark:bg-gray-800 dark:!text-white">
+            لغة إنجليزية
+          </option>
         </select>
       </div>
 
@@ -743,7 +758,7 @@ function CoursesTable() {
         <select
           id="level"
           name="level_id"
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
+          className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
           value={formData.level_id ? formData.level_id.toString() : ""}
           onChange={(e) => {
             setFormData((prev) => ({
@@ -753,9 +768,15 @@ function CoursesTable() {
           }}
           required
         >
-          <option value="">اختر المستوى</option>
+          <option value="" className="dark:bg-gray-800 dark:!text-white">
+            اختر المستوى
+          </option>
           {levels.map((level) => (
-            <option key={level.id} value={level.id}>
+            <option
+              key={level.id}
+              value={level.id}
+              className="dark:bg-gray-800 dark:!text-white"
+            >
               {level.name}
             </option>
           ))}
@@ -769,7 +790,7 @@ function CoursesTable() {
         <select
           id="type"
           name="type"
-          className="w-full rounded-md text-[#000000] border border-input bg-background px-3 py-2"
+          className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
           value={formData.type}
           onChange={(e) => {
             setFormData((prev) => ({
@@ -779,8 +800,12 @@ function CoursesTable() {
           }}
           required
         >
-          <option value="free">مجاني</option>
-          <option value="paid">مدفوع</option>
+          <option value="free" className="dark:bg-gray-800 dark:!text-white">
+            مجاني
+          </option>
+          <option value="paid" className="dark:bg-gray-800 dark:!text-white">
+            مدفوع
+          </option>
         </select>
       </div>
 
@@ -810,7 +835,7 @@ function CoursesTable() {
         <select
           id="position"
           name="position"
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
+          className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
           value={formData.position || ""}
           onChange={(e) => {
             setFormData((prev) => ({
@@ -819,9 +844,15 @@ function CoursesTable() {
             }));
           }}
         >
-          <option value="">اختر الموقع</option>
-          <option value="online">أونلاين</option>
-          <option value="offline">أوفلاين</option>
+          <option value="" className="dark:bg-gray-800 dark:!text-white">
+            اختر الموقع
+          </option>
+          <option value="online" className="dark:bg-gray-800 dark:!text-white">
+            أونلاين
+          </option>
+          <option value="offline" className="dark:bg-gray-800 dark:!text-white">
+            أوفلاين
+          </option>
         </select>
       </div>
 
@@ -832,7 +863,7 @@ function CoursesTable() {
         <select
           id="status"
           name="status"
-          className="w-full rounded-md border border-input bg-background px-3 py-2"
+          className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
           value={formData.status || ""}
           onChange={(e) => {
             setFormData((prev) => ({
@@ -841,10 +872,18 @@ function CoursesTable() {
             }));
           }}
         >
-          <option value="">اختر الحالة</option>
-          <option value="active">نشط</option>
-          <option value="inactive">غير نشط</option>
-          <option value="draft">مسودة</option>
+          <option value="" className="dark:bg-gray-800 dark:!text-white">
+            اختر الحالة
+          </option>
+          <option value="active" className="dark:bg-gray-800 dark:!text-white">
+            نشط
+          </option>
+          <option value="inactive" className="dark:bg-gray-800 dark:!text-white">
+            غير نشط
+          </option>
+          <option value="draft" className="dark:bg-gray-800 dark:!text-white">
+            مسودة
+          </option>
         </select>
       </div>
 
@@ -986,6 +1025,7 @@ function CoursesTable() {
             size="sm"
             onClick={() => fetchData()}
             disabled={isLoading}
+            className="flex items-center gap-2"
           >
             <RefreshCw
               className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
@@ -993,14 +1033,23 @@ function CoursesTable() {
             تحديث
           </Button>
 
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
+          <Button
+            className="flex items-center gap-2"
+            variant="outline"
+            size="sm"
+            onClick={exportToCSV}
+          >
             <Download className="h-4 w-4 mr-2" />
             تصدير CSV
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button
+                className="flex items-center gap-2"
+                variant="outline"
+                size="sm"
+              >
                 <EyeOff className="h-4 w-4 mr-2" />
                 الأعمدة
                 <ChevronDown className="h-4 w-4 ml-2" />
@@ -1031,18 +1080,23 @@ function CoursesTable() {
 
           <Dialog open={addCourse} onOpenChange={setAddCourse}>
             <DialogTrigger asChild>
-              <Button onClick={() => setAddCourse(true)}>
+              <Button
+                className="flex items-center gap-2"
+                onClick={() => setAddCourse(true)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 إضافة كورس
               </Button>
             </DialogTrigger>
             <DialogContent
-              className="max-w-2xl max-h-[90vh] overflow-y-auto"
+              className="w-full !max-w-7xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
               onPointerDownOutside={(e) => e.preventDefault()}
             >
               <DialogHeader>
-                <DialogTitle>إضافة كورس جديد</DialogTitle>
-                <DialogDescription>
+                <DialogTitle className="dark:text-gray-100">
+                  إضافة كورس جديد
+                </DialogTitle>
+                <DialogDescription className="dark:text-gray-400">
                   املأ النموذج التالي لإضافة كورس جديد إلى النظام
                 </DialogDescription>
               </DialogHeader>
@@ -1090,60 +1144,70 @@ function CoursesTable() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg border">
+        <div className="bg-blue-50 dark:bg-blue-950/50 p-4 rounded-lg border dark:border-blue-900/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-600">إجمالي الكورسات</p>
-              <p className="text-2xl font-bold text-blue-900">{data.length}</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                إجمالي الكورسات
+              </p>
+              <p className="text-2xl font-bold text-blue-900 dark:text-blue-200">
+                {data.length}
+              </p>
             </div>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg border">
+        <div className="bg-green-50 dark:bg-green-950/50 p-4 rounded-lg border dark:border-green-900/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-green-600">الكورسات النشطة</p>
-              <p className="text-2xl font-bold text-green-900">
+              <p className="text-sm text-green-600 dark:text-green-400">
+                الكورسات النشطة
+              </p>
+              <p className="text-2xl font-bold text-green-900 dark:text-green-200">
                 {data.filter((course) => course.status === "active").length}
               </p>
             </div>
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Eye className="h-6 w-6 text-green-600" />
+            <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
+              <Eye className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
-        <div className="bg-yellow-50 p-4 rounded-lg border">
+        <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg border dark:border-yellow-900/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-yellow-600">المسودات</p>
-              <p className="text-2xl font-bold text-yellow-900">
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                المسودات
+              </p>
+              <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-200">
                 {data.filter((course) => course.status === "draft").length}
               </p>
             </div>
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Clock className="h-6 w-6 text-yellow-600" />
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg">
+              <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg border">
+        <div className="bg-purple-50 dark:bg-purple-950/50 p-4 rounded-lg border dark:border-purple-900/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-purple-600">الكورسات المدفوعة</p>
-              <p className="text-2xl font-bold text-purple-900">
+              <p className="text-sm text-purple-600 dark:text-purple-400">
+                الكورسات المدفوعة
+              </p>
+              <p className="text-2xl font-bold text-purple-900 dark:text-purple-200">
                 {data.filter((course) => course.type === "paid").length}
               </p>
             </div>
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Download className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+              <Download className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Results Summary */}
-      <div className="flex items-center justify-between text-sm text-gray-600">
+      <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
         <div>
           عرض {filteredData.length} من {data.length} كورس
           {(typeFilter !== "all" ||
@@ -1162,12 +1226,14 @@ function CoursesTable() {
       {/* Edit Course Dialog */}
       <Dialog open={editCourse} onOpenChange={setEditCourse}>
         <DialogContent
-          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          className="w-full max-w-7xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>تعديل الكورس</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="dark:text-gray-100">
+              تعديل الكورس
+            </DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
               قم بتعديل معلومات الكورس أدناه
             </DialogDescription>
           </DialogHeader>
@@ -1184,7 +1250,7 @@ function CoursesTable() {
                 <div className="space-y-2">
                   <label
                     htmlFor="edit-description"
-                    className="text-sm font-medium"
+                    className="text-sm font-medium dark:text-gray-200"
                   >
                     الوصف
                   </label>
@@ -1232,13 +1298,13 @@ function CoursesTable() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-full max-w-7xl dark:bg-gray-900 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
               <AlertTriangle className="h-5 w-5" />
               تأكيد الحذف
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="dark:text-gray-400">
               هل أنت متأكد من حذف الكورس "{courseToDelete?.title}"؟ هذا الإجراء
               لا يمكن التراجع عنه.
             </DialogDescription>
@@ -1271,15 +1337,18 @@ function CoursesTable() {
       </Dialog>
 
       {/* Data Table */}
-      <div className="rounded-md border bg-white dark:bg-gray-800 shadow-sm">
+      <div className="rounded-md border bg-white dark:bg-gray-800/50 shadow-sm dark:border-gray-700">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-b">
+              <TableRow
+                key={headerGroup.id}
+                className="border-b dark:border-gray-700"
+              >
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="font-semibold text-gray-900 dark:text-gray-100"
+                    className="font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800/50"
                   >
                     {header.isPlaceholder
                       ? null
@@ -1297,10 +1366,13 @@ function CoursesTable() {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b dark:border-gray-700"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
+                    <TableCell
+                      key={cell.id}
+                      className="py-3 dark:text-gray-300"
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -1313,7 +1385,7 @@ function CoursesTable() {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-gray-500"
+                  className="h-24 text-center text-gray-500 dark:text-gray-400"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">
