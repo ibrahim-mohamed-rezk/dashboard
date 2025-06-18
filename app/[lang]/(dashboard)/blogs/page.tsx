@@ -106,7 +106,10 @@ const BlogForm = ({
 }: BlogFormProps) => (
   <form onSubmit={handleSubmit} className="space-y-4">
     <div className="space-y-2 flex items-center justify-center flex-col w-full">
-      <label htmlFor="image" className="block text-sm font-medium">
+      <label
+        htmlFor="image"
+        className="block text-sm font-medium dark:text-gray-200"
+      >
         صورة المقال
       </label>
       <div className="flex items-center gap-4">
@@ -121,9 +124,9 @@ const BlogForm = ({
           {!imagePreview && !editingBlog?.image && (
             <label
               htmlFor="image"
-              className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
+              className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
             >
-              <Upload className="w-5 h-5 text-gray-600" />
+              <Upload className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </label>
           )}
         </div>
@@ -149,7 +152,10 @@ const BlogForm = ({
     </div>
 
     <div>
-      <label htmlFor="title" className="block text-sm font-medium mb-1">
+      <label
+        htmlFor="title"
+        className="block text-sm font-medium mb-1 dark:text-gray-200"
+      >
         العنوان *
       </label>
       <input
@@ -159,13 +165,16 @@ const BlogForm = ({
         value={formData.title}
         onChange={handleInputChange}
         placeholder="أدخل عنوان المقال"
-        className="w-full px-4 py-2 border rounded-lg focus:border-blue-500"
+        className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         required
       />
     </div>
 
     <div>
-      <label htmlFor="description" className="block text-sm font-medium mb-1">
+      <label
+        htmlFor="description"
+        className="block text-sm font-medium mb-1 dark:text-gray-200"
+      >
         الوصف *
       </label>
       <textarea
@@ -174,13 +183,16 @@ const BlogForm = ({
         value={formData.description}
         onChange={handleInputChange}
         placeholder="وصف مختصر للمقال"
-        className="w-full px-4 py-2 border rounded-lg min-h-[100px] focus:border-blue-500"
+        className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg min-h-[100px] focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         required
       />
     </div>
 
     <div>
-      <label htmlFor="content" className="block text-sm font-medium mb-1">
+      <label
+        htmlFor="content"
+        className="block text-sm font-medium mb-1 dark:text-gray-200"
+      >
         المحتوى *
       </label>
       <textarea
@@ -189,7 +201,7 @@ const BlogForm = ({
         value={formData.content}
         onChange={handleInputChange}
         placeholder="محتوى المقال كاملاً"
-        className="w-full px-4 py-2 border rounded-lg min-h-[200px] focus:border-blue-500"
+        className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg min-h-[200px] focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         required
       />
     </div>
@@ -198,7 +210,7 @@ const BlogForm = ({
       <div>
         <label
           htmlFor="meta_description"
-          className="block text-sm font-medium mb-1"
+          className="block text-sm font-medium mb-1 dark:text-gray-200"
         >
           وصف SEO
         </label>
@@ -208,14 +220,14 @@ const BlogForm = ({
           value={formData.meta_description}
           onChange={handleInputChange}
           placeholder="وصف المقال لمحركات البحث"
-          className="w-full px-4 py-2 border rounded-lg min-h-[80px] focus:border-blue-500"
+          className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg min-h-[80px] focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         />
       </div>
 
       <div>
         <label
           htmlFor="meta_keywords"
-          className="block text-sm font-medium mb-1"
+          className="block text-sm font-medium mb-1 dark:text-gray-200"
         >
           كلمات SEO
         </label>
@@ -225,7 +237,7 @@ const BlogForm = ({
           value={formData.meta_keywords}
           onChange={handleInputChange}
           placeholder="كلمات مفتاحية، مفصولة، بفواصل"
-          className="w-full px-4 py-2 border rounded-lg min-h-[80px] focus:border-blue-500"
+          className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg min-h-[80px] focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         />
       </div>
     </div>
@@ -237,9 +249,12 @@ const BlogForm = ({
         name="published"
         checked={formData.published}
         onChange={handleInputChange}
-        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
       />
-      <label htmlFor="published" className="text-sm font-medium">
+      <label
+        htmlFor="published"
+        className="text-sm font-medium dark:text-gray-200"
+      >
         نشر المقال
       </label>
     </div>
@@ -259,7 +274,7 @@ const BlogForm = ({
       <button
         type="button"
         onClick={onClose}
-        className="w-full px-4 py-2 border rounded-lg"
+        className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:text-gray-200 dark:hover:bg-gray-700"
       >
         إلغاء
       </button>
@@ -496,7 +511,7 @@ function BlogTable() {
       accessorKey: "slug",
       header: "الرابط",
       cell: ({ row }) => (
-        <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
+        <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs font-mono">
           {truncateText(row.getValue("slug") || "غير متوفر", 30)}
         </code>
       ),
@@ -628,11 +643,13 @@ function BlogTable() {
 
   return (
     <div className="w-full p-4">
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-semibold">إدارة المقالات</span>
-            <span className="bg-gray-100 px-2 py-1 rounded text-sm">
+            <span className="text-xl font-semibold dark:text-white">
+              إدارة المقالات
+            </span>
+            <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm dark:text-gray-200">
               {data.length} مقال
             </span>
           </div>
@@ -647,23 +664,12 @@ function BlogTable() {
                 placeholder="البحث في المقالات..."
                 value={globalFilter ?? ""}
                 onChange={(e) => setGlobalFilter(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg pl-10"
+                className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg pl-10 dark:bg-gray-700 dark:text-white"
               />
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">
                 🔍
               </span>
             </div>
-
-            <select
-              value={String(pageSize)}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="border rounded-lg px-3 py-2"
-            >
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-            </select>
           </div>
 
           <button
@@ -675,15 +681,15 @@ function BlogTable() {
         </div>
 
         {/* Table */}
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border dark:border-gray-600 rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-4 py-3 text-right font-semibold text-gray-700"
+                      className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-gray-200"
                     >
                       {header.isPlaceholder
                         ? null
@@ -696,10 +702,13 @@ function BlogTable() {
                 </tr>
               ))}
             </thead>
-            <tbody>
+            <tbody className="dark:bg-gray-800">
               {loading ? (
                 <tr>
-                  <td colSpan={columns.length} className="text-center py-8">
+                  <td
+                    colSpan={columns.length}
+                    className="text-center py-8 dark:text-gray-200"
+                  >
                     <div className="flex items-center justify-center gap-2">
                       جاري التحميل...
                     </div>
@@ -709,10 +718,13 @@ function BlogTable() {
                 table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="hover:bg-gray-50 transition-colors duration-150"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3">
+                      <td
+                        key={cell.id}
+                        className="px-4 py-3 dark:text-gray-200"
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -725,7 +737,7 @@ function BlogTable() {
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="text-center py-8 text-gray-500"
+                    className="text-center py-8 text-gray-500 dark:text-gray-400"
                   >
                     <div className="flex flex-col items-center gap-2">
                       <p>لا توجد مقالات</p>
@@ -740,7 +752,7 @@ function BlogTable() {
 
         {/* Pagination */}
         <div className="flex items-center justify-between px-2 py-4">
-          <div className="text-sm text-gray-700">
+          <div className="text-sm text-gray-700 dark:text-gray-300">
             <span>
               عرض {(currentPage - 1) * pageSize + 1} إلى{" "}
               {Math.min(currentPage * pageSize, totalItems)} من {totalItems}{" "}
@@ -752,7 +764,7 @@ function BlogTable() {
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded-lg disabled:opacity-50"
+              className="px-3 py-1 border dark:border-gray-600 rounded-lg disabled:opacity-50 dark:text-gray-200"
             >
               السابق
             </button>
@@ -762,8 +774,10 @@ function BlogTable() {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-8 h-8 border rounded-lg ${
-                    currentPage === i + 1 ? "bg-blue-500 text-white" : ""
+                  className={`w-8 h-8 border dark:border-gray-600 rounded-lg ${
+                    currentPage === i + 1
+                      ? "bg-blue-500 text-white"
+                      : "dark:text-gray-200 dark:hover:bg-gray-700"
                   }`}
                 >
                   {i + 1}
@@ -779,7 +793,7 @@ function BlogTable() {
                 setCurrentPage((prev) => Math.min(totalPages, prev + 1))
               }
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded-lg disabled:opacity-50"
+              className="px-3 py-1 border dark:border-gray-600 rounded-lg disabled:opacity-50 dark:text-gray-200"
             >
               التالي
             </button>
@@ -790,16 +804,18 @@ function BlogTable() {
       {/* Create Dialog */}
       {isCreateDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">إضافة مقال جديد</h2>
+              <h2 className="text-xl font-semibold dark:text-white">
+                إضافة مقال جديد
+              </h2>
               <button
                 onClick={() => {
                   setIsCreateDialogOpen(false);
                   resetForm();
                   setImagePreview(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 ✕
               </button>
@@ -826,9 +842,11 @@ function BlogTable() {
       {/* Edit Dialog */}
       {isEditDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">تعديل المقال</h2>
+              <h2 className="text-xl font-semibold dark:text-white">
+                تعديل المقال
+              </h2>
               <button
                 onClick={() => {
                   setIsEditDialogOpen(false);
@@ -836,7 +854,7 @@ function BlogTable() {
                   resetForm();
                   setImagePreview(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 ✕
               </button>
@@ -864,23 +882,25 @@ function BlogTable() {
       {/* Delete Confirmation Dialog */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">تأكيد الحذف</h2>
+              <h2 className="text-xl font-semibold dark:text-white">
+                تأكيد الحذف
+              </h2>
               <button
                 onClick={() => setIsDeleteDialogOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 ✕
               </button>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع عن هذا الإجراء.
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setIsDeleteDialogOpen(false)}
-                className="px-4 py-2 border rounded-lg"
+                className="px-4 py-2 border dark:border-gray-600 rounded-lg dark:text-gray-200 dark:hover:bg-gray-700"
               >
                 إلغاء
               </button>

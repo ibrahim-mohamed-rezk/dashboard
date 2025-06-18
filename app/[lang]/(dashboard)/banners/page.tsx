@@ -76,15 +76,20 @@ const DEFAULT_IMAGE = "https://via.placeholder.com/300x200";
 const schema = z
   .object({
     image: z
-      .instanceof(File, { message: "يرجى رفع ملف صورة صالح" })
-      .refine(
-        (file) => file.size <= 5 * 1024 * 1024,
-        "يجب أن يكون حجم الصورة أقل من 5 ميجابايت"
-      )
-      .refine(
-        (file) => file.type.startsWith("image/"),
-        "يرجى رفع ملف صورة فقط"
-      ),
+      .union([
+        z
+          .instanceof(File, { message: "يرجى رفع ملف صورة صالح" })
+          .refine(
+            (file) => file.size <= 5 * 1024 * 1024,
+            "يجب أن يكون حجم الصورة أقل من 5 ميجابايت"
+          )
+          .refine(
+            (file) => file.type.startsWith("image/"),
+            "يرجى رفع ملف صورة فقط"
+          ),
+        z.undefined(),
+      ])
+      .optional(),
     type: z.enum(["online", "offline"], { message: "يرجى اختيار نوع البانر" }),
     teacher: z
       .union([
@@ -486,7 +491,12 @@ function BannerTable() {
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append("image", formData.image);
+
+      // Only append image if it exists (new upload) or if it's a new banner
+      if (formData.image) {
+        formDataToSend.append("image", formData.image);
+      }
+
       formDataToSend.append("type", formData.type);
       formDataToSend.append("status", "banner");
 
@@ -522,6 +532,12 @@ function BannerTable() {
         console.log("Update response:", response);
         toast.success("تم تحديث البانر بنجاح!");
       } else {
+        // For new banners, require an image
+        if (!formData.image) {
+          toast.error("يرجى رفع صورة للبانر");
+          return;
+        }
+
         const response = await withRetry(() =>
           postData("banners", formDataToSend, {
             Authorization: `Bearer ${token}`,
@@ -748,6 +764,11 @@ function BannerTable() {
                   {errors.image && (
                     <p className="text-red-500 text-sm mt-1">
                       {errors.image.message as string}
+                    </p>
+                  )}
+                  {!editingBanner && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      * مطلوب رفع صورة للبانر الجديد
                     </p>
                   )}
                 </div>
