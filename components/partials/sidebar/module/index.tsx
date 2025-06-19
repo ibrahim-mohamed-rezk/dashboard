@@ -125,10 +125,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
 
   return (
     <>
-      <div className="main-sidebar  pointer-events-none fixed start-0 top-0 z-[60] flex h-full xl:z-10 print:hidden">
-        {/* <div
+      <div className="main-sidebar pointer-events-none fixed start-0 top-0 z-[60] flex h-full xl:z-10 print:hidden">
+        <div
           className={cn(
-            "border-default-200  dark:border-default-300 pointer-events-auto relative z-20 flex h-full w-[72px] flex-col border-r border-dashed   bg-card transition-all duration-300",
+            "border-default-200 dark:border-default-300 pointer-events-auto relative z-20 flex h-full w-[72px] flex-col border-r border-dashed   bg-card transition-all duration-300",
             {
               "ltr:-translate-x-full rtl:translate-x-full ltr:xl:translate-x-0  rtl:xl:translate-x-0":
                 !collapsed && subMenu,
@@ -158,12 +158,12 @@ const ModuleSidebar = ({ user }: { user: User }) => {
             ))}
           </ScrollArea>
           <FooterMenu />
-        </div> */}
+        </div>
         {/* end small menu */}
 
         <div
           className={cn(
-            "border-default-200 pointer-events-auto relative z-10 flex flex-col h-full w-[228px] border-r  bg-card   transition-all duration-300",
+            "border-default-200 pointer-events-auto relative z-10 flex flex-col h-full w-[232px] border-r  bg-card   transition-all duration-300",
             {
               "rtl:translate-x-[calc(100%_+_72px)] translate-x-[calc(-100%_-_72px)]":
                 collapsed || subMenu,
@@ -171,7 +171,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
           )}
         >
           <Link href="/dashboard">
-            <h2 className="text-lg  bg-transparent   z-50   font-semibold  flex gap-4 items-center   text-default-700 sticky top-0 py-4  px-4   capitalize ">
+            <h2 className="text-lg  bg-transparent z-50 font-semibold  flex gap-4 items-center   text-default-700 sticky top-0 py-4  px-4   capitalize ">
               <svg
                 width="44"
                 height="43"
