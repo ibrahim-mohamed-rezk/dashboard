@@ -683,6 +683,10 @@ function CoursesTable() {
     },
   });
 
+  useEffect(() => {
+    table.setPageSize(data.length || 15);
+  }, [data.length]);
+
   const formGrid = (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2 md:col-span-2">
