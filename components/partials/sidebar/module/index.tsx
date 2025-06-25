@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
 import { User } from "@/lib/type";
-import { File, UserIcon, Video, Image as ImageIcon, Code, UserCircle, Percent, Bus, Briefcase } from "lucide-react";
+import { File, UserIcon, Video, Image as ImageIcon, Code, UserCircle, Percent, Bus, Briefcase, Building2 } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
   const menus = menusConfig?.sidebarNav?.modern || [];
@@ -137,7 +137,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
           )}
         >
           <div className=" pt-4 ">
-            <Link className="w-full flex items-center justify-center" href="/dashboard">
+            <Link
+              className="w-full flex items-center justify-center"
+              href="/dashboard"
+            >
               <svg
                 width="44"
                 height="43"
@@ -290,6 +293,19 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       href: "/courses",
                       title: "الكورسات",
                       icon: Video,
+                    }}
+                    toggleNested={toggleNested}
+                    index={1}
+                    nestedIndex={nestedIndex}
+                    locationName={locationName}
+                  />
+                </li>
+                <li className="mb-1.5 last:mb-0">
+                  <MenuItem
+                    childItem={{
+                      href: "/banks",
+                      title: "بنوك الاسئلة",
+                      icon: Building2,
                     }}
                     toggleNested={toggleNested}
                     index={1}
