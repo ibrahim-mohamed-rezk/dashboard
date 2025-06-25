@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import {
   ColumnDef,
   flexRender,
@@ -20,8 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { fetchBanks, addBank } from "@/services/bankService";
-
 import {
   Dialog,
   DialogContent,
@@ -34,12 +31,19 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { getData, postData } from "@/lib/axios/server";
+import axios, { AxiosHeaders } from "axios";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 interface Bank {
   id: number;
   name: string;
   price: number | null;
+  banktable_id: number;
+  banktable_type: string;
   created_at: string;
+  updated_at: string;
 }
 
 const columns: ColumnDef<Bank>[] = [
@@ -51,24 +55,49 @@ const columns: ColumnDef<Bank>[] = [
   {
     accessorKey: "price",
     header: "السعر",
-    cell: ({ row }) => (row.getValue("price") !== null ? row.getValue("price") : "Free"),
+    cell: ({ row }) =>
+      row.getValue("price") !== null ? row.getValue("price") : "Free",
+  },
+  {
+    accessorKey: "banktable_id",
+    header: "معرف الجدول",
+    cell: ({ row }) => row.getValue("banktable_id") ?? "N/A",
+  },
+  {
+    accessorKey: "banktable_type",
+    header: "نوع الجدول",
+    cell: ({ row }) => row.getValue("banktable_type") ?? "N/A",
   },
   {
     accessorKey: "created_at",
     header: "تاريخ الانشاء",
-    cell: ({ row }) => new Date(row.getValue("created_at")).toLocaleDateString(),
+    cell: ({ row }) =>
+      new Date(row.getValue("created_at")).toLocaleDateString(),
+  },
+  {
+    accessorKey: "updated_at",
+    header: "تاريخ التحديث",
+    cell: ({ row }) =>
+      new Date(row.getValue("updated_at")).toLocaleDateString(),
   },
 ];
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
-  price: z.union([z.number().positive().nullable(), z.string().length(0).transform(() => null)]),
+  price: z.union([
+    z.number().positive().nullable(),
+    z
+      .string()
+      .length(0)
+      .transform(() => null),
+  ]),
 });
 
 function BankTable() {
-  const [data, setData] = React.useState<Bank[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [globalFilter, setGlobalFilter] = React.useState("");
+  const [data, setData] = useState<Bank[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [token, setToken] = useState<string>("");
 
   const {
     register,
@@ -80,24 +109,59 @@ function BankTable() {
     mode: "all",
   });
 
-  React.useEffect(() => {
+  // get token from next api
+  const feachData = async () => {
+    try {
+      const response = await axios.get("/api/auth/getToken");
+      setToken(response.data.token);
+    } catch (error) {
+      throw error;
+    }
+  };
+  useEffect(() => {
+    feachData();
+  });
+
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const banks = await fetchBanks();
-      console.log("Fetched Banks:", banks); // Debugging line
-      setData(banks);
+
+      try {
+        const response = await getData(
+          "banks",
+          {},
+          new AxiosHeaders({ Authorization: `Bearer ${token}` })
+        );
+        setData(response.data);
+      } catch (error) {
+        throw error;
+      }
+
       setLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [token]);
 
   const onSubmit = async (formData: any) => {
     try {
-      await addBank(formData);
+      try {
+        await postData("", data, {
+          Authorization: `Bearer token`,
+          "Content-Type": "multipart/form-data",
+        });
+        feachData();
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          toast.error(error.response?.data?.msg || "An error occurred");
+        } else {
+          toast.error("An unexpected error occurred");
+        }
+        throw error;
+      }
+
       reset();
-      alert("Bank added successfully!");
-      location.reload();
+      toast.success("تمإضافة بنك الاسئلة بنجاح");
     } catch (error) {
       alert("Failed to add bank.");
     }
@@ -187,7 +251,10 @@ function BankTable() {
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>

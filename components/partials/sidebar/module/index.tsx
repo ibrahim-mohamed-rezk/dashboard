@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
 import { User } from "@/lib/type";
-import { File, UserIcon, Video, Image as ImageIcon, Code, UserCircle, Percent } from "lucide-react";
+import { File, UserIcon, Video, Image as ImageIcon, Code, UserCircle, Percent, Bus, Briefcase } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
   const menus = menusConfig?.sidebarNav?.modern || [];
@@ -137,41 +137,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
           )}
         >
           <div className=" pt-4 ">
-            <Link href="/dashboard">
-              <SiteLogo className=" mx-auto text-primary h-8 w-8" />
-            </Link>
-          </div>
-          <ScrollArea className=" pt-6 grow ">
-            {menus.map((item, i) => (
-              <div
-                key={i}
-                onClick={() => toggleSubMenu(i)}
-                className=" mb-3 last:mb-0"
-              >
-                <SingleIconMenu
-                  index={i}
-                  activeIndex={activeIndex}
-                  item={item}
-                  locationName={locationName}
-                />
-              </div>
-            ))}
-          </ScrollArea>
-          <FooterMenu />
-        </div>
-        {/* end small menu */}
-
-        <div
-          className={cn(
-            "border-default-200 pointer-events-auto relative z-10 flex flex-col h-full w-[232px] border-r  bg-card   transition-all duration-300",
-            {
-              "rtl:translate-x-[calc(100%_+_72px)] translate-x-[calc(-100%_-_72px)]":
-                collapsed || subMenu,
-            }
-          )}
-        >
-          <Link href="/dashboard">
-            <h2 className="text-lg  bg-transparent z-50 font-semibold  flex gap-4 items-center   text-default-700 sticky top-0 py-4  px-4   capitalize ">
+            <Link className="w-full flex items-center justify-center" href="/dashboard">
               <svg
                 width="44"
                 height="43"
@@ -220,6 +186,39 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                   fill="#22577D"
                 ></path>
               </svg>
+            </Link>
+          </div>
+          <ScrollArea className=" pt-6 grow ">
+            {menus.map((item, i) => (
+              <div
+                key={i}
+                onClick={() => toggleSubMenu(i)}
+                className=" mb-3 last:mb-0"
+              >
+                <SingleIconMenu
+                  index={i}
+                  activeIndex={activeIndex}
+                  item={item}
+                  locationName={locationName}
+                />
+              </div>
+            ))}
+          </ScrollArea>
+          <FooterMenu />
+        </div>
+        {/* end small menu */}
+
+        <div
+          className={cn(
+            "border-default-200 pointer-events-auto relative z-10 flex flex-col h-full w-[232px] border-r  bg-card   transition-all duration-300",
+            {
+              "rtl:translate-x-[calc(100%_+_72px)] translate-x-[calc(-100%_-_72px)]":
+                collapsed || subMenu,
+            }
+          )}
+        >
+          <Link href="/dashboard">
+            <h2 className="text-lg  bg-transparent z-50 font-semibold  flex gap-4 items-center   text-default-700 sticky top-0 py-4  px-4   capitalize ">
               <span className=" block ">لوحة التحكم</span>
             </h2>
           </Link>
@@ -330,6 +329,19 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       href: "/coupons",
                       title: "كوبونات الخصم",
                       icon: Percent,
+                    }}
+                    toggleNested={toggleNested}
+                    index={1}
+                    nestedIndex={nestedIndex}
+                    locationName={locationName}
+                  />
+                </li>
+                <li className="mb-1.5 last:mb-0">
+                  <MenuItem
+                    childItem={{
+                      href: "/jobs",
+                      title: "الوظائف",
+                      icon: Briefcase,
                     }}
                     toggleNested={toggleNested}
                     index={1}
