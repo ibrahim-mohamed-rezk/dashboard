@@ -28,7 +28,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Copy, Printer } from "lucide-react";
+import {
+  Copy,
+  Printer,
+  Users,
+  GraduationCap,
+  Phone,
+  School,
+} from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
@@ -36,17 +43,88 @@ import axios, { AxiosHeaders } from "axios";
 import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
 import toast from "react-hot-toast";
 
+// Statistics Card Component
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  color = "blue",
+}: {
+  title: string;
+  value: string | number;
+  icon: any;
+  color?: string;
+}) => {
+  const colorClasses = {
+    blue: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
+    green:
+      "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400",
+    orange:
+      "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
+    purple:
+      "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            {title}
+          </p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {value}
+          </p>
+        </div>
+        <div
+          className={`p-3 rounded-full ${
+            colorClasses[color as keyof typeof colorClasses]
+          }`}
+        >
+          <Icon className="w-6 h-6" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function BasicDataTable() {
   const [data, setData] = useState<StudentTypes[]>([]);
   const [token, setToken] = useState("");
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [statistics, setStatistics] = useState({
+    totalStudents: 0,
+    activeStudents: 0,
+    totalSchools: 0,
+    studentsWithPhone: 0,
+  });
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 15,
     total: 0,
     lastPage: 1,
   });
+
+  // Calculate statistics
+  const calculateStatistics = (studentsData: StudentTypes[]) => {
+    const activeStudents = studentsData.filter(
+      (student) => student.status === "active"
+    ).length;
+    const uniqueSchools = new Set(
+      studentsData.map((student) => student.school_name).filter(Boolean)
+    ).size;
+    const studentsWithPhone = studentsData.filter(
+      (student) => student.user?.phone
+    ).length;
+
+    setStatistics({
+      totalStudents: pagination.total,
+      activeStudents,
+      totalSchools: uniqueSchools,
+      studentsWithPhone,
+    });
+  };
 
   // Fetch teachers for admin
   const fetchTeachers = async () => {
@@ -84,10 +162,14 @@ function BasicDataTable() {
         total: response.meta.total,
         lastPage: response.meta.last_page,
       }));
+
+      // Calculate statistics with the fetched data
+      calculateStatistics(response.data);
     } catch (error) {
       console.log(error);
     }
   };
+
   // feach users from api
   useEffect(() => {
     refetchUsers();
@@ -215,6 +297,39 @@ function BasicDataTable() {
 
   return (
     <>
+      {/* Statistics Section */}
+      <div className="mb-8 px-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          إحصائيات الطلاب
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="إجمالي الطلاب"
+            value={statistics.totalStudents.toLocaleString()}
+            icon={Users}
+            color="blue"
+          />
+          <StatCard
+            title="الطلاب النشطون"
+            value={statistics.activeStudents.toLocaleString()}
+            icon={GraduationCap}
+            color="green"
+          />
+          <StatCard
+            title="عدد المدارس"
+            value={statistics.totalSchools.toLocaleString()}
+            icon={School}
+            color="purple"
+          />
+          <StatCard
+            title="طلاب لديهم هاتف"
+            value={statistics.studentsWithPhone.toLocaleString()}
+            icon={Phone}
+            color="orange"
+          />
+        </div>
+      </div>
+
       <div className="flex items-center justify-between gap-2 px-4 mb-4">
         <div className="flex items-center gap-2">
           {/* search input */}
