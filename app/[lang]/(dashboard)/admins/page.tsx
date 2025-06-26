@@ -37,8 +37,55 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X } from "lucide-react";
+import { X, Users, Shield, BookOpen, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Statistics Card Component
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  color = "blue",
+}: {
+  title: string;
+  value: number;
+  icon: React.ComponentType<any>;
+  color?: "blue" | "green" | "purple" | "orange";
+}) => {
+  const colorClasses = {
+    blue: "bg-blue-50 border-blue-200 text-blue-800",
+    green: "bg-green-50 border-green-200 text-green-800",
+    purple: "bg-purple-50 border-purple-200 text-purple-800",
+    orange: "bg-orange-50 border-orange-200 text-orange-800",
+  };
+
+  const iconColorClasses = {
+    blue: "text-blue-600",
+    green: "text-green-600",
+    purple: "text-purple-600",
+    orange: "text-orange-600",
+  };
+
+  return (
+    <div
+      className={`p-6 rounded-lg border ${colorClasses[color]} dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200`}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            {title}
+          </p>
+          <p className="text-3xl font-bold mt-2">{value.toLocaleString()}</p>
+        </div>
+        <div
+          className={`p-3 rounded-full ${iconColorClasses[color]} bg-white dark:bg-gray-700`}
+        >
+          <Icon className="h-6 w-6" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function BasicDataTable() {
   const [data, setData] = useState<AdminTypes[]>([]);
@@ -62,6 +109,16 @@ function BasicDataTable() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
+
+  // Calculate statistics
+  const statistics = {
+    totalAdmins: data.length,
+    totalTeachers: teachers.length,
+    totalModules: modules.length,
+    activeAdmins: data.filter(
+      (admin) => admin.modules && admin.modules.length > 0
+    ).length,
+  };
 
   // get token from next api
   useEffect(() => {
@@ -459,6 +516,34 @@ function BasicDataTable() {
 
   return (
     <>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="إجمالي المشرفين"
+          value={statistics.totalAdmins}
+          icon={Shield}
+          color="blue"
+        />
+        <StatCard
+          title="إجمالي المعلمين"
+          value={statistics.totalTeachers}
+          icon={Users}
+          color="green"
+        />
+        <StatCard
+          title="إجمالي الوحدات"
+          value={statistics.totalModules}
+          icon={BookOpen}
+          color="purple"
+        />
+        <StatCard
+          title="المشرفين النشطين"
+          value={statistics.activeAdmins}
+          icon={UserCheck}
+          color="orange"
+        />
+      </div>
+
       <div className="flex items-center justify-between gap-2 px-4 mb-4">
         <div className="flex items-center gap-2">
           {/* search input */}
