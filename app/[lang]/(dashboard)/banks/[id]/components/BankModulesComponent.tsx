@@ -46,7 +46,7 @@ interface BankQuestion {
   id: number;
   question: string;
   options: string[];
-  correct_answer: number;
+  correct_answer: number | null;
   type?: "multiple_choice" | "true_false" | "written";
   written_answer?: string;
 }
@@ -83,7 +83,7 @@ interface PaginationMeta {
 interface MultipleQuestionForm {
   title: string;
   questions: string[];
-  correct_answer: number;
+  correct_answer: number | null;
 }
 
 interface BankModulesComponentProps {
@@ -117,6 +117,7 @@ const BankModulesComponent = ({
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
     null
   );
+  const [sectionTitle, setSectionTitle] = useState<string>("");
 
   // Multiple questions form state
   const [multipleQuestions, setMultipleQuestions] = useState<
@@ -125,7 +126,7 @@ const BankModulesComponent = ({
     {
       title: "",
       questions: ["", "", "", ""],
-      correct_answer: 0,
+      correct_answer: null,
     },
   ]);
 
@@ -258,22 +259,27 @@ const BankModulesComponent = ({
       setIsLoading(true);
 
       const formData = new FormData();
-      formData.append("name", editForm.name);
+      formData.append("name", selectedSection.name);
       formData.append("bank_id", selectedBank.id.toString());
       formData.append("type", "questions");
       formData.append("_method", "PUT");
 
-      // Add the question in the specified format (using index 1)
-      formData.append("questions[1][question]", editForm.question);
-      editForm.options.forEach((option, index) => {
-        if (option.trim()) {
-          formData.append(`questions[1][${index + 1}]`, option);
-        }
-      });
-      formData.append(
-        "questions[1][correct_answer]",
-        (editForm.correct_answer + 1).toString()
-      );
+      // Add all questions in the section
+      if (selectedSection.questions && selectedSection.questions.length > 0) {
+        selectedSection.questions.forEach((q, idx) => {
+          const qIndex = idx + 1;
+          formData.append(`questions[${qIndex}][question]`, q.question);
+          q.options.forEach((option, optIdx) => {
+            if (option.trim()) {
+              formData.append(`questions[${qIndex}][${optIdx + 1}]`, option);
+            }
+          });
+          formData.append(
+            `questions[${qIndex}][correct_answer]`,
+            ((q.correct_answer as number) + 1).toString()
+          );
+        });
+      }
 
       await postData(`bank-sections/${selectedSection.id}`, formData, {
         Authorization: `Bearer ${token}`,
@@ -313,7 +319,7 @@ const BankModulesComponent = ({
       setIsLoading(true);
 
       const formData = new FormData();
-      formData.append("name", `بنك أسئلة - ${validQuestions.length} سؤال`);
+      formData.append("name", sectionTitle);
       formData.append("bank_id", selectedBank.id.toString());
       formData.append("type", "questions");
 
@@ -331,7 +337,7 @@ const BankModulesComponent = ({
 
         formData.append(
           `questions[${qIndex}][correct_answer]`,
-          (question.correct_answer + 1).toString()
+          ((question.correct_answer as number) + 1).toString()
         );
       });
 
@@ -357,7 +363,7 @@ const BankModulesComponent = ({
       {
         title: "",
         questions: ["", "", "", ""],
-        correct_answer: 0,
+        correct_answer: null,
       },
     ]);
   };
@@ -369,7 +375,7 @@ const BankModulesComponent = ({
       {
         title: "",
         questions: ["", "", "", ""],
-        correct_answer: 0,
+        correct_answer: null,
       },
     ]);
   };
@@ -506,7 +512,7 @@ const BankModulesComponent = ({
           ).map((page) => (
             <Button
               key={page}
-              variant={ "outline"}
+              variant={"outline"}
               size="sm"
               onClick={() => handlePageChange(page)}
             >
@@ -815,10 +821,12 @@ const BankModulesComponent = ({
       {/* View/Edit Section Dialog */}
       <Dialog
         open={!!selectedSection && (isViewing || isEditing)}
-        onOpenChange={() => {
-          setSelectedSection(null);
-          setIsEditing(false);
-          setIsViewing(false);
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSection(null);
+            setIsEditing(false);
+            setIsViewing(false);
+          }
         }}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -844,57 +852,176 @@ const BankModulesComponent = ({
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      عنوان السؤال
-                    </label>
-                    <Textarea
-                      value={editForm.question}
-                      onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          question: e.target.value,
-                        }))
-                      }
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium">
-                      الخيارات
-                    </label>
-                    {editForm.options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={option}
-                          onChange={(e) =>
-                            setEditForm((prev) => ({
-                              ...prev,
-                              options: prev.options.map((q, i) =>
-                                i === index ? e.target.value : q
-                              ),
-                            }))
-                          }
-                          placeholder={`الخيار ${index + 1}`}
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setEditForm({
-                              ...editForm,
-                              correct_answer: index,
-                            })
-                          }
+                  {/* Render all questions for editing */}
+                  {selectedSection.questions &&
+                  selectedSection.questions.length > 0 ? (
+                    <div className="space-y-6">
+                      {selectedSection.questions.map((question, qIdx) => (
+                        <div
+                          key={question.id || qIdx}
+                          className="border rounded-lg p-4"
                         >
-                          {editForm.correct_answer === index
-                            ? "إجابة صحيحة"
-                            : "تحديد كإجابة صحيحة"}
+                          <h4 className="font-medium mb-2">
+                            السؤال {qIdx + 1}
+                          </h4>
+                          <div className="mb-2">
+                            <label className="block text-sm font-medium mb-1">
+                              عنوان السؤال
+                            </label>
+                            <Textarea
+                              value={question.question}
+                              onChange={(e) => {
+                                const updatedQuestions =
+                                  selectedSection.questions!.map((q, i) =>
+                                    i === qIdx
+                                      ? { ...q, question: e.target.value }
+                                      : q
+                                  );
+                                setSelectedSection({
+                                  ...selectedSection,
+                                  questions: updatedQuestions,
+                                });
+                              }}
+                              rows={3}
+                            />
+                          </div>
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium">
+                              الخيارات
+                            </label>
+                            {question.options.map((option, optIdx) => (
+                              <div
+                                key={optIdx}
+                                className="flex items-center gap-2"
+                              >
+                                <Input
+                                  value={option}
+                                  onChange={(e) => {
+                                    const updatedOptions = question.options.map(
+                                      (o, i) =>
+                                        i === optIdx ? e.target.value : o
+                                    );
+                                    const updatedQuestions =
+                                      selectedSection.questions!.map((q, i) =>
+                                        i === qIdx
+                                          ? { ...q, options: updatedOptions }
+                                          : q
+                                      );
+                                    setSelectedSection({
+                                      ...selectedSection,
+                                      questions: updatedQuestions,
+                                    });
+                                  }}
+                                  placeholder={`الخيار ${optIdx + 1}`}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updatedQuestions =
+                                      selectedSection.questions!.map((q, i) =>
+                                        i === qIdx
+                                          ? { ...q, correct_answer: optIdx }
+                                          : q
+                                      );
+                                    setSelectedSection({
+                                      ...selectedSection,
+                                      questions: updatedQuestions,
+                                    });
+                                  }}
+                                >
+                                  {question.correct_answer === optIdx
+                                    ? "إجابة صحيحة"
+                                    : "تحديد كإجابة صحيحة"}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex justify-center mt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            // Assign a unique negative id for new questions
+                            const minId = (
+                              selectedSection.questions || []
+                            ).reduce((min, q) => (q.id < min ? q.id : min), 0);
+                            const newQuestion: BankQuestion = {
+                              id: minId - 1,
+                              question: "",
+                              options: ["", "", "", ""],
+                              correct_answer: null,
+                              type: "multiple_choice",
+                            };
+                            setSelectedSection({
+                              ...selectedSection,
+                              questions: [
+                                ...(selectedSection.questions || []),
+                                newQuestion,
+                              ],
+                            });
+                          }}
+                          className="w-full max-w-md"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          إضافة سؤال آخر
                         </Button>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        عنوان السؤال
+                      </label>
+                      <Textarea
+                        value={editForm.question}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            question: e.target.value,
+                          }))
+                        }
+                        rows={3}
+                      />
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium">
+                          الخيارات
+                        </label>
+                        {editForm.options.map((option, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Input
+                              value={option}
+                              onChange={(e) =>
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  options: prev.options.map((q, i) =>
+                                    i === index ? e.target.value : q
+                                  ),
+                                }))
+                              }
+                              placeholder={`الخيار ${index + 1}`}
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setEditForm({
+                                  ...editForm,
+                                  correct_answer: index,
+                                })
+                              }
+                            >
+                              {editForm.correct_answer === index
+                                ? "إجابة صحيحة"
+                                : "تحديد كإجابة صحيحة"}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <DialogFooter>
                     <Button
@@ -949,7 +1076,9 @@ const BankModulesComponent = ({
                                         <div
                                           key={optIndex}
                                           className={`flex items-center gap-2 p-2 rounded ${
-                                            question.correct_answer === optIndex
+                                            question.correct_answer !== null &&
+                                            question.correct_answer - 1 ===
+                                              optIndex
                                               ? "bg-green-100 text-green-800 border border-green-200"
                                               : "bg-gray-100"
                                           }`}
@@ -960,12 +1089,13 @@ const BankModulesComponent = ({
                                           <span className="flex-1">
                                             {option}
                                           </span>
-                                          {question.correct_answer ===
-                                            optIndex && (
-                                            <span className="text-xs font-medium bg-green-200 px-2 py-1 rounded">
-                                              الإجابة الصحيحة
-                                            </span>
-                                          )}
+                                          {question.correct_answer !== null &&
+                                            question.correct_answer - 1 ===
+                                              optIndex && (
+                                              <span className="text-xs font-medium bg-green-200 px-2 py-1 rounded">
+                                                الإجابة الصحيحة
+                                              </span>
+                                            )}
                                         </div>
                                       )
                                     )}
@@ -1016,6 +1146,15 @@ const BankModulesComponent = ({
             <DialogTitle>إضافة أسئلة جديدة</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                اسم القسم
+              </label>
+              <Input
+                value={sectionTitle}
+                onChange={(e) => setSectionTitle(e.target.value)}
+              />
+            </div>
             {multipleQuestions.map((questionForm, index) => (
               <div key={index} className="border rounded-lg p-4 relative">
                 {multipleQuestions.length > 1 && (
@@ -1072,7 +1211,8 @@ const BankModulesComponent = ({
                             })
                           }
                         >
-                          {questionForm.correct_answer === qIndex
+                          {questionForm.correct_answer !== null &&
+                          questionForm.correct_answer === qIndex
                             ? "إجابة صحيحة"
                             : "تحديد كإجابة صحيحة"}
                         </Button>
@@ -1088,6 +1228,7 @@ const BankModulesComponent = ({
                               updateQuestionForm(index, {
                                 questions: newQuestions,
                                 correct_answer:
+                                  questionForm.correct_answer !== null &&
                                   questionForm.correct_answer >= qIndex &&
                                   questionForm.correct_answer > 0
                                     ? questionForm.correct_answer - 1
