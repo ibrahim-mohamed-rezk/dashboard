@@ -11,14 +11,23 @@ const Dashboard = async ({
 }) => {
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
+  const paramsData = await searchParams;
 
-  const feachData = async () => {
+  // Format date as "YYYY-MM-DDTHH:mm:ss.sssZ"
+  const formatDate = (date: Date) => date.toISOString();
+
+  // Use params date if available, otherwise use current date in ISO format
+  const startDate = (paramsData.from as string) || formatDate(new Date());
+
+  // Use params end date if available, otherwise use current date + 1 month in ISO format
+  const endDate =
+    (paramsData.to as string) ||
+    formatDate(new Date(new Date().setMonth(new Date().getMonth() + 1)));
+
+  const filterBy = (paramsData.filter_by as string) || "month";
+
+  const fetchData = async () => {
     try {
-      const params = await searchParams;
-      const startDate = params.start_date || "2025-02-01";
-      const endDate = params.end_date || "2025-06-01";
-      const filterBy = params.filter_by || "month";
-
       const response = await getData(
         `statistics?start_date=${startDate}&end_date=${endDate}&filter_by=${filterBy}`,
         {},
@@ -28,12 +37,15 @@ const Dashboard = async ({
       );
       return response;
     } catch (error) {
+      console.error("Error fetching statistics:", error);
       throw error;
     }
   };
 
-  const statistics = await feachData();
+  const statistics = await fetchData();
+
   const trans = await getDictionary("ar");
+
   return <DashboardPageView statistics={statistics} trans={trans} />;
 };
 

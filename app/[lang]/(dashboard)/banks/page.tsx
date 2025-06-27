@@ -29,6 +29,10 @@ import {
   Building2,
   Users,
   GraduationCap,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -68,9 +72,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-
 import { useEffect, useState, useMemo } from "react";
+import { deleteData, getData, postData } from "@/lib/axios/server";
+import axios, { AxiosHeaders } from "axios";
+import toast from "react-hot-toast";
+import { CoursesData, Teacher } from "@/lib/type";
+import Link from "next/link";
 
 interface Bank {
   id: number;
@@ -78,6 +85,7 @@ interface Bank {
   price: number | null;
   banktable_id: number;
   banktable_type: "course" | "teacher";
+  position: "online" | "offline";
   created_at: string;
   updated_at: string;
 }
@@ -87,6 +95,7 @@ interface FormData {
   price: string;
   banktable_id: number;
   banktable_type: "course" | "teacher";
+  position: "online" | "offline";
 }
 
 interface PaginationMeta {
@@ -118,36 +127,13 @@ interface ApiResponse {
 }
 
 function BanksTable() {
-  // Sample data matching the provided API response
-  const [data, setData] = useState<Bank[]>([
-    {
-      id: 7,
-      name: "bank5",
-      price: 50,
-      banktable_id: 1,
-      banktable_type: "course",
-      created_at: "2025-04-05",
-      updated_at: "2025-04-05",
-    },
-    {
-      id: 2,
-      name: "bank3",
-      price: null,
-      banktable_id: 1,
-      banktable_type: "teacher",
-      created_at: "2025-04-03",
-      updated_at: "2025-04-03",
-    },
-    {
-      id: 1,
-      name: "bank12",
-      price: 100,
-      banktable_id: 1,
-      banktable_type: "course",
-      created_at: "2025-03-01",
-      updated_at: "2025-04-07",
-    },
-  ]);
+  const [data, setData] = useState<Bank[]>([]);
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+    null
+  );
+  const [paginationLinks, setPaginationLinks] =
+    useState<PaginationLinks | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [userRole, setUserRole] = useState<string>("admin");
   const [userId, setUserId] = useState<number>(1);
@@ -158,11 +144,14 @@ function BanksTable() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [bankToDelete, setBankToDelete] = useState<Bank | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [courses, setCourses] = useState<CoursesData[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     price: "",
     banktable_id: 1,
     banktable_type: "course",
+    position: "online",
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -170,30 +159,88 @@ function BanksTable() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
-    current_page: 1,
-    from: 1,
-    last_page: 1,
-    links: [
-      { url: null, label: "&laquo; Previous", active: false },
-      {
-        url: "https://safezone-co.top/api/v1/dashboard/banks?page=1",
-        label: "1",
-        active: true,
-      },
-      { url: null, label: "Next &raquo;", active: false },
-    ],
-    path: "https://safezone-co.top/api/v1/dashboard/banks",
-    per_page: 15,
-    to: 3,
-    total: 3,
-  });
-  const [paginationLinks, setPaginationLinks] = useState<PaginationLinks>({
-    first: "https://safezone-co.top/api/v1/dashboard/banks?page=1",
-    last: "https://safezone-co.top/api/v1/dashboard/banks?page=1",
-    prev: null,
-    next: null,
-  });
+
+  // get token from next api
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("/api/auth/getToken");
+        setToken(response.data.token);
+      } catch (error) {
+        throw error;
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // get data from api with pagination
+  const fetchData = async (page: number = 1) => {
+    try {
+      const response = await getData(
+        `banks?page=${page}`,
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setData(response.data || []);
+      setPaginationMeta(response.meta || null);
+      setPaginationLinks(response.links || null);
+      setCurrentPage(response.meta?.current_page || 1);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // useEffect to fetch data
+  useEffect(() => {
+    if (token) {
+      fetchData(currentPage);
+    }
+  }, [token, currentPage]);
+
+  // function to fetch courses
+  const fetchCourses = async () => {
+    if (!token) return;
+    try {
+      const response = await getData(
+        `/courses`,
+        {},
+        new AxiosHeaders({
+          Authorization: `Bearer ${token}`,
+        })
+      );
+      setCourses(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // function to fetch teachers
+  const fetchTeachers = async () => {
+    if (!token) return;
+    try {
+      const response = await getData(
+        `teachers`,
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setTeachers(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Load courses and teachers on component mount
+  useEffect(() => {
+    if (token) {
+      fetchCourses();
+      fetchTeachers();
+    }
+  }, [token]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -207,36 +254,57 @@ function BanksTable() {
     }));
   };
 
+  // Handle banktable_type change and reset banktable_id
+  const handleBanktableTypeChange = (value: "course" | "teacher") => {
+    setFormData((prev) => ({
+      ...prev,
+      banktable_type: value,
+      banktable_id: 1, // Reset to default
+    }));
+  };
+
+  // submit course
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Simulate API call
-      const newBank: Bank = {
-        id: Math.max(...data.map((b) => b.id)) + 1,
-        name: formData.name,
-        price: formData.price ? parseFloat(formData.price) : null,
-        banktable_id: formData.banktable_id,
-        banktable_type: formData.banktable_type,
-        created_at: new Date().toISOString().split("T")[0],
-        updated_at: new Date().toISOString().split("T")[0],
-      };
-
-      setData((prev) => [...prev, newBank]);
+      await postData(
+        "banks",
+        {
+          name: formData.name,
+          price: formData.price ? formData.price : null,
+          banktable_id: formData.banktable_id,
+          banktable_type: formData.banktable_type,
+          position: formData.position,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        }
+      );
       setAddBank(false);
       setFormData({
         name: "",
         price: "",
         banktable_id: 1,
         banktable_type: "course",
+        position: "online",
       });
-    } catch (error: any) {
-      setEditError("Failed to add bank");
+      await fetchData(currentPage);
+      toast.success("تم إضافة البنك بنجاح");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.msg || "An error occurred");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
+  // update course
   const handleEdit = (bank: Bank) => {
     setEditingBank(bank);
     setFormData({
@@ -244,6 +312,7 @@ function BanksTable() {
       price: bank.price?.toString() || "",
       banktable_id: bank.banktable_id,
       banktable_type: bank.banktable_type,
+      position: bank.position || "online",
     });
     setEditBank(true);
   };
@@ -257,11 +326,15 @@ function BanksTable() {
     if (!bankToDelete) return;
     setIsLoading(true);
     try {
-      setData((prev) => prev.filter((b) => b.id !== bankToDelete.id));
+      await deleteData(`banks/${bankToDelete.id}`, {
+        Authorization: `Bearer ${token}`,
+      });
       setDeleteDialogOpen(false);
       setBankToDelete(null);
+      await fetchData(currentPage);
+      toast.success("تم حذف البنك بنجاح");
     } catch (error) {
-      // Handle error
+      toast.error("فشل في حذف البنك");
     } finally {
       setIsLoading(false);
     }
@@ -289,19 +362,25 @@ function BanksTable() {
   };
 
   const exportToCSV = () => {
-    const headers = ["الاسم", "السعر", "النوع", "معرف الجدول", "تاريخ الإنشاء"];
-    const csvData = data.map((bank) => [
+    const headers = [
+      "الاسم",
+      "السعر",
+      "النوع",
+      "معرف الجدول",
+      "تاريخ الإنشاء",
+      "الموقع",
+    ];
+    const csvData = (data || []).map((bank) => [
       bank.name,
       bank.price?.toString() || "مجاني",
       bank.banktable_type === "course" ? "كورس" : "معلم",
       bank.banktable_id.toString(),
       bank.created_at,
+      bank.position,
     ]);
-
     const csvContent = [headers, ...csvData]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
       .join("\n");
-
     const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], {
       type: "text/csv;charset=utf-8;",
@@ -313,16 +392,42 @@ function BanksTable() {
   };
 
   const filteredData = useMemo(() => {
-    return data.filter((bank) => {
+    return (data || []).filter((bank) => {
       const matchesType =
         typeFilter === "all" || bank.banktable_type === typeFilter;
       const matchesGlobal =
         globalFilter === "" ||
         bank.name.toLowerCase().includes(globalFilter.toLowerCase());
-
       return matchesType && matchesGlobal;
     });
   }, [data, typeFilter, globalFilter]);
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (paginationMeta && currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (paginationMeta && currentPage < paginationMeta.last_page) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
+  const handleFirstPage = () => {
+    handlePageChange(1);
+  };
+
+  const handleLastPage = () => {
+    if (paginationMeta) {
+      handlePageChange(paginationMeta.last_page);
+    }
+  };
 
   const columns: ColumnDef<Bank>[] = [
     {
@@ -340,7 +445,9 @@ function BanksTable() {
       cell: ({ row }) => (
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-gray-500" />
-          <span className="font-medium">{row.getValue("name")}</span>
+          <Link href={`/ar/banks/${row.original.id}`} className="font-medium">
+            {row.getValue("name")}
+          </Link>
         </div>
       ),
     },
@@ -363,10 +470,33 @@ function BanksTable() {
     },
     {
       accessorKey: "banktable_id",
-      header: "معرف الجدول",
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue("banktable_id")}</Badge>
-      ),
+      header: "المرتبط بـ",
+      cell: ({ row }) => {
+        const bankType = row.getValue("banktable_type") as string;
+        const bankId = row.getValue("banktable_id") as number;
+
+        if (bankType === "course") {
+          const course = courses.find((c) => c.id === bankId);
+          return (
+            <div className="flex items-center !justify-center space-x-2">
+              <GraduationCap className="w-4 h-4 text-blue-500" />
+              <span className="font-medium ">
+                {course?.title || `كورس #${bankId}`}
+              </span>
+            </div>
+          );
+        } else {
+          const teacher = teachers.find((t) => t.id === bankId);
+          return (
+            <div className="flex items-center !justify-center space-x-2">
+              <Users className="w-4 h-4 text-green-500" />
+              <span className="font-medium">
+                {teacher?.user?.full_name || `معلم #${bankId}`}
+              </span>
+            </div>
+          );
+        }
+      },
     },
     {
       accessorKey: "created_at",
@@ -400,13 +530,22 @@ function BanksTable() {
                 <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[160px]">
-              <DropdownMenuItem onClick={() => handleEdit(item)}>
+            <DropdownMenuContent align="center" className="w-[160px]">
+              <Link href={`/ar/banks/${item.id}`}>
+                <DropdownMenuItem className="!justify-center">
+                  عرض
+                </DropdownMenuItem>
+              </Link>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="!justify-center"
+                onClick={() => handleEdit(item)}
+              >
                 تعديل
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="text-red-600 hover:bg-red-50"
+                className="text-red-600 !justify-center hover:bg-red-50"
                 onClick={() => handleDeleteClick(item)}
               >
                 حذف
@@ -437,22 +576,22 @@ function BanksTable() {
 
   const updateBank = async (id: number) => {
     setIsLoading(true);
+    setEditError(null);
     try {
-      setData((prev) =>
-        prev.map((bank) =>
-          bank.id === id
-            ? {
-                ...bank,
-                name: formData.name,
-                price: formData.price ? parseFloat(formData.price) : null,
-                banktable_id: formData.banktable_id,
-                banktable_type: formData.banktable_type,
-                updated_at: new Date().toISOString().split("T")[0],
-              }
-            : bank
-        )
+      await postData(
+        `banks/${id}?_method=PUT`,
+        {
+          name: formData.name,
+          price: formData.price ? formData.price : null,
+          banktable_id: formData.banktable_id,
+          banktable_type: formData.banktable_type,
+          position: formData.position,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        }
       );
-
       setEditBank(false);
       setEditingBank(null);
       setFormData({
@@ -460,9 +599,13 @@ function BanksTable() {
         price: "",
         banktable_id: 1,
         banktable_type: "course",
+        position: "online",
       });
+      await fetchData(currentPage);
+      toast.success("تم تعديل البنك بنجاح");
     } catch (error: any) {
       setEditError("Failed to update bank");
+      toast.error("فشل في تعديل البنك");
     } finally {
       setIsLoading(false);
     }
@@ -499,7 +642,7 @@ function BanksTable() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {}}
+            onClick={() => fetchData(currentPage)}
             disabled={isLoading}
             className="flex items-center gap-2"
           >
@@ -558,7 +701,16 @@ function BanksTable() {
             <DialogTrigger asChild>
               <Button
                 className="flex items-center gap-2"
-                onClick={() => setAddBank(true)}
+                onClick={() => {
+                  setAddBank(true);
+                  setFormData({
+                    name: "",
+                    price: "",
+                    banktable_id: 1,
+                    banktable_type: "course",
+                    position: "online",
+                  });
+                }}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 إضافة بنك
@@ -621,7 +773,11 @@ function BanksTable() {
                         name="banktable_type"
                         className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
                         value={formData.banktable_type}
-                        onChange={handleInputChange}
+                        onChange={(e) =>
+                          handleBanktableTypeChange(
+                            e.target.value as "course" | "teacher"
+                          )
+                        }
                         required
                       >
                         <option
@@ -644,14 +800,15 @@ function BanksTable() {
                         htmlFor="banktable_id"
                         className="text-sm font-medium"
                       >
-                        معرف الجدول *
+                        {formData.banktable_type === "course"
+                          ? "الكورس"
+                          : "المعلم"}{" "}
+                        *
                       </label>
-                      <Input
+                      <select
                         id="banktable_id"
                         name="banktable_id"
-                        type="number"
-                        min="1"
-                        placeholder="أدخل معرف الجدول"
+                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
                         value={formData.banktable_id}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -660,7 +817,68 @@ function BanksTable() {
                           }))
                         }
                         required
-                      />
+                      >
+                        <option
+                          value=""
+                          disabled
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          اختر{" "}
+                          {formData.banktable_type === "course"
+                            ? "الكورس"
+                            : "المعلم"}
+                        </option>
+                        {formData.banktable_type === "course"
+                          ? courses.map((course) => (
+                              <option
+                                key={course.id}
+                                value={course.id}
+                                className="dark:bg-gray-800 dark:!text-white"
+                              >
+                                {course.title}
+                              </option>
+                            ))
+                          : teachers.map((teacher) => (
+                              <option
+                                key={teacher.id}
+                                value={teacher.id}
+                                className="dark:bg-gray-800 dark:!text-white"
+                              >
+                                {teacher.user?.full_name}
+                              </option>
+                            ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="position" className="text-sm font-medium">
+                        الموقع
+                      </label>
+                      <select
+                        id="position"
+                        name="position"
+                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                        value={formData.position}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            position: e.target.value as "online" | "offline",
+                          }))
+                        }
+                      >
+                        <option
+                          value="online"
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          أونلاين
+                        </option>
+                        <option
+                          value="offline"
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          أوفلاين
+                        </option>
+                      </select>
                     </div>
                   </div>
 
@@ -711,7 +929,7 @@ function BanksTable() {
                 إجمالي البنوك
               </p>
               <p className="text-2xl font-bold text-blue-900 dark:text-blue-200">
-                {data.length}
+                {paginationMeta?.total || data.length}
               </p>
             </div>
             <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
@@ -772,7 +990,9 @@ function BanksTable() {
       {/* Results Summary */}
       <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
         <div>
-          عرض {filteredData.length} من {data.length} بنك
+          عرض {paginationMeta?.from || 1} إلى{" "}
+          {paginationMeta?.to || data.length} من{" "}
+          {paginationMeta?.total || data.length} بنك
           {(typeFilter !== "all" || globalFilter) && (
             <span className="text-blue-600"> (مفلتر)</span>
           )}
@@ -851,7 +1071,11 @@ function BanksTable() {
                       name="banktable_type"
                       className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
                       value={formData.banktable_type}
-                      onChange={handleInputChange}
+                      onChange={(e) =>
+                        handleBanktableTypeChange(
+                          e.target.value as "course" | "teacher"
+                        )
+                      }
                       required
                     >
                       <option
@@ -874,14 +1098,15 @@ function BanksTable() {
                       htmlFor="edit-banktable_id"
                       className="text-sm font-medium"
                     >
-                      معرف الجدول *
+                      {formData.banktable_type === "course"
+                        ? "الكورس"
+                        : "المعلم"}{" "}
+                      *
                     </label>
-                    <Input
+                    <select
                       id="edit-banktable_id"
                       name="banktable_id"
-                      type="number"
-                      min="1"
-                      placeholder="أدخل معرف الجدول"
+                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
                       value={formData.banktable_id}
                       onChange={(e) =>
                         setFormData((prev) => ({
@@ -890,7 +1115,71 @@ function BanksTable() {
                         }))
                       }
                       required
-                    />
+                    >
+                      <option
+                        value=""
+                        disabled
+                        className="dark:bg-gray-800 dark:!text-white"
+                      >
+                        اختر{" "}
+                        {formData.banktable_type === "course"
+                          ? "الكورس"
+                          : "المعلم"}
+                      </option>
+                      {formData.banktable_type === "course"
+                        ? courses.map((course) => (
+                            <option
+                              key={course.id}
+                              value={course.id}
+                              className="dark:bg-gray-800 dark:!text-white"
+                            >
+                              {course.title}
+                            </option>
+                          ))
+                        : teachers.map((teacher) => (
+                            <option
+                              key={teacher.id}
+                              value={teacher.id}
+                              className="dark:bg-gray-800 dark:!text-white"
+                            >
+                              {teacher.user?.full_name}
+                            </option>
+                          ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="edit-position"
+                      className="text-sm font-medium"
+                    >
+                      الموقع
+                    </label>
+                    <select
+                      id="edit-position"
+                      name="position"
+                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                      value={formData.position}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          position: e.target.value as "online" | "offline",
+                        }))
+                      }
+                    >
+                      <option
+                        value="online"
+                        className="dark:bg-gray-800 dark:!text-white"
+                      >
+                        أونلاين
+                      </option>
+                      <option
+                        value="offline"
+                        className="dark:bg-gray-800 dark:!text-white"
+                      >
+                        أوفلاين
+                      </option>
+                    </select>
                   </div>
                 </div>
 
@@ -972,7 +1261,7 @@ function BanksTable() {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="text-center">
+                  <TableHead key={header.id} className="!text-center">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -1012,43 +1301,82 @@ function BanksTable() {
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          عرض {filteredData.length} من {data.length} بنك
+      {/* Pagination */}
+      {paginationMeta && paginationMeta.last_page > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <p className="text-sm text-muted-foreground">
+              عرض {paginationMeta.from} إلى {paginationMeta.to} من{" "}
+              {paginationMeta.total} نتيجة
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFirstPage}
+              disabled={currentPage === 1}
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center space-x-1">
+              {Array.from(
+                { length: Math.min(5, paginationMeta.last_page) },
+                (_, i) => {
+                  let pageNumber;
+                  if (paginationMeta.last_page <= 5) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= paginationMeta.last_page - 2) {
+                    pageNumber = paginationMeta.last_page - 4 + i;
+                  } else {
+                    pageNumber = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={"outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNumber)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                }
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextPage}
+              disabled={currentPage === paginationMeta.last_page}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLastPage}
+              disabled={currentPage === paginationMeta.last_page}
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPaginationMeta((prev) => ({
-                ...prev,
-                current_page: Math.max(1, prev.current_page - 1),
-              }))
-            }
-            disabled={paginationMeta.current_page === 1}
-          >
-            السابق
-          </Button>
-          <span>
-            الصفحة {paginationMeta.current_page} من {paginationMeta.last_page}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPaginationMeta((prev) => ({
-                ...prev,
-                current_page: Math.min(prev.last_page, prev.current_page + 1),
-              }))
-            }
-            disabled={paginationMeta.current_page === paginationMeta.last_page}
-          >
-            التالي
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
