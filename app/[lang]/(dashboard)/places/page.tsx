@@ -9,14 +9,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -29,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 import { useEffect, useState } from "react";
-import { getData, postData } from "@/lib/axios/server";
+import { getData, postData, deleteData } from "@/lib/axios/server";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +54,6 @@ interface AreasResponse {
     total: number;
   };
 }
-
 
 // Statistics Card Component
 const StatCard = ({
@@ -203,8 +194,8 @@ function GovernoratesAreasManagement() {
       refetchAreas();
     }
   }, [token]);
-    
-    console.log(areas, governorates)
+
+  console.log(areas, governorates);
 
   // Governorate form handlers
   const handleGovernorateInputChange = (
@@ -224,16 +215,13 @@ function GovernoratesAreasManagement() {
       formData.append("name", governorateFormData.name);
 
       if (isEditingGovernorate && editingGovernorate) {
-        await postData(
-          `dashboard/governorates/${editingGovernorate.id}`,
-          formData,
-          {
-            Authorization: `Bearer ${token}`,
-          }
-        );
+        formData.append("_method", "PUT");
+        await postData(`governorates/${editingGovernorate.id}`, formData, {
+          Authorization: `Bearer ${token}`,
+        });
         toast.success("تم تحديث المحافظة بنجاح");
       } else {
-        await postData("dashboard/governorates", formData, {
+        await postData("governorates", formData, {
           Authorization: `Bearer ${token}`,
         });
         toast.success("تم إضافة المحافظة بنجاح");
@@ -282,12 +270,17 @@ function GovernoratesAreasManagement() {
       formData.append("governorate_id", areaFormData.governorate_id);
 
       if (isEditingArea && editingArea) {
-        await postData(`dashboard/areas/${editingArea.id}`, formData, {
-          Authorization: `Bearer ${token}`,
-        });
+        formData.append("_method", "PUT");
+        await postData(
+          `areas/${editingArea.id}`,
+          formData,
+          {
+            Authorization: `Bearer ${token}`,
+          }
+        );
         toast.success("تم تحديث المنطقة بنجاح");
       } else {
-        await postData("dashboard/areas", formData, {
+        await postData("areas", formData, {
           Authorization: `Bearer ${token}`,
         });
         toast.success("تم إضافة المنطقة بنجاح");
@@ -330,6 +323,59 @@ function GovernoratesAreasManagement() {
     });
     setIsEditingArea(true);
     setIsAreaDialogOpen(true);
+  };
+
+  // Delete handlers
+  const handleDeleteGovernorate = async (id: number) => {
+    if (
+      !window.confirm(
+        "هل أنت متأكد من حذف هذه المحافظة؟ سيتم حذف جميع المناطق التابعة لها أيضاً."
+      )
+    )
+      return;
+    try {
+      await deleteData(`governorates/${id}`, {
+        Authorization: `Bearer ${token}`,
+      });
+      toast.success("تم حذف المحافظة بنجاح");
+      refetchGovernorates();
+      refetchAreas(); // In case areas are affected
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data?.errors;
+        if (errorData) {
+          const errorMessages = Object.values(errorData).flat().join(", ");
+          setError(errorMessages);
+        } else {
+          setError("حدث خطأ");
+        }
+      } else {
+        setError("حدث خطأ غير متوقع");
+      }
+    }
+  };
+
+  const handleDeleteArea = async (id: number) => {
+    if (!window.confirm("هل أنت متأكد من حذف هذه المنطقة؟")) return;
+    try {
+      await deleteData(`areas/${id}`, {
+        Authorization: `Bearer ${token}`,
+      });
+      toast.success("تم حذف المنطقة بنجاح");
+      refetchAreas();
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data?.errors;
+        if (errorData) {
+          const errorMessages = Object.values(errorData).flat().join(", ");
+          setError(errorMessages);
+        } else {
+          setError("حدث خطأ");
+        }
+      } else {
+        setError("حدث خطأ غير متوقع");
+      }
+    }
   };
 
   // Get governorate name by ID
@@ -383,6 +429,14 @@ function GovernoratesAreasManagement() {
             >
               تعديل
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeleteGovernorate(governorate.id)}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              حذف
+            </Button>
           </div>
         );
       },
@@ -429,6 +483,14 @@ function GovernoratesAreasManagement() {
               onClick={() => handleEditArea(area)}
             >
               تعديل
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeleteArea(area.id)}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              حذف
             </Button>
           </div>
         );
@@ -516,7 +578,8 @@ function GovernoratesAreasManagement() {
         <>
           <div className="flex items-center justify-between gap-2 px-4 mb-4">
             <div className="flex items-center gap-2">
-              <Input
+              <input
+                type="text"
                 placeholder="البحث في المحافظات..."
                 value={
                   (governorateTable
@@ -528,7 +591,7 @@ function GovernoratesAreasManagement() {
                     .getColumn("name")
                     ?.setFilterValue(event.target.value)
                 }
-                className="max-w-sm min-w-[200px] h-10"
+                className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <Dialog
@@ -556,15 +619,17 @@ function GovernoratesAreasManagement() {
                   </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleGovernorateSubmit} className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex flex-col">
                     <Label htmlFor="governorate_name">اسم المحافظة</Label>
-                    <Input
+                    <input
                       id="governorate_name"
                       name="name"
+                      type="text"
                       value={governorateFormData.name}
                       onChange={handleGovernorateInputChange}
                       placeholder="أدخل اسم المحافظة"
                       required
+                      className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -584,7 +649,7 @@ function GovernoratesAreasManagement() {
                 {governorateTable.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
+                      <TableHead className="!text-right" key={header.id}>
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -631,7 +696,8 @@ function GovernoratesAreasManagement() {
         <>
           <div className="flex items-center justify-between gap-2 px-4 mb-4">
             <div className="flex items-center gap-2">
-              <Input
+              <input
+                type="text"
                 placeholder="البحث في المناطق..."
                 value={
                   (areaTable.getColumn("name")?.getFilterValue() as string) ||
@@ -642,7 +708,7 @@ function GovernoratesAreasManagement() {
                     .getColumn("name")
                     ?.setFilterValue(event.target.value)
                 }
-                className="max-w-sm min-w-[200px] h-10"
+                className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <Dialog open={isAreaDialogOpen} onOpenChange={setIsAreaDialogOpen}>
@@ -665,39 +731,41 @@ function GovernoratesAreasManagement() {
                   </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleAreaSubmit} className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex flex-col">
                     <Label htmlFor="area_name">اسم المنطقة</Label>
-                    <Input
+                    <input
                       id="area_name"
                       name="name"
+                      type="text"
                       value={areaFormData.name}
                       onChange={handleAreaInputChange}
                       placeholder="أدخل اسم المنطقة"
                       required
+                      className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex flex-col">
                     <Label htmlFor="governorate_select">المحافظة</Label>
-                    <Select
+                    <select
+                      id="governorate_select"
+                      name="governorate_id"
                       value={areaFormData.governorate_id}
-                      onValueChange={handleAreaGovernorateChange}
+                      onChange={(e) =>
+                        handleAreaGovernorateChange(e.target.value)
+                      }
                       required
+                      className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر المحافظة" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {governorates.map((governorate) => (
-                          <SelectItem
-                            key={governorate.id}
-                            value={governorate.id.toString()}
-                          >
-                            {governorate.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value="" disabled>
+                        اختر المحافظة
+                      </option>
+                      {governorates.map((governorate) => (
+                        <option key={governorate.id} value={governorate.id}>
+                          {governorate.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {error && <div className="text-red-500 text-sm">{error}</div>}
