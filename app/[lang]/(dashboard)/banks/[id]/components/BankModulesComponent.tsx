@@ -41,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import CustomModal from "@/components/ui/CustomModal";
 
 interface BankQuestion {
   id: number;
@@ -130,12 +131,9 @@ const BankModulesComponent = ({
     },
   ]);
 
-  const [editForm, setEditForm] = useState({
-    name: "",
-    question: "",
-    options: ["", "", "", ""],
-    correct_answer: 0,
-  });
+  const [editQuestionsForm, setEditQuestionsForm] = useState<
+    MultipleQuestionForm[]
+  >([]);
 
   // Fetch banks data
   const fetchBanks = async () => {
@@ -211,24 +209,19 @@ const BankModulesComponent = ({
   // Handle Edit Section
   const handleEdit = (section: BankSection) => {
     setSelectedSection(section);
-
     if (section.questions && section.questions.length > 0) {
-      const firstQuestion = section.questions[0];
-      setEditForm({
-        name: section.name,
-        question: firstQuestion.question,
-        options: firstQuestion.options.length
-          ? [...firstQuestion.options]
-          : ["", "", "", ""],
-        correct_answer: firstQuestion.correct_answer || 0,
-      });
+      setEditQuestionsForm(
+        section.questions.map((q) => ({
+          title: q.question,
+          questions: q.options.length ? [...q.options] : ["", "", "", ""],
+          correct_answer:
+            q.correct_answer !== null ? q.correct_answer - 1 : null,
+        }))
+      );
     } else {
-      setEditForm({
-        name: section.name,
-        question: "",
-        options: ["", "", "", ""],
-        correct_answer: 0,
-      });
+      setEditQuestionsForm([
+        { title: "", questions: ["", "", "", ""], correct_answer: null },
+      ]);
     }
     setIsEditing(true);
   };
@@ -251,35 +244,66 @@ const BankModulesComponent = ({
     }
   };
 
+  // Add closeDialog function
+  const closeDialog = () => {
+    setIsEditing(false);
+    setIsViewing(false);
+    setSelectedSection(null);
+  };
+
   // Handle Update Section
   const handleUpdate = async () => {
     if (!selectedSection || !selectedBank) return;
-
     try {
       setIsLoading(true);
+      if (selectedSection.type === "file") {
+        const formData = new FormData();
+        formData.append("name", selectedSection.name);
+        formData.append("bank_id", selectedBank.id.toString());
+        formData.append("type", "file");
+        formData.append("_method", "PUT");
 
+        // If user uploaded a new file, add it
+        if (fileToUpload) {
+          formData.append("file", fileToUpload);
+        } else if (!selectedSection.file_path) {
+          // If file_path is undefined, user wants to remove the file
+          formData.append("remove_file", "1");
+        }
+
+        await postData(`bank-sections/${selectedSection.id}`, formData, {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        });
+
+        await fetchBankSections(currentPage);
+        setFileToUpload(null);
+        closeDialog();
+        toast.success("تم تحديث القسم بنجاح");
+        return;
+      }
+
+      // Default: handle questions section update
       const formData = new FormData();
       formData.append("name", selectedSection.name);
       formData.append("bank_id", selectedBank.id.toString());
       formData.append("type", "questions");
       formData.append("_method", "PUT");
 
-      // Add all questions in the section
-      if (selectedSection.questions && selectedSection.questions.length > 0) {
-        selectedSection.questions.forEach((q, idx) => {
-          const qIndex = idx + 1;
-          formData.append(`questions[${qIndex}][question]`, q.question);
-          q.options.forEach((option, optIdx) => {
-            if (option.trim()) {
-              formData.append(`questions[${qIndex}][${optIdx + 1}]`, option);
-            }
-          });
-          formData.append(
-            `questions[${qIndex}][correct_answer]`,
-            ((q.correct_answer as number) + 1).toString()
-          );
+      // Use editQuestionsForm for all questions
+      editQuestionsForm.forEach((q, idx) => {
+        const qIndex = idx + 1;
+        formData.append(`questions[${qIndex}][question]`, q.title);
+        q.questions.forEach((option, optIdx) => {
+          if (option.trim()) {
+            formData.append(`questions[${qIndex}][${optIdx + 1}]`, option);
+          }
         });
-      }
+        formData.append(
+          `questions[${qIndex}][correct_answer]`,
+          q.correct_answer !== null ? (q.correct_answer + 1).toString() : ""
+        );
+      });
 
       await postData(`bank-sections/${selectedSection.id}`, formData, {
         Authorization: `Bearer ${token}`,
@@ -287,8 +311,7 @@ const BankModulesComponent = ({
       });
 
       await fetchBankSections(currentPage);
-      setIsEditing(false);
-      setSelectedSection(null);
+      closeDialog();
       toast.success("تم تحديث القسم بنجاح");
     } catch (error) {
       toast.error("حدث خطأ أثناء تحديث القسم");
@@ -485,6 +508,29 @@ const BankModulesComponent = ({
     }
   };
 
+  // Add, remove, update question logic for editQuestionsForm
+  const addEditQuestionForm = () => {
+    setEditQuestionsForm([
+      ...editQuestionsForm,
+      { title: "", questions: ["", "", "", ""], correct_answer: null },
+    ]);
+  };
+  const removeEditQuestionForm = (index: number) => {
+    if (editQuestionsForm.length === 1) {
+      toast.error("يجب أن يحتوي النموذج على سؤال واحد على الأقل");
+      return;
+    }
+    setEditQuestionsForm(editQuestionsForm.filter((_, i) => i !== index));
+  };
+  const updateEditQuestionForm = (
+    index: number,
+    updates: Partial<MultipleQuestionForm>
+  ) => {
+    setEditQuestionsForm(
+      editQuestionsForm.map((q, i) => (i === index ? { ...q, ...updates } : q))
+    );
+  };
+
   // Render pagination
   const renderPagination = () => {
     if (!paginationMeta || paginationMeta.last_page <= 1) return null;
@@ -537,8 +583,8 @@ const BankModulesComponent = ({
   return (
     <div className="w-full">
       {/* Bank Header */}
-      <div className="mx-auto bg-white rounded-lg shadow-md overflow-hidden mb-8">
-        <div className="relative h-64 bg-gradient-to-r from-blue-500 to-purple-600">
+      <div className="mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden mb-8 border border-gray-200 dark:border-gray-700">
+        <div className="relative h-64 bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-900 dark:to-purple-900">
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-white">
               <svg
@@ -563,20 +609,26 @@ const BankModulesComponent = ({
           </h1>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <p className="text-gray-600">رقم البنك</p>
-              <p className="font-semibold">{selectedBank?.id || "-"}</p>
+              <p className="text-gray-600 dark:text-gray-300">رقم البنك</p>
+              <p className="font-semibold dark:text-white">
+                {selectedBank?.id || "-"}
+              </p>
             </div>
             <div>
-              <p className="text-gray-600">السعر</p>
-              <p className="font-semibold">{selectedBank?.price || 0} ج.م</p>
+              <p className="text-gray-600 dark:text-gray-300">السعر</p>
+              <p className="font-semibold dark:text-white">
+                {selectedBank?.price || 0} ج.م
+              </p>
             </div>
             <div>
-              <p className="text-gray-600">عدد الأقسام</p>
-              <p className="font-semibold">{paginationMeta?.total || 0}</p>
+              <p className="text-gray-600 dark:text-gray-300">عدد الأقسام</p>
+              <p className="font-semibold dark:text-white">
+                {paginationMeta?.total || 0}
+              </p>
             </div>
             <div>
-              <p className="text-gray-600">تاريخ الإنشاء</p>
-              <p className="font-semibold">
+              <p className="text-gray-600 dark:text-gray-300">تاريخ الإنشاء</p>
+              <p className="font-semibold dark:text-white">
                 {selectedBank?.created_at
                   ? new Date(selectedBank.created_at).toLocaleDateString("ar")
                   : "غير محدد"}
@@ -591,7 +643,7 @@ const BankModulesComponent = ({
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-bold">أقسام البنك</h2>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-300">
                 ({filteredSections.length} من {sections.length} قسم)
               </span>
             </div>
@@ -619,19 +671,19 @@ const BankModulesComponent = ({
           {/* Search and Filter */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
               <Input
                 placeholder="البحث في الأقسام..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full lg:w-48">
+              <SelectTrigger className="w-full lg:w-48 dark:bg-gray-800 dark:text-white">
                 <SelectValue placeholder="فلترة حسب النوع" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark:bg-gray-800 dark:text-white">
                 <SelectItem value="all">جميع الأنواع</SelectItem>
                 <SelectItem value="questions">أسئلة</SelectItem>
                 <SelectItem value="file">ملفات</SelectItem>
@@ -641,9 +693,9 @@ const BankModulesComponent = ({
 
           {/* Bulk Actions */}
           {isBulkMode && selectedQuestions.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-800">
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
                   تم تحديد {selectedQuestions.length} قسم
                 </span>
                 <div className="flex gap-2">
@@ -662,13 +714,15 @@ const BankModulesComponent = ({
           )}
 
           {/* File Upload Section */}
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <h3 className="text-lg font-semibold mb-4">رفع ملف جديد</h3>
+          <div className="mb-6 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold mb-4 dark:text-white">
+              رفع ملف جديد
+            </h3>
             <div className="flex items-center gap-4">
               <label className="cursor-pointer flex-1">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors text-center">
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm font-medium text-gray-700">
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-center">
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
                     {fileToUpload ? fileToUpload.name : "اختر ملف للرفع"}
                   </p>
                 </div>
@@ -689,11 +743,13 @@ const BankModulesComponent = ({
           {/* Sections List */}
           {isLoading && !sections.length ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 text-lg">جاري التحميل...</p>
+              <p className="text-gray-500 dark:text-gray-300 text-lg">
+                جاري التحميل...
+              </p>
             </div>
           ) : filteredSections.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 text-lg">
+              <p className="text-gray-500 dark:text-gray-300 text-lg">
                 {searchTerm || filterType !== "all"
                   ? "لا توجد أقسام تطابق البحث"
                   : "لا توجد أقسام متاحة حالياً"}
@@ -706,8 +762,8 @@ const BankModulesComponent = ({
                   key={section.id}
                   className={`border rounded-lg p-4 transition-colors ${
                     selectedQuestions.includes(section.id)
-                      ? "bg-blue-50 border-blue-200"
-                      : "hover:bg-gray-50"
+                      ? "bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700"
                   } ${!isBulkMode ? "cursor-pointer" : ""}`}
                   onClick={() => !isBulkMode && handleViewSection(section)}
                 >
@@ -724,9 +780,9 @@ const BankModulesComponent = ({
                           className="p-1"
                         >
                           {selectedQuestions.includes(section.id) ? (
-                            <CheckSquare className="h-4 w-4 text-blue-600" />
+                            <CheckSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                           ) : (
-                            <Square className="h-4 w-4" />
+                            <Square className="h-4 w-4 dark:text-gray-400" />
                           )}
                         </Button>
                       </div>
@@ -734,29 +790,29 @@ const BankModulesComponent = ({
 
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-blue-600">
+                        <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                           القسم {index + 1}
                         </span>
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                        <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
                           {section.type === "questions" ? "أسئلة" : "ملف"}
                         </span>
                       </div>
-                      <h3 className="text-lg font-semibold mb-2 leading-relaxed">
+                      <h3 className="text-lg font-semibold mb-2 leading-relaxed dark:text-white">
                         {section.name}
                       </h3>
                       {section.questions && section.questions.length > 0 && (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 dark:text-gray-300">
                           <span className="font-medium">عدد الأسئلة: </span>
                           {section.questions.length}
                         </div>
                       )}
                       {section.file_path && (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 dark:text-gray-300">
                           <a
                             href={section.file_path}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
                             تحميل الملف
@@ -819,325 +875,349 @@ const BankModulesComponent = ({
       </div>
 
       {/* View/Edit Section Dialog */}
-      <Dialog
-        open={!!selectedSection && (isViewing || isEditing)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedSection(null);
-            setIsEditing(false);
-            setIsViewing(false);
-          }
-        }}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "تعديل القسم" : "عرض القسم"}</DialogTitle>
-          </DialogHeader>
-          {selectedSection && (
-            <div className="space-y-6">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      اسم القسم
-                    </label>
-                    <Input
-                      value={editForm.name}
-                      onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  {/* Render all questions for editing */}
-                  {selectedSection.questions &&
-                  selectedSection.questions.length > 0 ? (
-                    <div className="space-y-6">
-                      {selectedSection.questions.map((question, qIdx) => (
-                        <div
-                          key={question.id || qIdx}
-                          className="border rounded-lg p-4"
-                        >
-                          <h4 className="font-medium mb-2">
-                            السؤال {qIdx + 1}
-                          </h4>
-                          <div className="mb-2">
-                            <label className="block text-sm font-medium mb-1">
-                              عنوان السؤال
-                            </label>
-                            <Textarea
-                              value={question.question}
-                              onChange={(e) => {
-                                const updatedQuestions =
-                                  selectedSection.questions!.map((q, i) =>
-                                    i === qIdx
-                                      ? { ...q, question: e.target.value }
-                                      : q
-                                  );
-                                setSelectedSection({
-                                  ...selectedSection,
-                                  questions: updatedQuestions,
-                                });
-                              }}
-                              rows={3}
-                            />
-                          </div>
-                          <div className="space-y-3">
-                            <label className="block text-sm font-medium">
-                              الخيارات
-                            </label>
-                            {question.options.map((option, optIdx) => (
-                              <div
-                                key={optIdx}
-                                className="flex items-center gap-2"
-                              >
-                                <Input
-                                  value={option}
-                                  onChange={(e) => {
-                                    const updatedOptions = question.options.map(
-                                      (o, i) =>
-                                        i === optIdx ? e.target.value : o
-                                    );
-                                    const updatedQuestions =
-                                      selectedSection.questions!.map((q, i) =>
-                                        i === qIdx
-                                          ? { ...q, options: updatedOptions }
-                                          : q
-                                      );
-                                    setSelectedSection({
-                                      ...selectedSection,
-                                      questions: updatedQuestions,
-                                    });
-                                  }}
-                                  placeholder={`الخيار ${optIdx + 1}`}
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const updatedQuestions =
-                                      selectedSection.questions!.map((q, i) =>
-                                        i === qIdx
-                                          ? { ...q, correct_answer: optIdx }
-                                          : q
-                                      );
-                                    setSelectedSection({
-                                      ...selectedSection,
-                                      questions: updatedQuestions,
-                                    });
-                                  }}
-                                >
-                                  {question.correct_answer === optIdx
-                                    ? "إجابة صحيحة"
-                                    : "تحديد كإجابة صحيحة"}
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex justify-center mt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            // Assign a unique negative id for new questions
-                            const minId = (
-                              selectedSection.questions || []
-                            ).reduce((min, q) => (q.id < min ? q.id : min), 0);
-                            const newQuestion: BankQuestion = {
-                              id: minId - 1,
-                              question: "",
-                              options: ["", "", "", ""],
-                              correct_answer: null,
-                              type: "multiple_choice",
-                            };
-                            setSelectedSection({
-                              ...selectedSection,
-                              questions: [
-                                ...(selectedSection.questions || []),
-                                newQuestion,
-                              ],
-                            });
-                          }}
-                          className="w-full max-w-md"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          إضافة سؤال آخر
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
+      {selectedSection && (
+        <CustomModal
+          open={isViewing || isEditing}
+          onClose={closeDialog}
+          className="max-w-4xl max-h-[90vh] w-full"
+        >
+          <div className="space-y-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold">
+                {isEditing ? "تعديل القسم" : "عرض القسم"}
+              </h2>
+            </div>
+            {selectedSection && (
+              <div className="space-y-6">
+                {isEditing ? (
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-1">
-                        عنوان السؤال
+                        اسم القسم
                       </label>
-                      <Textarea
-                        value={editForm.question}
-                        onChange={(e) =>
-                          setEditForm((prev) => ({
-                            ...prev,
-                            question: e.target.value,
-                          }))
-                        }
-                        rows={3}
+                      <Input
+                        value={selectedSection.name}
+                        onChange={(e) => {
+                          setSelectedSection({
+                            ...selectedSection,
+                            name: e.target.value,
+                          });
+                        }}
                       />
-                      <div className="space-y-3">
-                        <label className="block text-sm font-medium">
-                          الخيارات
-                        </label>
-                        {editForm.options.map((option, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Input
-                              value={option}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  options: prev.options.map((q, i) =>
-                                    i === index ? e.target.value : q
-                                  ),
-                                }))
-                              }
-                              placeholder={`الخيار ${index + 1}`}
-                            />
+                    </div>
+
+                    {/* If section is file, show file upload form instead of question edit form */}
+                    {selectedSection.type === "file" ? (
+                      <div className="space-y-4">
+                        {selectedSection.file_path ? (
+                          <div className="mb-2">
+                            <label className="block text-sm font-medium mb-1">
+                              الملف الحالي:
+                            </label>
+                            <a
+                              href={selectedSection.file_path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              تحميل الملف الحالي
+                            </a>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() =>
-                                setEditForm({
-                                  ...editForm,
-                                  correct_answer: index,
-                                })
-                              }
+                              className="ml-4 text-red-600 border-red-300 hover:bg-red-50"
+                              onClick={() => {
+                                setSelectedSection({
+                                  ...selectedSection,
+                                  file_path: undefined,
+                                });
+                              }}
                             >
-                              {editForm.correct_answer === index
-                                ? "إجابة صحيحة"
-                                : "تحديد كإجابة صحيحة"}
+                              إزالة الملف
                             </Button>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditing(false)}
-                    >
-                      إلغاء
-                    </Button>
-                    <Button onClick={handleUpdate} disabled={isLoading}>
-                      {isLoading ? "جاري الحفظ..." : "حفظ التغييرات"}
-                    </Button>
-                  </DialogFooter>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">اسم القسم</h3>
-                    <p className="text-gray-700 leading-relaxed">
-                      {selectedSection.name}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2">النوع</h4>
-                    <p className="text-gray-700">
-                      {selectedSection.type === "questions" ? "أسئلة" : "ملف"}
-                    </p>
-                  </div>
-
-                  {selectedSection.questions &&
-                    selectedSection.questions.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-2">الأسئلة</h4>
-                        <div className="space-y-4">
-                          {selectedSection.questions.map((question, index) => (
-                            <div
-                              key={question.id}
-                              className="border rounded-lg p-4"
-                            >
-                              <h5 className="font-medium mb-2">
-                                السؤال {index + 1}
-                              </h5>
-                              <p className="text-gray-700 mb-2">
-                                {question.question}
+                        ) : (
+                          <div>
+                            <label className="block text-sm font-medium mb-1">
+                              رفع ملف جديد
+                            </label>
+                            <label className="cursor-pointer block border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors text-center">
+                              <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                              <p className="text-sm font-medium text-gray-700">
+                                {fileToUpload
+                                  ? fileToUpload.name
+                                  : "اختر ملف للرفع"}
                               </p>
-
-                              {question.options &&
-                                question.options.length > 0 && (
-                                  <div className="space-y-2">
-                                    {question.options.map(
-                                      (option, optIndex) => (
-                                        <div
-                                          key={optIndex}
-                                          className={`flex items-center gap-2 p-2 rounded ${
-                                            question.correct_answer !== null &&
-                                            question.correct_answer - 1 ===
-                                              optIndex
-                                              ? "bg-green-100 text-green-800 border border-green-200"
-                                              : "bg-gray-100"
-                                          }`}
+                              <input
+                                type="file"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  setFileToUpload(file);
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {editQuestionsForm.map((questionForm, index) => (
+                          <div
+                            key={index}
+                            className="border rounded-lg p-4 relative"
+                          >
+                            {editQuestionsForm.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeEditQuestionForm(index)}
+                                className="absolute top-2 right-2 text-red-500"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <h3 className="font-medium mb-4">
+                              السؤال {index + 1}
+                            </h3>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium mb-1">
+                                  عنوان السؤال
+                                </label>
+                                <Textarea
+                                  value={questionForm.title}
+                                  onChange={(e) =>
+                                    updateEditQuestionForm(index, {
+                                      title: e.target.value,
+                                    })
+                                  }
+                                  placeholder="أدخل عنوان السؤال هنا"
+                                  rows={3}
+                                />
+                              </div>
+                              <div className="space-y-3">
+                                <label className="block text-sm font-medium">
+                                  الخيارات
+                                </label>
+                                {questionForm.questions.map(
+                                  (option, qIndex) => (
+                                    <div
+                                      key={qIndex}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Input
+                                        value={option}
+                                        onChange={(e) => {
+                                          const newQuestions = [
+                                            ...questionForm.questions,
+                                          ];
+                                          newQuestions[qIndex] = e.target.value;
+                                          updateEditQuestionForm(index, {
+                                            questions: newQuestions,
+                                          });
+                                        }}
+                                        placeholder={`الخيار ${qIndex + 1}`}
+                                      />
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                          updateEditQuestionForm(index, {
+                                            correct_answer: qIndex,
+                                          })
+                                        }
+                                      >
+                                        {questionForm.correct_answer !== null &&
+                                        questionForm.correct_answer === qIndex
+                                          ? "إجابة صحيحة"
+                                          : "تحديد كإجابة صحيحة"}
+                                      </Button>
+                                      {questionForm.questions.length > 2 && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            const newQuestions =
+                                              questionForm.questions.filter(
+                                                (_, i) => i !== qIndex
+                                              );
+                                            updateEditQuestionForm(index, {
+                                              questions: newQuestions,
+                                              correct_answer:
+                                                questionForm.correct_answer !==
+                                                  null &&
+                                                questionForm.correct_answer >=
+                                                  qIndex &&
+                                                questionForm.correct_answer > 0
+                                                  ? questionForm.correct_answer -
+                                                    1
+                                                  : questionForm.correct_answer,
+                                            });
+                                          }}
+                                          className="text-red-500"
                                         >
-                                          <span className="font-medium">
-                                            {optIndex + 1}.
-                                          </span>
-                                          <span className="flex-1">
-                                            {option}
-                                          </span>
-                                          {question.correct_answer !== null &&
-                                            question.correct_answer - 1 ===
-                                              optIndex && (
-                                              <span className="text-xs font-medium bg-green-200 px-2 py-1 rounded">
-                                                الإجابة الصحيحة
-                                              </span>
-                                            )}
-                                        </div>
-                                      )
-                                    )}
-                                  </div>
+                                          <Trash className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )
                                 )}
-
-                              {question.written_answer && (
-                                <div className="mt-2">
-                                  <span className="font-medium text-sm">
-                                    الإجابة النموذجية:{" "}
-                                  </span>
-                                  <p className="text-gray-700">
-                                    {question.written_answer}
-                                  </p>
-                                </div>
-                              )}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newQuestions = [
+                                      ...questionForm.questions,
+                                      "",
+                                    ];
+                                    updateEditQuestionForm(index, {
+                                      questions: newQuestions,
+                                    });
+                                  }}
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  إضافة خيار
+                                </Button>
+                              </div>
                             </div>
-                          ))}
+                          </div>
+                        ))}
+                        <div className="flex justify-center">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={addEditQuestionForm}
+                            className="w-full max-w-md"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            إضافة سؤال آخر
+                          </Button>
                         </div>
                       </div>
                     )}
 
-                  {selectedSection.file_path && (
-                    <div>
-                      <h4 className="font-medium mb-2">الملف المرفوع</h4>
-                      <a
-                        href={selectedSection.file_path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 underline"
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditing(false)}
                       >
-                        <Download className="w-4 h-4" />
-                        تحميل الملف
-                      </a>
+                        إلغاء
+                      </Button>
+                      <Button onClick={handleUpdate} disabled={isLoading}>
+                        {isLoading ? "جاري الحفظ..." : "حفظ التغييرات"}
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">اسم القسم</h3>
+                      <p className="text-gray-700 leading-relaxed">
+                        {selectedSection.name}
+                      </p>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+                    <div>
+                      <h4 className="font-medium mb-2">النوع</h4>
+                      <p className="text-gray-700">
+                        {selectedSection.type === "questions" ? "أسئلة" : "ملف"}
+                      </p>
+                    </div>
+
+                    {selectedSection.questions &&
+                      selectedSection.questions.length > 0 && (
+                        <div>
+                          <h4 className="font-medium mb-2">الأسئلة</h4>
+                          <div className="space-y-4">
+                            {selectedSection.questions.map(
+                              (question, index) => (
+                                <div
+                                  key={question.id}
+                                  className="border rounded-lg p-4"
+                                >
+                                  <h5 className="font-medium mb-2">
+                                    السؤال {index + 1}
+                                  </h5>
+                                  <p className="text-gray-700 mb-2">
+                                    {question.question}
+                                  </p>
+
+                                  {question.options &&
+                                    question.options.length > 0 && (
+                                      <div className="space-y-2">
+                                        {question.options.map(
+                                          (option, optIndex) => (
+                                            <div
+                                              key={optIndex}
+                                              className={`flex items-center gap-2 p-2 rounded ${
+                                                question.correct_answer !==
+                                                  null &&
+                                                question.correct_answer - 1 ===
+                                                  optIndex
+                                                  ? "bg-green-100 text-green-800 border border-green-200"
+                                                  : "bg-gray-100"
+                                              }`}
+                                            >
+                                              <span className="font-medium">
+                                                {optIndex + 1}.
+                                              </span>
+                                              <span className="flex-1">
+                                                {option}
+                                              </span>
+                                              {question.correct_answer !==
+                                                null &&
+                                                question.correct_answer - 1 ===
+                                                  optIndex && (
+                                                  <span className="text-xs font-medium bg-green-200 px-2 py-1 rounded">
+                                                    الإجابة الصحيحة
+                                                  </span>
+                                                )}
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    )}
+
+                                  {question.written_answer && (
+                                    <div className="mt-2">
+                                      <span className="font-medium text-sm">
+                                        الإجابة النموذجية:{" "}
+                                      </span>
+                                      <p className="text-gray-700">
+                                        {question.written_answer}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {selectedSection.file_path && (
+                      <div>
+                        <h4 className="font-medium mb-2">الملف المرفوع</h4>
+                        <a
+                          href={selectedSection.file_path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 underline"
+                        >
+                          <Download className="w-4 h-4" />
+                          تحميل الملف
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CustomModal>
+      )}
 
       {/* Add Multiple Questions Dialog */}
       <Dialog open={isAdding} onOpenChange={setIsAdding}>

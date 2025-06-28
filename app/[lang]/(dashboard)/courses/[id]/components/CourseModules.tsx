@@ -391,10 +391,10 @@ const CourseModules = ({
   };
 
   return (
-    <div className="mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">محتوى الدورة</h2>
+          <h2 className="text-2xl font-bold dark:text-white">محتوى الدورة</h2>
           <Button onClick={() => setIsAdding(true)}>
             <Plus className="h-4 w-4 mr-2" />
             إضافة درس جديدة
@@ -402,14 +402,14 @@ const CourseModules = ({
         </div>
         {!modules || modules.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500 text-lg">لا يوجد محتوى متاح حالياً</p>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">لا يوجد محتوى متاح حالياً</p>
           </div>
         ) : (
           <div className="space-y-6">
             {modules.map((module: CoursModules, index) => (
               <div
                 key={index}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                 onClick={() => handleViewModule(module)}
               >
                 <div className="flex justify-between items-start">
@@ -437,17 +437,17 @@ const CourseModules = ({
                           </div>
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold">
+                          <h3 className="text-lg font-semibold dark:text-white">
                             {module?.details?.title}
                           </h3>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 dark:text-gray-300">
                             {module?.details?.description}
                           </p>
                         </div>
                       </div>
                       {module?.details?.has_quiz && (
                         <div className="mt-2">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             يحتوي على اختبار
                           </span>
                         </div>
@@ -477,10 +477,10 @@ const CourseModules = ({
                           </div>
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold">
+                          <h3 className="text-lg font-semibold dark:text-white">
                             {module?.details?.title}
                           </h3>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 dark:text-gray-300">
                             {module?.details?.quiz?.[0]?.questions_count || 0}{" "}
                             سؤال
                           </p>
@@ -538,7 +538,7 @@ const CourseModules = ({
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="dark:text-white">
               {isEditing ? "تعديل الدرس" : selectedModule?.details?.title}
             </DialogTitle>
           </DialogHeader>
@@ -547,7 +547,7 @@ const CourseModules = ({
               {isEditing ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1 dark:text-white">
                       العنوان
                     </label>
                     <Input
@@ -561,7 +561,7 @@ const CourseModules = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1 dark:text-white">
                       الوصف
                     </label>
                     <Textarea
@@ -575,7 +575,7 @@ const CourseModules = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1 dark:text-white">
                       رابط الفيديو
                     </label>
                     <Input
@@ -589,7 +589,7 @@ const CourseModules = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1 dark:text-white">
                       صورة مصغرة
                     </label>
                     <Input
@@ -599,13 +599,13 @@ const CourseModules = ({
                       className="cursor-pointer"
                     />
                     {editForm.thumbnail && (
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         تم اختيار: {editForm.thumbnail.name}
                       </p>
                     )}
                     {!editForm.thumbnail &&
                       selectedModule?.details?.thumbnail && (
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           الصورة الحالية: {selectedModule.details.thumbnail}
                         </p>
                       )}
@@ -631,12 +631,12 @@ const CourseModules = ({
                         poster={selectedModule?.details?.thumbnail}
                       />
                     ) : (
-                      <div className="bg-gray-100 rounded-lg p-6">
-                        <h3 className="text-xl font-semibold mb-4">الأسئلة</h3>
+                      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+                        <h3 className="text-xl font-semibold mb-4 dark:text-white">الأسئلة</h3>
                         {selectedModule?.details?.quiz?.[0]?.questions.map(
                           (question, index) => (
                             <div key={question.id} className="mb-6">
-                              <p className="font-medium mb-2">
+                              <p className="font-medium mb-2 dark:text-white">
                                 {index + 1}. {question.question}
                               </p>
                               <div className="space-y-2">

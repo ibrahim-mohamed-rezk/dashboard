@@ -548,14 +548,14 @@ function GovernoratesAreasManagement() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 rounded-lg bg-gray-100 p-1 mb-6">
+      <div className="flex space-x-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1 mb-6">
         <button
           onClick={() => setActiveTab("governorates")}
           className={cn(
             "flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors",
             activeTab === "governorates"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           )}
         >
           المحافظات
@@ -565,8 +565,8 @@ function GovernoratesAreasManagement() {
           className={cn(
             "flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors",
             activeTab === "areas"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           )}
         >
           المناطق

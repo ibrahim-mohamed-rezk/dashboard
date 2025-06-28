@@ -25,7 +25,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   return (
     <div className="w-full">
-      <div className="mx-auto bg-white rounded-lg shadow-md overflow-hidden mb-8">
+      <div className="mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-8">
         <div className="relative h-64">
           <img
             src={courseData.cover}
@@ -34,28 +34,28 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
           />
         </div>
         <div className="p-6">
-          <h1 className="text-3xl font-bold mb-4">{courseData.title}</h1>
+          <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">{courseData.title}</h1>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <p className="text-gray-600">رقم الدورة</p>
-              <p className="font-semibold">{courseData.cour_no}</p>
+              <p className="text-gray-600 dark:text-gray-400">رقم الدورة</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{courseData.cour_no}</p>
             </div>
             <div>
-              <p className="text-gray-600">الموضوع</p>
-              <p className="font-semibold">{courseData.subject}</p>
+              <p className="text-gray-600 dark:text-gray-400">الموضوع</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{courseData.subject}</p>
             </div>
             <div>
-              <p className="text-gray-600">المستوى</p>
-              <p className="font-semibold">{courseData.level}</p>
+              <p className="text-gray-600 dark:text-gray-400">المستوى</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{courseData.level}</p>
             </div>
             <div>
-              <p className="text-gray-600">السعر</p>
-              <p className="font-semibold">{courseData.price} </p>
+              <p className="text-gray-600 dark:text-gray-400">السعر</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{courseData.price} </p>
             </div>
           </div>
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">الوصف</h2>
-            <p className="text-gray-700">{courseData.description}</p>
+            <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">الوصف</h2>
+            <p className="text-gray-700 dark:text-gray-300">{courseData.description}</p>
           </div>
         </div>
         <CourseModules

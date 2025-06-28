@@ -75,7 +75,7 @@ const StatCard = ({
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
             {title}
           </p>
-          <p className="text-3xl font-bold mt-2">{value.toLocaleString()}</p>
+          <p className="text-3xl font-bold mt-2">{value?.toLocaleString()}</p>
         </div>
         <div
           className={`p-3 rounded-full ${iconColorClasses[color]} bg-white dark:bg-gray-700`}
@@ -109,13 +109,26 @@ function BasicDataTable() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
+  const [pagination, setPagination] = useState<{
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    links: { url: string | null; label: string; active: boolean }[];
+  }>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    links: [],
+  });
 
   // Calculate statistics
   const statistics = {
-    totalAdmins: data.length,
-    totalTeachers: teachers.length,
-    totalModules: modules.length,
-    activeAdmins: data.filter(
+    totalAdmins: data?.length,
+    totalTeachers: teachers?.length,
+    totalModules: modules?.length,
+    activeAdmins: data?.filter(
       (admin) => admin.modules && admin.modules.length > 0
     ).length,
   };
@@ -135,20 +148,28 @@ function BasicDataTable() {
   });
 
   // fetch admins from api
-  const refetchAdmins = async () => {
+  const refetchAdmins = async (page = 1) => {
     try {
       const response = await getData(
         "admins",
-        {},
+        { page },
         {
           Authorization: `Bearer ${token}`,
         }
       );
       setData(response.data);
+      setPagination({
+        current_page: response.meta.current_page,
+        last_page: response.meta.last_page,
+        per_page: response.meta.per_page,
+        total: response.meta.total,
+        links: response.meta.links,
+      });
     } catch (error) {
       console.log(error);
     }
   };
+  console.log(data, teachers, modules)
 
   // refetch admins
   useEffect(() => {
@@ -854,7 +875,7 @@ function BasicDataTable() {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {table?.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
@@ -876,6 +897,30 @@ function BasicDataTable() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex justify-center mt-4">
+        {pagination.links.map((link, idx) => (
+          <button
+            key={idx}
+            disabled={!link.url || link.active}
+            className={`mx-1 px-3 py-1 rounded transition-colors ${
+              link.active 
+                ? "bg-blue-500 text-white dark:bg-blue-600" 
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            onClick={() => {
+              if (link.url) {
+                // Extract page number from URL
+                const match = link.url.match(/page=(\d+)/);
+                if (match) {
+                  refetchAdmins(Number(match[1]));
+                }
+              }
+            }}
+            dangerouslySetInnerHTML={{ __html: link.label }}
+          />
+        ))}
       </div>
     </>
   );
