@@ -159,8 +159,8 @@ function BasicDataTable() {
       setData(response.data);
       setPagination((prev) => ({
         ...prev,
-        total: response.meta.total,
-        lastPage: response.meta.last_page,
+        total: response?.meta?.total,
+        lastPage: response?.meta?.last_page,
       }));
 
       // Calculate statistics with the fetched data

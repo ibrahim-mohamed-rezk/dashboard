@@ -22,15 +22,17 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   };
   const courseData = await feachData();
 
-
-
-
   return (
     <div className="w-full">
       <div className="mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-8">
         <div className="relative h-64">
           <img
-            src={courseData.cover}
+            src={
+              courseData.cover.startsWith("http") &&
+              courseData.cover.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
+                ? courseData.cover
+                : "/images/all-img/user-cover.png"
+            }
             alt={courseData.title}
             className="w-full h-full object-cover"
           />
@@ -64,6 +66,12 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 {courseData.price}{" "}
               </p>
             </div>
+            <div>
+              <p className="text-gray-600 dark:text-gray-400">عدد الدروس</p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {courseData.modules.length}{" "}
+              </p>
+            </div>
           </div>
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
@@ -74,13 +82,8 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </p>
           </div>
         </div>
-        <CourseModules
-          token={token as string}
-          courseId={paramsData.id}
-        />
+        <CourseModules token={token as string} courseId={paramsData.id} />
       </div>
-
-      {/* Course Modules Section */}
     </div>
   );
 };

@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (token) response.cookies.set("token", token, { maxAge: 60 * 60 });
   if (user)
     response.cookies.set("user", user, {
-      maxAge: 60 * 60,
+      maxAge: 60 * 60 * 24,
     });
 
   return response;

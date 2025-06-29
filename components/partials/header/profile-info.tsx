@@ -34,7 +34,13 @@ const ProfileInfo = ({ user }: { user: User }) => {
         <div className="flex  items-center">
           {user.avatar && (
             <Image
-              src={user.avatar ? user.avatar : avatar}
+              src={
+                user.avatar &&
+                (user.avatar.startsWith("http") &&
+                  user.avatar.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i))
+                  ? user.avatar
+                  : avatar
+              }
               alt={user.full_name}
               width={36}
               height={36}
@@ -47,7 +53,13 @@ const ProfileInfo = ({ user }: { user: User }) => {
         <DropdownMenuLabel className="flex gap-2 items-center mb-1 p-3">
           {user.avatar && (
             <Image
-              src={user.avatar ? user.avatar : avatar}
+              src={
+                user.avatar &&
+                (user.avatar.startsWith("http") &&
+                  user.avatar.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i))
+                  ? user.avatar
+                  : avatar
+              }
               alt={user.full_name}
               width={40}
               height={10}
