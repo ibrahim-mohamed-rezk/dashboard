@@ -133,7 +133,7 @@ const VerticalHeader = () => {
       <div className="flex items-center md:gap-6 gap-3">
         {LogoContent}
         {menuBarContent}
-        {searchButtonContent}
+        {/* {searchButtonContent} */}
       </div>
       <HeaderSearch open={open} setOpen={setOpen} />
     </>

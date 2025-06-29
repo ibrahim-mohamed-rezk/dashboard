@@ -76,7 +76,7 @@ import { useEffect, useState, useMemo } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
 import toast from "react-hot-toast";
-import { CoursesData, Teacher } from "@/lib/type";
+import { CoursesData, Teacher, User } from "@/lib/type";
 import Link from "next/link";
 
 interface Bank {
@@ -128,6 +128,7 @@ interface ApiResponse {
 
 function BanksTable() {
   const [data, setData] = useState<Bank[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
     null
   );
@@ -166,6 +167,7 @@ function BanksTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        setUser(JSON.parse(response.data.user));
       } catch (error) {
         throw error;
       }
@@ -638,7 +640,7 @@ function BanksTable() {
           </Select>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -698,7 +700,7 @@ function BanksTable() {
           </DropdownMenu>
 
           <Dialog open={addBank} onOpenChange={setAddBank}>
-            <DialogTrigger asChild>
+           {user?.role === "admin" && <DialogTrigger asChild>
               <Button
                 className="flex items-center gap-2"
                 onClick={() => {
@@ -715,7 +717,7 @@ function BanksTable() {
                 <Plus className="h-4 w-4 mr-2" />
                 إضافة بنك
               </Button>
-            </DialogTrigger>
+            </DialogTrigger>}
             <DialogContent
               className="w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
               onPointerDownOutside={(e) => e.preventDefault()}

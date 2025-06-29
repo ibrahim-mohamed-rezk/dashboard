@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-table";
 
 import { Input } from "@/components/ui/input";
+import { DateRange } from "react-day-picker";
 import {
   Table,
   TableBody,
@@ -23,14 +24,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Copy,
-  Printer,
   Users,
   GraduationCap,
   Phone,
@@ -38,10 +31,19 @@ import {
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
-import { getData, postData } from "@/lib/axios/server";
+import { getData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
 import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
-import toast from "react-hot-toast";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import DatePickerWithRange from "@/components/date-picker-with-range";
 
 // Statistics Card Component
 const StatCard = ({
@@ -92,6 +94,22 @@ function BasicDataTable() {
   const [data, setData] = useState<StudentTypes[]>([]);
   const [token, setToken] = useState("");
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [governorates, setGovernorates] = useState<any[]>([]);
+  const [area, setArea] = useState<any[]>([]);
+  const [level, setLevel] = useState<any[]>([]);
+  // const [subjects, setSubjects] = useState<any[]>([]);
+  const [filters, setFilters] = useState({
+    governorate_id: "",
+    area_id: "",
+    level_id: "",
+    // subject_id: "",
+    teacher_id: "",
+    gender: "",
+    to_date: "",
+    from_date: "",
+    search: "",
+  });
+
   const [user, setUser] = useState<User | null>(null);
   const [statistics, setStatistics] = useState({
     totalStudents: 0,
@@ -106,13 +124,15 @@ function BasicDataTable() {
     lastPage: 1,
   });
 
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
   // Calculate statistics
   const calculateStatistics = (studentsData: StudentTypes[]) => {
     const activeStudents = studentsData.filter(
       (student) => student.status === "active"
     ).length;
     const uniqueSchools = new Set(
-      studentsData.map((student) => student.school_name).filter(Boolean)
+      studentsData?.map((student) => student.school_name).filter(Boolean)
     ).size;
     const studentsWithPhone = studentsData.filter(
       (student) => student.user?.phone
@@ -125,6 +145,73 @@ function BasicDataTable() {
       studentsWithPhone,
     });
   };
+
+  // feach governornment data
+  const feachGovernorData = async () => {
+    try {
+      const response = await getData(
+        "governorates",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setGovernorates(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  // feach governornment data
+  const feachLevelsData = async () => {
+    try {
+      const response = await getData(
+        "levels",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setLevel(response.levels);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  // feach governornment data
+  const feachAreaData = async () => {
+    try {
+      const response = await getData(
+        "areas",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setArea(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  // const feachSubjectsData = async () => {
+  //   try {
+  //     const response = await getData(
+  //       "subjects",
+  //       {},
+  //       {
+  //         Authorization: `Bearer ${token}`,
+  //       }
+  //     );
+  //     setSubjects(response.data);
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
+
+  useEffect(() => {
+    feachAreaData();
+    feachLevelsData();
+    feachGovernorData();
+    // feachSubjectsData();
+  }, [token]);
 
   // Fetch teachers for admin
   const fetchTeachers = async () => {
@@ -151,6 +238,7 @@ function BasicDataTable() {
         {
           page: pagination.pageIndex + 1,
           per_page: pagination.pageSize,
+          ...filters,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -173,7 +261,7 @@ function BasicDataTable() {
   // feach users from api
   useEffect(() => {
     refetchUsers();
-  }, [pagination.pageIndex, pagination.pageSize, token]);
+  }, [pagination.pageIndex, pagination.pageSize, token, filters]);
 
   // get token from next api
   useEffect(() => {
@@ -192,12 +280,7 @@ function BasicDataTable() {
     };
 
     feachData();
-  }, [token]);
-
-  const copyToClipboard = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("تم نسخ الكود بنجاح");
-  };
+  }, []);
 
   // columns of table
   const columns: ColumnDef<StudentTypes>[] = [
@@ -305,42 +388,235 @@ function BasicDataTable() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="إجمالي الطلاب"
-            value={statistics.totalStudents.toLocaleString()}
+            value={statistics?.totalStudents?.toLocaleString()}
             icon={Users}
             color="blue"
           />
           <StatCard
             title="الطلاب النشطون"
-            value={statistics.activeStudents.toLocaleString()}
+            value={statistics?.activeStudents?.toLocaleString()}
             icon={GraduationCap}
             color="green"
           />
           <StatCard
             title="عدد المدارس"
-            value={statistics.totalSchools.toLocaleString()}
+            value={statistics?.totalSchools?.toLocaleString()}
             icon={School}
             color="purple"
           />
           <StatCard
             title="طلاب لديهم هاتف"
-            value={statistics.studentsWithPhone.toLocaleString()}
+            value={statistics?.studentsWithPhone?.toLocaleString()}
             icon={Phone}
             color="orange"
           />
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 px-4 mb-4">
+      <div className="flex flex-col gap-2 px-4 mb-4">
+        {/* Filters Bar */}
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+          {/* Governorate Filter */}
+          <div className="min-w-[180px]">
+            <Label htmlFor="governorate">المحافظة</Label>
+            <Select
+              value={filters.governorate_id}
+              onValueChange={(value) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  governorate_id: value,
+                  area_id: "",
+                }));
+                setArea([]); // Optionally clear area if governorate changes
+                feachAreaData();
+                refetchUsers();
+              }}
+            >
+              <SelectTrigger id="governorate">
+                <SelectValue placeholder="اختر المحافظة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                {governorates?.map((g: any) => (
+                  <SelectItem key={g.id} value={g.id + ""}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Area Filter */}
+          <div className="min-w-[180px]">
+            <Label htmlFor="area">المنطقة</Label>
+            <Select
+              value={filters.area_id}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, area_id: value }));
+                refetchUsers();
+              }}
+            >
+              <SelectTrigger id="area">
+                <SelectValue placeholder="اختر المنطقة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                {area?.map((a: any) => (
+                  <SelectItem key={a.id} value={a.id + ""}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Level Filter */}
+          <div className="min-w-[180px]">
+            <Label htmlFor="level">المرحلة</Label>
+            <Select
+              value={filters.level_id}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, level_id: value }));
+                refetchUsers();
+              }}
+            >
+              <SelectTrigger id="level">
+                <SelectValue placeholder="اختر المرحلة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                {level?.map((l: any) => (
+                  <SelectItem key={l.id} value={l.id + ""}>
+                    {l.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Subject Filter */}
+          {/* <div className="min-w-[180px]">
+            <Label htmlFor="subject">المادة</Label>
+            <Select
+              value={filters.subject_id}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, subject_id: value }));
+                refetchUsers();
+              }}
+            >
+              <SelectTrigger id="subject">
+                <SelectValue placeholder="اختر المادة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                {subjects?.map((s: any) => (
+                  <SelectItem key={s.id} value={s.id + ""}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div> */}
+          {/* Teacher Filter (admin only) */}
+          {user?.role === "admin" && (
+            <div className="min-w-[180px]">
+              <Label htmlFor="teacher">المعلم</Label>
+              <Select
+                value={filters.teacher_id}
+                onValueChange={(value) => {
+                  setFilters((prev) => ({ ...prev, teacher_id: value }));
+                  refetchUsers();
+                }}
+              >
+                <SelectTrigger id="teacher">
+                  <SelectValue placeholder="اختر المعلم" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">الكل</SelectItem>
+                  {teachers?.map((t: any) => (
+                    <SelectItem key={t.id} value={t.id + ""}>
+                      {t.user.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {/* Gender Filter */}
+          <div className="min-w-[180px] flex flex-col">
+            <Label>الجنس</Label>
+            <RadioGroup
+              value={filters.gender}
+              onValueChange={(value) => {
+                setFilters((prev) => ({ ...prev, gender: value }));
+                refetchUsers();
+              }}
+              className="flex flex-row gap-2 mt-1"
+            >
+              <RadioGroupItem value="" id="gender-all">
+                الكل
+              </RadioGroupItem>
+              <RadioGroupItem value="male" id="gender-male">
+                ذكر
+              </RadioGroupItem>
+              <RadioGroupItem value="female" id="gender-female">
+                أنثى
+              </RadioGroupItem>
+            </RadioGroup>
+          </div>
+          {/* Date Range Filter */}
+          <div className="min-w-[220px] flex flex-col">
+            <Label>الفترة الزمنية</Label>
+            <DatePickerWithRange
+              className="w-full"
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range);
+                setFilters((prev) => ({
+                  ...prev,
+                  from_date: range?.from
+                    ? range.from.toISOString().split("T")[0]
+                    : "",
+                  to_date: range?.to
+                    ? range.to.toISOString().split("T")[0]
+                    : "",
+                }));
+                refetchUsers();
+              }}
+            />
+          </div>
+          {/* Reset Filters Button */}
+          <div className="flex items-end">
+            <Button
+              variant="outline"
+              color="warning"
+              size="sm"
+              onClick={() => {
+                setFilters({
+                  governorate_id: "",
+                  area_id: "",
+                  level_id: "",
+                  // subject_id: "",
+                  teacher_id: "",
+                  gender: "",
+                  to_date: "",
+                  from_date: "",
+                  search: "",
+                });
+                setDateRange(undefined);
+                refetchUsers();
+              }}
+            >
+              إعادة تعيين الفلاتر
+            </Button>
+          </div>
+        </div>
+        {/* search input */}
         <div className="flex items-center gap-2">
-          {/* search input */}
           <Input
             placeholder="Filter by name..."
-            value={
-              (table.getColumn("full_name")?.getFilterValue() as string) || ""
-            }
-            onChange={(event) =>
-              table.getColumn("full_name")?.setFilterValue(event.target.value)
-            }
+            value={filters.search}
+            onChange={(event) => {
+              setFilters((prev) => ({ ...prev, search: event.target.value }));
+              refetchUsers();
+            }}
             className="max-w-sm min-w-[200px] h-10"
           />
         </div>
@@ -350,9 +626,9 @@ function BasicDataTable() {
       <div className="overflow-x-auto">
         <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups()?.map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers?.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
@@ -367,9 +643,9 @@ function BasicDataTable() {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows?.map((row) => (
                 <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells()?.map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -405,7 +681,7 @@ function BasicDataTable() {
 
           {/* Page Numbers */}
           <div className="flex items-center gap-2">
-            {Array.from({ length: pagination.lastPage }, (_, i) => i + 1).map(
+            {Array.from({ length: pagination.lastPage }, (_, i) => i + 1)?.map(
               (pageNumber) => (
                 <Button
                   key={pageNumber}

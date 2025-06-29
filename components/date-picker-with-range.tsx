@@ -18,8 +18,12 @@ import { useTheme } from "next-themes";
 
 export default function DatePickerWithRange({
   className,
+  value,
+  onChange,
 }: {
   className?: string;
+  value?: DateRange;
+  onChange?: (range: DateRange | undefined) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,13 +35,21 @@ export default function DatePickerWithRange({
   const to = searchParams.get("to")
     ? new Date(searchParams.get("to")!)
     : undefined;
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from,
-    to,
-  });
+  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>(
+    {
+      from,
+      to,
+    }
+  );
 
-  const onSelect = (newDate: DateRange | undefined) => {
-    setDate(newDate);
+  const date = value !== undefined ? value : internalDate;
+
+  const handleSelect = (newDate: DateRange | undefined) => {
+    if (onChange) {
+      onChange(newDate);
+    } else {
+      setInternalDate(newDate);
+    }
     const params = new URLSearchParams(searchParams.toString());
 
     if (newDate?.from) {
@@ -86,7 +98,7 @@ export default function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={onSelect}
+            onSelect={handleSelect}
             numberOfMonths={2}
           />
         </PopoverContent>

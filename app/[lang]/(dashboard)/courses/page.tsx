@@ -76,6 +76,7 @@ import { deleteData, getData, postData } from "@/lib/axios/server";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { Teacher } from "@/lib/type";
+import { user } from "@/app/api/user/data";
 
 function generateSlug(title: string): string {
   const baseSlug = title.toLowerCase().replace(/\s+/g, "-");
@@ -168,6 +169,7 @@ function CoursesTable() {
   const [token, setToken] = useState<string | null>(null);
   const [editCourse, setEditCourse] = useState<boolean>(false);
   const [addCourse, setAddCourse] = useState<boolean>(false);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
@@ -194,6 +196,11 @@ function CoursesTable() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [positionFilter, setPositionFilter] = useState("all");
+  const [teacherFilter, setTeacherFilter] = useState<string>("all");
+  const [subjectFilter, setSubjectFilter] = useState<string>("all");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [fromDateFilter, setFromDateFilter] = useState<string>("");
+  const [toDateFilter, setToDateFilter] = useState<string>("");
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
     null
   );
@@ -311,10 +318,28 @@ function CoursesTable() {
     }
   };
 
+  // get subjects from api
+  const fetchSubjects = async () => {
+    if (!token) return;
+    try {
+      const response = await getData(
+        "subjects",
+        {},
+        new AxiosHeaders({
+          Authorization: `Bearer ${token}`,
+        })
+      );
+      setSubjects(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch subjects");
+    }
+  };
+
   useEffect(() => {
     if (userRole === "admin") {
       fetchTeachers();
     }
+    fetchSubjects();
   }, [userRole, token]);
 
   // Update form data when user role changes
@@ -334,7 +359,16 @@ function CoursesTable() {
     try {
       const response = await getData(
         `/courses?page=${page}`,
-        {},
+        {
+          search: globalFilter,
+          teacher_id: teacherFilter === "all" ? undefined : teacherFilter,
+          subject_id: subjectFilter === "all" ? undefined : subjectFilter,
+          level_id: levelFilter === "all" ? undefined : levelFilter,
+          position: positionFilter === "all" ? undefined : positionFilter,
+          type: typeFilter === "all" ? undefined : typeFilter,
+          from_date: fromDateFilter || undefined,
+          to_date: toDateFilter || undefined,
+        },
         new AxiosHeaders({
           Authorization: `Bearer ${token}`,
         })
@@ -354,7 +388,17 @@ function CoursesTable() {
     if (token) {
       fetchData();
     }
-  }, [token]);
+  }, [
+    token,
+    globalFilter,
+    teacherFilter,
+    subjectFilter,
+    levelFilter,
+    fromDateFilter,
+    toDateFilter,
+    typeFilter,
+    positionFilter,
+  ]);
 
   // fetch levels form api
   const fetchLevels = async () => {
@@ -516,21 +560,6 @@ function CoursesTable() {
     link.click();
   };
 
-  const filteredData = useMemo(() => {
-    return data.filter((course) => {
-      const matchesType = typeFilter === "all" || course.type === typeFilter;
-      const matchesPosition =
-        positionFilter === "all" || course.position === positionFilter;
-      const matchesGlobal =
-        globalFilter === "" ||
-        course.title.toLowerCase().includes(globalFilter.toLowerCase()) ||
-        course.subject.toLowerCase().includes(globalFilter.toLowerCase()) ||
-        course.level.toLowerCase().includes(globalFilter.toLowerCase());
-
-      return matchesType && matchesPosition && matchesGlobal;
-    });
-  }, [data, typeFilter, positionFilter, globalFilter]);
-
   const columns: ColumnDef<Course>[] = [
     {
       accessorKey: "title",
@@ -671,7 +700,7 @@ function CoursesTable() {
   ];
 
   const table = useReactTable({
-    data: filteredData,
+    data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -819,7 +848,16 @@ function CoursesTable() {
           <option value="" className="dark:bg-gray-800 dark:!text-white">
             اختر المادة
           </option>
-          <option value="1" className="dark:bg-gray-800 dark:!text-white">
+          {subjects.map((subject) => (
+            <option
+              className="text-[#000000] dark:!text-white dark:bg-gray-800"
+              key={subject.id}
+              value={subject.id}
+            >
+              {subject.name}
+            </option>
+          ))}
+          {/* <option value="1" className="dark:bg-gray-800 dark:!text-white">
             رياضيات
           </option>
           <option value="2" className="dark:bg-gray-800 dark:!text-white">
@@ -830,7 +868,7 @@ function CoursesTable() {
           </option>
           <option value="4" className="dark:bg-gray-800 dark:!text-white">
             لغة إنجليزية
-          </option>
+          </option> */}
         </select>
       </div>
 
@@ -1074,22 +1112,77 @@ function CoursesTable() {
   };
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Enhanced Header with Filters and Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-1 flex-col sm:flex-row gap-2 max-w-2xl">
-          <div className="relative flex-1">
+      <div className="flex !max-w-[100%] overflow-auto flex-col gap-2 sm:gap-3 md:items-start md:justify-start mb-4">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto items-stretch sm:items-center">
+          <div className="relative flex-1 min-w-[160px] sm:min-w-[180px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="البحث في الكورسات..."
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-10 w-full"
             />
           </div>
-
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[120px]">
+          {userRole === "admin" && (
+            <Select value={teacherFilter} onValueChange={setTeacherFilter}>
+              <SelectTrigger className="w-full sm:w-[140px] h-10">
+                <SelectValue placeholder="المعلم" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع المعلمين</SelectItem>
+                {teachers.map((teacher) => (
+                  <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                    {teacher?.user?.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        
+          <Select value={levelFilter} onValueChange={setSubjectFilter}>
+            <SelectTrigger className="w-full sm:w-[130px] h-10">
+              <SelectValue placeholder="المادة" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع المواد</SelectItem>
+              {subjects.map((level) => (
+                <SelectItem key={level.id} value={level.id.toString()}>
+                  {level.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={levelFilter} onValueChange={setLevelFilter}>
+            <SelectTrigger className="w-full sm:w-[130px] h-10">
+              <SelectValue placeholder="المستوى" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع المستويات</SelectItem>
+              {levels.map((level) => (
+                <SelectItem key={level.id} value={level.id.toString()}>
+                  {level.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            value={fromDateFilter}
+            onChange={(e) => setFromDateFilter(e.target.value)}
+            className="w-full sm:w-[120px] h-10"
+            placeholder="من تاريخ"
+          />
+          <Input
+            type="date"
+            value={toDateFilter}
+            onChange={(e) => setToDateFilter(e.target.value)}
+            className="w-full sm:w-[120px] h-10"
+            placeholder="إلى تاريخ"
+          />
+          {/* <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full sm:w-[110px] h-10">
               <SelectValue placeholder="النوع" />
             </SelectTrigger>
             <SelectContent>
@@ -1097,10 +1190,9 @@ function CoursesTable() {
               <SelectItem value="paid">مدفوع</SelectItem>
               <SelectItem value="free">مجاني</SelectItem>
             </SelectContent>
-          </Select>
-
+          </Select> */}
           <Select value={positionFilter} onValueChange={setPositionFilter}>
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-full sm:w-[110px] h-10">
               <SelectValue placeholder="الموقع" />
             </SelectTrigger>
             <SelectContent>
@@ -1110,23 +1202,21 @@ function CoursesTable() {
             </SelectContent>
           </Select>
         </div>
-
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-2 md:mt-0 md:ml-2 items-stretch sm:items-center justify-end w-full md:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => fetchData()}
             disabled={isLoading}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 h-10 w-full sm:w-auto"
           >
             <RefreshCw
               className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
             />
             تحديث
           </Button>
-
           <Button
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 h-10 w-full sm:w-auto"
             variant="outline"
             size="sm"
             onClick={exportToCSV}
@@ -1134,11 +1224,10 @@ function CoursesTable() {
             <Download className="h-4 w-4 mr-2" />
             تصدير CSV
           </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 h-10 w-full sm:w-auto"
                 variant="outline"
                 size="sm"
               >
@@ -1169,17 +1258,18 @@ function CoursesTable() {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-
           <Dialog open={addCourse} onOpenChange={setAddCourse}>
-            <DialogTrigger asChild>
-              <Button
-                className="flex items-center gap-2"
-                onClick={() => setAddCourse(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                إضافة كورس
-              </Button>
-            </DialogTrigger>
+            {userRole === "admin" && (
+              <DialogTrigger asChild>
+                <Button
+                  className="flex items-center gap-2 h-10 w-full sm:w-auto"
+                  onClick={() => setAddCourse(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  إضافة كورس
+                </Button>
+              </DialogTrigger>
+            )}
             <DialogContent
               className="w-full !max-w-7xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
               onPointerDownOutside={(e) => e.preventDefault()}
@@ -1301,7 +1391,7 @@ function CoursesTable() {
       {/* Results Summary */}
       <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
         <div>
-          عرض {filteredData.length} من {data.length} كورس
+          عرض {data.length} من {paginationMeta?.total} كورس
           {(typeFilter !== "all" ||
             positionFilter !== "all" ||
             globalFilter) && <span className="text-blue-600"> (مفلتر)</span>}
