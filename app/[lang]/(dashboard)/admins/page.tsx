@@ -541,7 +541,7 @@ function BasicDataTable() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="إجمالي المشرفين"
-          value={statistics.totalAdmins}
+          value={pagination.total}
           icon={Shield}
           color="blue"
         />
@@ -905,8 +905,8 @@ function BasicDataTable() {
             key={idx}
             disabled={!link.url || link.active}
             className={`mx-1 px-3 py-1 rounded transition-colors ${
-              link.active 
-                ? "bg-blue-500 text-white dark:bg-blue-600" 
+              link.active
+                ? "bg-blue-500 text-white dark:bg-blue-600"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
             onClick={() => {

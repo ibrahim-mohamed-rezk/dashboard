@@ -96,8 +96,20 @@ export interface CoursModules {
     from: string;
     course_id: number;
     course_name: string;
+    questions: {
+      id: number;
+      exam: string;
+      question: string;
+      questions_count: number;
+      options: {
+        id: number;
+        answer: string;
+      }[];
+      correct_answer: number;
+    }[];
     title: string;
     description: string;
+    questions_count: number;
     thumbnail: string;
     url: string;
     created_at: string;
@@ -106,6 +118,7 @@ export interface CoursModules {
       id: number;
       type: string;
       title: string;
+      duration: number;
       thumbnail: string;
       questions_count: number;
       passing_score: number;
@@ -114,6 +127,7 @@ export interface CoursModules {
         id: number;
         exam: string;
         question: string;
+        questions_count: number;
         options: {
           id: number;
           answer: string;
@@ -295,4 +309,24 @@ export interface Statistics {
       [key: string]: number;
     };
   };
+}
+
+
+export interface VideoTypes {
+  id: number;
+  type: string;
+  from: string;
+  course_id: number;
+  course_name: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  url: string;
+  created_at: string;
+  has_quiz: boolean;
+  quiz: any | null;
+  questions: any | null;
+  questions_count: number;
+  duration: number;
+  passing_score: number;
 }

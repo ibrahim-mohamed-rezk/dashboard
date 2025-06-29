@@ -1,17 +1,10 @@
 "use client";
-import { CoursModules } from "@/lib/type";
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { CoursModules, VideoTypes } from "@/lib/type";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { postData, deleteData } from "@/lib/axios/server";
+import { postData, deleteData, getData } from "@/lib/axios/server";
 import { toast } from "react-hot-toast";
 import {
   DropdownMenu,
@@ -19,7 +12,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash, Plus } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash,
+  Plus,
+  Upload,
+  FileText,
+  PlayCircle,
+  HelpCircle,
+  X,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,29 +30,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useParams } from "next/navigation";
+import CustomModal from "@/components/ui/CustomModal";
+import { Badge } from "@/components/ui/badge";
 
 const CourseModules = ({
-  modules: initialModules,
   courseId,
   token,
 }: {
-  modules: CoursModules[];
   courseId: string;
   token: string;
 }) => {
-  const [modules, setModules] = useState<CoursModules[]>(initialModules);
+  const [modules, setModules] = useState<CoursModules[]>([]);
   const [selectedModule, setSelectedModule] = useState<CoursModules | null>(
     null
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
+  const [isEditingVideoQuiz, setIsEditingVideoQuiz] = useState(false);
+  const [videos, setVideos] = useState<VideoTypes[]>([]);
+
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
     url: "",
     thumbnail: null as File | null,
+    questions_count: 0,
+    duration: 0,
+    passing_score: 0,
+    exam_image: null as File | null,
+    questions: [] as {
+      id?: number;
+      question: string;
+      options: { id?: number; answer: string; is_correct: boolean }[];
+      correct_answer?: number;
+    }[],
   });
+
   const [newModuleForm, setNewModuleForm] = useState({
     type: "video",
     title: "",
@@ -64,6 +82,8 @@ const CourseModules = ({
       question: string;
       options: { answer: string; is_correct: boolean }[];
     }[],
+    exam_belongs_to: "course" as "course" | "video",
+    exam_video_id: "",
   });
 
   const [currentQuestion, setCurrentQuestion] = useState({
@@ -78,6 +98,59 @@ const CourseModules = ({
     written_answer: "",
   });
 
+  // For editing existing questions
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<
+    number | null
+  >(null);
+  const [editQuestionForm, setEditQuestionForm] = useState({
+    question: "",
+    options: [
+      { answer: "", is_correct: false },
+      { answer: "", is_correct: false },
+      { answer: "", is_correct: false },
+      { answer: "", is_correct: false },
+    ],
+  });
+
+  const params = useParams();
+
+  // Fetch course data
+  const fetchCourse = async () => {
+    try {
+      const response = await getData(
+        `courses/${params.id}`,
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setModules(response.data.modules);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Fetch videos from api
+  const fetchVideos = async () => {
+    try {
+      const response = await getData(
+        `videos`,
+        { course_id: params.id },
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setVideos(response.videos);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    fetchCourse();
+    fetchVideos();
+  }, [token]);
+
   const handleThumbnailEditChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -90,24 +163,97 @@ const CourseModules = ({
     }
   };
 
-  const handleEdit = (module: CoursModules) => {
-    setSelectedModule(module);
-    setEditForm({
-      title: module?.details?.title || "",
-      description: module?.details?.description || "",
-      url: module?.details?.url || "",
-      thumbnail: null,
-    });
-    setIsEditing(true);
+  const handleExamImageEditChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setEditForm((prev) => ({
+        ...prev,
+        exam_image: files[0],
+      }));
+    }
   };
 
+  // Enhanced click handler for modules
+  const handleModuleClick = (module: CoursModules) => {
+    setSelectedModule(module);
+
+    if (module.type === "video") {
+      setEditForm({
+        title: module?.details?.title || "",
+        description: module?.details?.description || "",
+        url: module?.details?.url || "",
+        thumbnail: null,
+        questions_count: 0,
+        duration: 0,
+        passing_score: 0,
+        exam_image: null,
+        questions: [],
+      });
+      setIsEditing(true);
+    } else if (module.type === "quiz" || module.type === "exam") {
+      // For quiz/exam, populate the form with existing data
+      const examDetails = module.details;
+
+      const questions =
+        (Array.isArray((examDetails as any)?.questions)
+          ? (examDetails as any).questions
+          : Array.isArray(examDetails?.quiz)
+            ? examDetails.quiz[0]?.questions
+            : []);
+
+      const transformedQuestions =
+        questions?.map((q: any) => ({
+          id: q.id,
+          question: q.question,
+          options: q.options.map((opt: any, index: number) => ({
+            id: opt.id,
+            answer: opt.answer,
+            is_correct: q.correct_answer === index + 1,
+          })),
+          correct_answer: q.correct_answer,
+        })) || [];
+
+      setEditForm({
+        title: examDetails?.title || "",
+        description: examDetails?.description || "",
+        url: "",
+        thumbnail: null,
+        questions_count:
+          (examDetails as any)?.questions_count ??
+          (Array.isArray(examDetails?.quiz) ? examDetails.quiz[0]?.questions_count : 0),
+        duration:
+          (examDetails as any)?.duration ??
+          (Array.isArray(examDetails?.quiz) ? examDetails.quiz[0]?.duration : 0),
+        passing_score:
+          (examDetails as any)?.passing_score ??
+          (Array.isArray(examDetails?.quiz) ? examDetails.quiz[0]?.passing_score : 0),
+        exam_image: null,
+        questions: transformedQuestions,
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const handleEdit = (module: CoursModules) => {
+    handleModuleClick(module);
+  };
+
+  // Enhanced delete function with confirmation
   const handleDelete = async (moduleId: number, type: string) => {
+    if (
+      !confirm("هل أنت متأكد من حذف هذا الدرس؟ لا يمكن التراجع عن هذا الإجراء.")
+    ) {
+      return;
+    }
+
     try {
       const endpoint = type === "video" ? "videos" : "exams";
       await deleteData(`${endpoint}/${moduleId}`, {
         Authorization: `Bearer ${token}`,
       });
-      setModules(modules.filter((m) => m?.details?.id !== moduleId));
+      await fetchCourse();
       toast.success("تم حذف الدرس بنجاح");
     } catch (error) {
       toast.error("حدث خطأ أثناء حذف الدرس");
@@ -124,6 +270,7 @@ const CourseModules = ({
       formData.append("_method", "PUT");
 
       let endpoint = "videos";
+
       if (selectedModule.type === "video") {
         const from = "youtube";
         formData.append("from", from);
@@ -132,89 +279,20 @@ const CourseModules = ({
           formData.append("thumbnail", editForm.thumbnail);
         }
         endpoint = "videos";
-      } else if (selectedModule.type === "quiz") {
-        endpoint = "exams";
-      }
+      } else if (
+        selectedModule.type === "quiz" ||
+        selectedModule.type === "exam"
+      ) {
+        formData.append("questions_count", editForm.questions_count.toString());
+        formData.append("duration", editForm.duration.toString());
+        formData.append("passing_score", editForm.passing_score.toString());
 
-      await postData(`${endpoint}/${selectedModule?.details?.id}`, formData, {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      });
-
-      setModules(
-        modules.map((m) =>
-          m?.id === selectedModule?.id
-            ? {
-                ...m,
-                details: {
-                  ...m.details,
-                  title: editForm.title,
-                  description: editForm.description,
-                  url: editForm.url,
-                  thumbnail: editForm.thumbnail
-                    ? URL.createObjectURL(editForm.thumbnail)
-                    : m.details.thumbnail,
-                },
-              }
-            : m
-        )
-      );
-
-      setIsEditing(false);
-      setSelectedModule(null);
-      toast.success("تم تحديث الدرس بنجاح");
-    } catch (error) {
-      toast.error("حدث خطأ أثناء تحديث الدرس");
-    }
-  };
-
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewModuleForm({
-        ...newModuleForm,
-        thumbnail: e.target.files[0],
-      });
-    }
-  };
-
-  const handleExamImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewModuleForm({
-        ...newModuleForm,
-        exam_image: e.target.files[0],
-      });
-    }
-  };
-
-  console.log(modules);
-
-  const handleAddModule = async () => {
-    try {
-      const formData = new FormData();
-      formData.append("type", newModuleForm.type);
-      formData.append("title", newModuleForm.title);
-      formData.append("description", newModuleForm.description);
-      formData.append("course_id", courseId);
-
-      let endpoint = "course-sections";
-      if (newModuleForm.type === "video") {
-        const from = "youtube";
-        formData.append("from", from);
-        formData.append("url", newModuleForm.url);
-        if (newModuleForm.thumbnail) {
-          formData.append("thumbnail", newModuleForm.thumbnail);
+        if (editForm.exam_image) {
+          formData.append("image", editForm.exam_image);
         }
-        endpoint = "videos";
-      } else if (newModuleForm.type === "quiz") {
-        formData.append("title", newModuleForm.title);
-        formData.append("examtable_id", courseId);
-        formData.append("examtable_type", "course");
-        formData.append(
-          "questions_count",
-          newModuleForm.questions_count.toString()
-        );
 
-        newModuleForm.questions.forEach((question, index) => {
+        // Add questions data
+        editForm.questions.forEach((question, index) => {
           const questionNumber = index + 1;
           formData.append(
             `questions[${questionNumber}][question]`,
@@ -237,19 +315,185 @@ const CourseModules = ({
           );
         });
 
-        if (newModuleForm.exam_image) {
-          formData.append("image", newModuleForm.exam_image);
-        }
-
         endpoint = "exams";
       }
 
-      const response = await postData(endpoint, formData, {
+      await postData(`${endpoint}/${selectedModule?.details?.id}`, formData, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
 
-      setModules([...modules, response.video]);
+      await fetchCourse();
+      setIsEditing(false);
+      setSelectedModule(null);
+      toast.success("تم تحديث الدرس بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء تحديث الدرس");
+    }
+  };
+
+  // Handle video quiz update
+  const handleVideoQuizUpdate = async () => {
+    if (!selectedModule?.details?.quiz?.[0]) return;
+
+    try {
+      const quizId = selectedModule.details.quiz[0].id;
+      const videoId = selectedModule.details.id; // Get the current video ID
+
+      const formData = new FormData();
+      formData.append("_method", "PUT");
+      formData.append("examtable_type", "video");
+      formData.append("examtable_id", videoId.toString());
+      formData.append("questions_count", editForm.questions_count.toString());
+      formData.append("duration", editForm.duration.toString());
+      formData.append("passing_score", editForm.passing_score.toString());
+
+      // Add questions data
+      editForm.questions.forEach((question, index) => {
+        const questionNumber = index + 1;
+        formData.append(
+          `questions[${questionNumber}][question]`,
+          question.question
+        );
+
+        question.options.forEach((option, optIndex) => {
+          formData.append(
+            `questions[${questionNumber}][${optIndex + 1}]`,
+            option.answer
+          );
+        });
+
+        const correctAnswerIndex = question.options.findIndex(
+          (opt) => opt.is_correct
+        );
+        formData.append(
+          `questions[${questionNumber}][answer]`,
+          (correctAnswerIndex + 1).toString()
+        );
+      });
+
+      await postData(`exams/${quizId}`, formData, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      });
+
+      await fetchCourse();
+      setIsEditingVideoQuiz(false);
+      setSelectedModule(null);
+      toast.success("تم تحديث اختبار الفيديو بنجاح");
+    } catch (error) {
+      console.error("Error updating video quiz:", error);
+      toast.error("حدث خطأ أثناء تحديث اختبار الفيديو");
+    }
+  };
+
+  // Handle editing video quiz
+  const handleEditVideoQuiz = () => {
+    if (!selectedModule?.details?.quiz?.[0]) return;
+
+    const quizData = selectedModule.details.quiz[0];
+    const transformedQuestions =
+      quizData.questions?.map((q: any) => ({
+        id: q.id,
+        question: q.question,
+        options: q.options.map((opt: any, index: number) => ({
+          id: opt.id,
+          answer: opt.answer,
+          is_correct: q.correct_answer === index + 1,
+        })),
+        correct_answer: q.correct_answer,
+      })) || [];
+
+    setEditForm((prev) => ({
+      ...prev,
+      questions_count: (quizData as any)?.questions_count ?? 0,
+      duration: (quizData as any)?.duration ?? 0,
+      passing_score: (quizData as any)?.passing_score ?? 0,
+      questions: transformedQuestions,
+    }));
+    setIsEditingVideoQuiz(true);
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewModuleForm({
+        ...newModuleForm,
+        thumbnail: e.target.files[0],
+      });
+    }
+  };
+
+  const handleExamImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewModuleForm({
+        ...newModuleForm,
+        exam_image: e.target.files[0],
+      });
+    }
+  };
+
+  const handleAddModule = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("type", newModuleForm.type);
+      formData.append("title", newModuleForm.title);
+      formData.append("description", newModuleForm.description);
+      formData.append("course_id", courseId);
+
+      let endpoint = "course-sections";
+      if (newModuleForm.type === "video") {
+        const from = "youtube";
+        formData.append("from", from);
+        formData.append("url", newModuleForm.url);
+        if (newModuleForm.thumbnail) {
+          formData.append("thumbnail", newModuleForm.thumbnail);
+        }
+        endpoint = "videos";
+      } else if (newModuleForm.type === "quiz") {
+        formData.append("title", newModuleForm.title);
+        if (newModuleForm.exam_belongs_to === "course") {
+          formData.append("examtable_id", courseId);
+          formData.append("examtable_type", "course");
+        } else if (newModuleForm.exam_belongs_to === "video") {
+          formData.append("examtable_id", newModuleForm.exam_video_id);
+          formData.append("examtable_type", "video");
+        }
+        formData.append(
+          "questions_count",
+          newModuleForm.questions_count.toString()
+        );
+        newModuleForm.questions.forEach((question, index) => {
+          const questionNumber = index + 1;
+          formData.append(
+            `questions[${questionNumber}][question]`,
+            question.question
+          );
+          question.options.forEach((option, optIndex) => {
+            formData.append(
+              `questions[${questionNumber}][${optIndex + 1}]`,
+              option.answer
+            );
+          });
+          const correctAnswerIndex = question.options.findIndex(
+            (opt) => opt.is_correct
+          );
+          formData.append(
+            `questions[${questionNumber}][answer]`,
+            (correctAnswerIndex + 1).toString()
+          );
+        });
+        if (newModuleForm.exam_image) {
+          formData.append("image", newModuleForm.exam_image);
+        }
+        endpoint = "exams";
+      }
+
+      await postData(endpoint, formData, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      });
+
+      await fetchCourse();
       setIsAdding(false);
       setNewModuleForm({
         type: "video",
@@ -262,6 +506,8 @@ const CourseModules = ({
         passing_score: 0,
         exam_image: null,
         questions: [],
+        exam_belongs_to: "course",
+        exam_video_id: "",
       });
       toast.success("تم إضافة الدرس بنجاح");
     } catch (error) {
@@ -269,6 +515,7 @@ const CourseModules = ({
     }
   };
 
+  // Question management functions
   const addOption = () => {
     if (currentQuestion.type !== "msq") return;
     setCurrentQuestion({
@@ -310,28 +557,6 @@ const CourseModules = ({
     });
   };
 
-  const setQuestionType = (type: "msq" | "tf" | "written") => {
-    setCurrentQuestion({
-      ...currentQuestion,
-      type,
-      options:
-        type === "tf"
-          ? [
-              { answer: "صح", is_correct: false },
-              { answer: "خطأ", is_correct: false },
-            ]
-          : type === "msq"
-          ? [
-              { answer: "", is_correct: false },
-              { answer: "", is_correct: false },
-              { answer: "", is_correct: false },
-              { answer: "", is_correct: false },
-            ]
-          : [],
-      written_answer: type === "written" ? currentQuestion.written_answer : "",
-    });
-  };
-
   const addQuestion = () => {
     if (currentQuestion.question.trim() === "") {
       toast.error("يرجى إدخال السؤال");
@@ -348,22 +573,27 @@ const CourseModules = ({
         toast.error("يرجى تحديد الإجابة الصحيحة");
         return;
       }
-    } else if (currentQuestion.type === "tf") {
-      if (!currentQuestion.options.some((opt) => opt.is_correct)) {
-        toast.error("يرجى تحديد الإجابة الصحيحة");
-        return;
-      }
-    } else if (currentQuestion.type === "written") {
-      if (currentQuestion.written_answer.trim() === "") {
-        toast.error("يرجى إدخال الإجابة النموذجية");
-        return;
-      }
     }
 
-    setNewModuleForm({
-      ...newModuleForm,
-      questions: [...newModuleForm.questions, currentQuestion],
-    });
+    // Add to edit form for existing modules
+    if (isEditing) {
+      setEditForm({
+        ...editForm,
+        questions: [
+          ...editForm.questions,
+          {
+            question: currentQuestion.question,
+            options: currentQuestion.options,
+          },
+        ],
+      });
+    } else {
+      // Add to new module form
+      setNewModuleForm({
+        ...newModuleForm,
+        questions: [...newModuleForm.questions, currentQuestion],
+      });
+    }
 
     setCurrentQuestion({
       question: "",
@@ -379,9 +609,69 @@ const CourseModules = ({
   };
 
   const removeQuestion = (index: number) => {
-    setNewModuleForm({
-      ...newModuleForm,
-      questions: newModuleForm.questions.filter((_, i) => i !== index),
+    if (isEditing) {
+      setEditForm({
+        ...editForm,
+        questions: editForm.questions.filter((_, i) => i !== index),
+      });
+    } else {
+      setNewModuleForm({
+        ...newModuleForm,
+        questions: newModuleForm.questions.filter((_, i) => i !== index),
+      });
+    }
+  };
+
+  // Edit existing question functions
+  const startEditingQuestion = (index: number) => {
+    const question = editForm.questions[index];
+    setEditingQuestionIndex(index);
+    setEditQuestionForm({
+      question: question.question,
+      options: question.options.map((opt) => ({
+        answer: opt.answer,
+        is_correct: opt.is_correct,
+      })),
+    });
+  };
+
+  const saveEditedQuestion = () => {
+    if (editingQuestionIndex === null) return;
+
+    const updatedQuestions = [...editForm.questions];
+    updatedQuestions[editingQuestionIndex] = {
+      ...updatedQuestions[editingQuestionIndex],
+      question: editQuestionForm.question,
+      options: editQuestionForm.options,
+    };
+
+    setEditForm({
+      ...editForm,
+      questions: updatedQuestions,
+    });
+
+    setEditingQuestionIndex(null);
+    setEditQuestionForm({
+      question: "",
+      options: [
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+      ],
+    });
+  };
+
+  const cancelEditingQuestion = () => {
+    setEditingQuestionIndex(null);
+    setEditQuestionForm({
+      question: "",
+      options: [
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+      ],
     });
   };
 
@@ -390,104 +680,116 @@ const CourseModules = ({
     setIsViewing(true);
   };
 
+  const renderModuleIcon = (module: CoursModules) => {
+    if (module.type === "video") {
+      return <PlayCircle className="w-8 h-8 text-blue-500" />;
+    } else if (module.type === "quiz" || module.type === "exam") {
+      return <HelpCircle className="w-8 h-8 text-green-500" />;
+    }
+    return <FileText className="w-8 h-8 text-gray-500" />;
+  };
+
   return (
     <div className="mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold dark:text-white">محتوى الدورة</h2>
-          <Button onClick={() => setIsAdding(true)}>
+          <Button
+            onClick={() => setIsAdding(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
             <Plus className="h-4 w-4 mr-2" />
             إضافة درس جديدة
           </Button>
         </div>
+
         {!modules || modules.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400 text-lg">لا يوجد محتوى متاح حالياً</p>
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 text-lg">
+              لا يوجد محتوى متاح حالياً
+            </p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
+              ابدأ بإضافة أول درس للدورة
+            </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {modules.map((module: CoursModules, index) => (
               <div
-                key={index}
-                className="border dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                onClick={() => handleViewModule(module)}
+                key={module.id}
+                className="border dark:border-gray-700 rounded-lg p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 cursor-pointer hover:shadow-md"
+                onClick={() => handleModuleClick(module)}
               >
                 <div className="flex justify-between items-start">
-                  {module?.type === "video" ? (
-                    <div className="space-y-4 flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 relative">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="flex-shrink-0">
+                      {module?.type === "video" &&
+                      module?.details?.thumbnail ? (
+                        <div className="w-20 h-20 relative rounded-lg overflow-hidden">
                           <img
-                            src={module?.details?.thumbnail}
-                            alt={module?.details?.title}
-                            className="w-full h-full object-cover rounded"
+                            src={module.details.thumbnail}
+                            alt={module.details.title}
+                            className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <svg
-                              className="w-8 h-8 text-white"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                            <PlayCircle className="w-8 h-8 text-white" />
                           </div>
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold dark:text-white">
-                            {module?.details?.title}
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-300">
-                            {module?.details?.description}
-                          </p>
-                        </div>
-                      </div>
-                      {module?.details?.has_quiz && (
-                        <div className="mt-2">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                            يحتوي على اختبار
-                          </span>
+                      ) : (
+                        <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                          {renderModuleIcon(module)}
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="space-y-4 flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 relative">
-                          <img
-                            src={module?.details?.thumbnail}
-                            alt={module?.details?.title}
-                            className="w-full h-full object-cover rounded"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <svg
-                              className="w-8 h-8 text-white"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold dark:text-white truncate">
+                          {module?.details?.title}
+                        </h3>
+                        <Badge
+                          variant={
+                             "outline"
+                          }
+                        >
+                          {module.type === "video" ? "فيديو" : "اختبار"}
+                        </Badge>
+                      </div>
+
+                      <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
+                        {module?.details?.description}
+                      </p>
+
+                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                        {module.type === "video" && (
+                          <>
+                            <span>فيديو تعليمي</span>
+                            {module?.details?.has_quiz && (
+                              <Badge variant="outline" className="text-xs">
+                                يحتوي على اختبار (
+                                {module?.details?.quiz?.[0]?.questions_count ||
+                                  0}{" "}
+                                سؤال)
+                              </Badge>
+                            )}
+                          </>
+                        )}
+                        {(module.type === "quiz" || module.type === "exam") && (
+                          <div className="flex items-center gap-2">
+                            <HelpCircle className="w-4 h-4" />
+                            <span>
+                              {module?.details?.questions_count ||
+                                module?.details?.questions?.length ||
+                                0}{" "}
+                              سؤال
+                            </span>
                           </div>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold dark:text-white">
-                            {module?.details?.title}
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-300">
-                            {module?.details?.quiz?.[0]?.questions_count || 0}{" "}
-                            سؤال
-                          </p>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -498,7 +800,7 @@ const CourseModules = ({
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
@@ -509,7 +811,16 @@ const CourseModules = ({
                         تعديل
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewModule(module);
+                        }}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        عرض التفاصيل
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600 focus:text-red-600"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(module?.details?.id, module?.type);
@@ -527,55 +838,86 @@ const CourseModules = ({
         )}
       </div>
 
-      {/* Module Details Dialog */}
-      <Dialog
-        open={!!selectedModule && (isViewing || isEditing)}
-        onOpenChange={() => {
+      {/* Enhanced Edit Module Modal */}
+      <CustomModal
+        open={!!selectedModule && isEditing && !isEditingVideoQuiz}
+        onClose={() => {
           setSelectedModule(null);
           setIsEditing(false);
-          setIsViewing(false);
+          setEditingQuestionIndex(null);
         }}
+        className="max-w-7xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 dark:text-white"
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="dark:text-white">
-              {isEditing ? "تعديل الدرس" : selectedModule?.details?.title}
-            </DialogTitle>
-          </DialogHeader>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b pb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              {selectedModule?.type === "video" && (
+                <PlayCircle className="w-5 h-5" />
+              )}
+              {(selectedModule?.type === "quiz" ||
+                selectedModule?.type === "exam") && (
+                <HelpCircle className="w-5 h-5" />
+              )}
+              تعديل {selectedModule?.type === "video" ? "الفيديو" : "الاختبار"}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedModule(null);
+                setIsEditing(false);
+                setEditingQuestionIndex(null);
+              }}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
           {selectedModule && (
             <div className="space-y-6">
-              {isEditing ? (
+              {/* Common fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-white">
+                    العنوان
+                  </label>
+                  <Input
+                    value={editForm.title}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    className="bg-white dark:bg-gray-800 dark:text-white"
+                    placeholder="أدخل عنوان الدرس"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-white">
+                    الوصف
+                  </label>
+                  <Textarea
+                    value={editForm.description}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    className="bg-white dark:bg-gray-800 dark:text-white"
+                    placeholder="أدخل وصف الدرس"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Video specific fields */}
+              {selectedModule.type === "video" && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1 dark:text-white">
-                      العنوان
-                    </label>
-                    <Input
-                      value={editForm.title}
-                      onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 dark:text-white">
-                      الوصف
-                    </label>
-                    <Textarea
-                      value={editForm.description}
-                      onChange={(e) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 dark:text-white">
+                    <label className="block text-sm font-medium mb-2 dark:text-white">
                       رابط الفيديو
                     </label>
                     <Input
@@ -586,163 +928,1001 @@ const CourseModules = ({
                           url: e.target.value,
                         }))
                       }
+                      className="bg-white dark:bg-gray-800 dark:text-white"
+                      placeholder="https://youtube.com/watch?v=..."
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium mb-1 dark:text-white">
+                    <label className="block text-sm font-medium mb-2 dark:text-white">
                       صورة مصغرة
                     </label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleThumbnailEditChange}
-                      className="cursor-pointer"
-                    />
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleThumbnailEditChange}
+                        className="cursor-pointer bg-white dark:bg-gray-800 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
                     {editForm.thumbnail && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                        <Upload className="w-3 h-3" />
                         تم اختيار: {editForm.thumbnail.name}
                       </p>
                     )}
-                    {!editForm.thumbnail &&
-                      selectedModule?.details?.thumbnail && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          الصورة الحالية: {selectedModule.details.thumbnail}
-                        </p>
-                      )}
                   </div>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditing(false)}
-                    >
-                      إلغاء
-                    </Button>
-                    <Button onClick={handleUpdate}>حفظ التغييرات</Button>
-                  </DialogFooter>
-                </div>
-              ) : (
-                <>
-                  <div className="aspect-video relative">
-                    {selectedModule?.type === "video" ? (
-                      <video
-                        src={selectedModule?.details?.url}
-                        controls
-                        className="w-full h-full rounded-lg"
-                        poster={selectedModule?.details?.thumbnail}
-                      />
-                    ) : (
-                      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
-                        <h3 className="text-xl font-semibold mb-4 dark:text-white">الأسئلة</h3>
-                        {selectedModule?.details?.quiz?.[0]?.questions.map(
-                          (question, index) => (
-                            <div key={question.id} className="mb-6">
-                              <p className="font-medium mb-2 dark:text-white">
-                                {index + 1}. {question.question}
-                              </p>
-                              <div className="space-y-2">
-                                {question.options.map((option) => (
-                                  <div
-                                    key={option.id}
-                                    className="flex items-center space-x-2 p-2 rounded hover:bg-gray-200"
-                                  >
-                                    <input
-                                      type="radio"
-                                      name={`question-${question.id}`}
-                                      id={`option-${option.id}`}
-                                      className="h-4 w-4"
-                                    />
-                                    <label htmlFor={`option-${option.id}`}>
-                                      {option.answer}
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">الوصف</h3>
-                    <p className="text-gray-600">
-                      {selectedModule?.details?.description}
-                    </p>
-                  </div>
-                  {selectedModule?.type === "quiz" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">
-                          عدد الأسئلة
-                        </h3>
-                        <p className="text-gray-600">
-                          {selectedModule?.details?.quiz?.[0]
-                            ?.questions_count || 0}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">
-                          درجة النجاح
-                        </h3>
-                        <p className="text-gray-600">
-                          {selectedModule?.details?.quiz?.[0]?.passing_score ||
-                            0}
-                          %
-                        </p>
+
+                  {/* Video Quiz Edit Button */}
+                  {selectedModule.details?.has_quiz && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-blue-900 dark:text-blue-100">
+                            اختبار الفيديو
+                          </h4>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            {selectedModule.details.quiz?.[0]
+                              ?.questions_count || 0}{" "}
+                            سؤال
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={handleEditVideoQuiz}
+                          className="border-blue-200 text-blue-700 hover:bg-blue-100"
+                        >
+                          <HelpCircle className="w-4 h-4 mr-2" />
+                          تعديل الاختبار
+                        </Button>
                       </div>
                     </div>
                   )}
-                </>
+                </div>
+              )}
+
+              {/* Exam/Quiz specific fields */}
+              {(selectedModule.type === "quiz" ||
+                selectedModule.type === "exam") && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 dark:text-white">
+                        عدد الأسئلة
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={editForm.questions_count || ""}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            questions_count: parseInt(e.target.value) || 0,
+                          }))
+                        }
+                        className="bg-white dark:bg-gray-800 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 dark:text-white">
+                        المدة (دقيقة)
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={editForm.duration || ""}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            duration: parseInt(e.target.value) || 0,
+                          }))
+                        }
+                        className="bg-white dark:bg-gray-800 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 dark:text-white">
+                        درجة النجاح (%)
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={editForm.passing_score || ""}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            passing_score: parseInt(e.target.value) || 0,
+                          }))
+                        }
+                        className="bg-white dark:bg-gray-800 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 dark:text-white">
+                      صورة الاختبار
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleExamImageEditChange}
+                        className="cursor-pointer bg-white dark:bg-gray-800 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                      />
+                      <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                    {editForm.exam_image && (
+                      <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                        <Upload className="w-3 h-3" />
+                        تم اختيار: {editForm.exam_image.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Display and edit questions */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium mb-2 dark:text-white">
+                        الأسئلة المتاحة
+                      </h4>
+                      <Badge variant="outline">
+                        {editForm.questions.length} من{" "}
+                        {editForm.questions_count} سؤال
+                      </Badge>
+                    </div>
+
+                    {/* Existing Questions List */}
+                    {editForm.questions.length > 0 && (
+                      <div className="space-y-4 max-h-60 overflow-y-auto">
+                        {editForm.questions.map((question, index) => (
+                          <div
+                            key={index}
+                            className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
+                          >
+                            {editingQuestionIndex === index ? (
+                              // Edit mode
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">
+                                    السؤال
+                                  </label>
+                                  <Textarea
+                                    value={editQuestionForm.question}
+                                    onChange={(e) =>
+                                      setEditQuestionForm((prev) => ({
+                                        ...prev,
+                                        question: e.target.value,
+                                      }))
+                                    }
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium">
+                                    الخيارات
+                                  </label>
+                                  {editQuestionForm.options.map(
+                                    (option, optIndex) => (
+                                      <div
+                                        key={optIndex}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <span className="text-sm w-6">
+                                          {optIndex + 1}.
+                                        </span>
+                                        <Input
+                                          value={option.answer}
+                                          onChange={(e) => {
+                                            const newOptions = [
+                                              ...editQuestionForm.options,
+                                            ];
+                                            newOptions[optIndex].answer =
+                                              e.target.value;
+                                            setEditQuestionForm((prev) => ({
+                                              ...prev,
+                                              options: newOptions,
+                                            }));
+                                          }}
+                                          className="flex-1"
+                                        />
+                                        <Button
+                                          variant={
+                                           "outline"
+                                          }
+                                          size="sm"
+                                          onClick={() => {
+                                            const newOptions =
+                                              editQuestionForm.options.map(
+                                                (opt, i) => ({
+                                                  ...opt,
+                                                  is_correct: i === optIndex,
+                                                })
+                                              );
+                                            setEditQuestionForm((prev) => ({
+                                              ...prev,
+                                              options: newOptions,
+                                            }));
+                                          }}
+                                          className={
+                                            option.is_correct
+                                              ? "bg-green-600 hover:bg-green-700"
+                                              : ""
+                                          }
+                                        >
+                                          {option.is_correct
+                                            ? "صحيح ✓"
+                                            : "تحديد"}
+                                        </Button>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={saveEditedQuestion}
+                                  >
+                                    حفظ
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={cancelEditingQuestion}
+                                  >
+                                    إلغاء
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              // View mode
+                              <div>
+                                <div className="flex justify-between items-start mb-2">
+                                  <p className="font-medium dark:text-white">
+                                    {index + 1}. {question.question}
+                                  </p>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        startEditingQuestion(index)
+                                      }
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeQuestion(index)}
+                                      className="text-red-500"
+                                    >
+                                      <Trash className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  {question.options.map((option, optIndex) => (
+                                    <div
+                                      key={optIndex}
+                                      className={`flex items-center gap-2 p-2 rounded text-sm ${
+                                        option.is_correct
+                                          ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+                                          : "bg-white dark:bg-gray-700"
+                                      }`}
+                                    >
+                                      <span className="font-medium">
+                                        {optIndex + 1}.
+                                      </span>
+                                      <span className="flex-1">
+                                        {option.answer}
+                                      </span>
+                                      {option.is_correct && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          صحيح
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add New Question Form */}
+                    <div className="border rounded-lg p-6 bg-blue-50 dark:bg-blue-900/20">
+                      <h4 className="font-medium mb-4 text-blue-900 dark:text-blue-100">
+                        إضافة سؤال جديد
+                      </h4>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            السؤال
+                          </label>
+                          <Textarea
+                            value={currentQuestion.question}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                question: e.target.value,
+                              })
+                            }
+                            placeholder="أدخل السؤال هنا"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-sm font-medium">
+                              الخيارات
+                            </label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={addOption}
+                              className="text-blue-600 border-blue-200"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              إضافة خيار
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-3">
+                            {currentQuestion.options.map((option, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2"
+                              >
+                                <span className="text-sm font-medium w-6">
+                                  {index + 1}.
+                                </span>
+                                <Input
+                                  value={option.answer}
+                                  onChange={(e) =>
+                                    updateOption(index, e.target.value)
+                                  }
+                                  placeholder={`الخيار ${index + 1}`}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  variant={
+                                     "outline"
+                                  }
+                                  size="sm"
+                                  onClick={() => setCorrectAnswer(index)}
+                                  className={
+                                    option.is_correct
+                                      ? "bg-green-600 hover:bg-green-700"
+                                      : ""
+                                  }
+                                >
+                                  {option.is_correct ? "صحيح ✓" : "تحديد كصحيح"}
+                                </Button>
+                                {currentQuestion.options.length > 2 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeOption(index)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={addQuestion}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          disabled={
+                            !currentQuestion.question.trim() ||
+                            !currentQuestion.options.some(
+                              (opt) => opt.is_correct
+                            )
+                          }
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          إضافة السؤال
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditingQuestionIndex(null);
+                  }}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  onClick={handleUpdate}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  حفظ التغييرات
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </CustomModal>
+
+      {/* Video Quiz Edit Modal */}
+      <CustomModal
+        open={isEditingVideoQuiz}
+        onClose={() => setIsEditingVideoQuiz(false)}
+        className="max-w-7xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 dark:text-white"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b pb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <HelpCircle className="w-5 h-5" />
+              تعديل اختبار الفيديو
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditingVideoQuiz(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-white">
+                  عدد الأسئلة
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={editForm.questions_count || ""}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      questions_count: parseInt(e.target.value) || 0,
+                    }))
+                  }
+                  className="bg-white dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-white">
+                  المدة (دقيقة)
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={editForm.duration || ""}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      duration: parseInt(e.target.value) || 0,
+                    }))
+                  }
+                  className="bg-white dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-white">
+                  درجة النجاح (%)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editForm.passing_score || ""}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      passing_score: parseInt(e.target.value) || 0,
+                    }))
+                  }
+                  className="bg-white dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+            </div>
+
+            {/* Display number of questions */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">
+                الأسئلة المتاحة
+              </h4>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-blue-700 dark:text-blue-300">
+                  عدد الأسئلة الحالية: {editForm.questions.length}
+                </span>
+                <Badge
+                  variant="outline"
+                  className="border-blue-200 text-blue-700"
+                >
+                  {editForm.questions.length} من {editForm.questions_count}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Questions List */}
+            {editForm.questions.length > 0 && (
+              <div className="space-y-4">
+                <h4 className="font-medium dark:text-white">قائمة الأسئلة</h4>
+                <div className="max-h-60 overflow-y-auto space-y-3">
+                  {editForm.questions.map((question, index) => (
+                    <div
+                      key={index}
+                      className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="font-medium dark:text-white">
+                          {index + 1}. {question.question}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeQuestion(index)}
+                          className="text-red-500"
+                        >
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {question.options.map((option, optIndex) => (
+                          <div
+                            key={optIndex}
+                            className={`flex items-center gap-2 p-2 rounded ${
+                              option.is_correct
+                                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+                                : "bg-white dark:bg-gray-700"
+                            }`}
+                          >
+                            <span className="text-sm font-medium">
+                              {optIndex + 1}.
+                            </span>
+                            <span className="flex-1">{option.answer}</span>
+                            {option.is_correct && (
+                              <Badge variant="outline" className="text-xs">
+                                الإجابة الصحيحة
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add New Question Form */}
+            <div className="border rounded-lg p-6 bg-blue-50 dark:bg-blue-900/20">
+              <h4 className="font-medium mb-4 text-blue-900 dark:text-blue-100">
+                إضافة سؤال جديد
+              </h4>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    السؤال
+                  </label>
+                  <Textarea
+                    value={currentQuestion.question}
+                    onChange={(e) =>
+                      setCurrentQuestion({
+                        ...currentQuestion,
+                        question: e.target.value,
+                      })
+                    }
+                    placeholder="أدخل السؤال هنا"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-sm font-medium">
+                      الخيارات
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addOption}
+                      className="text-blue-600 border-blue-200"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      إضافة خيار
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {currentQuestion.options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-sm font-medium w-6">
+                          {index + 1}.
+                        </span>
+                        <Input
+                          value={option.answer}
+                          onChange={(e) => updateOption(index, e.target.value)}
+                          placeholder={`الخيار ${index + 1}`}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant={ "outline"}
+                          size="sm"
+                          onClick={() => setCorrectAnswer(index)}
+                          className={
+                            option.is_correct
+                              ? "bg-green-600 hover:bg-green-700"
+                              : ""
+                          }
+                        >
+                          {option.is_correct ? "صحيح ✓" : "تحديد"}
+                        </Button>
+                        {currentQuestion.options.length > 2 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeOption(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  onClick={addQuestion}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={
+                    !currentQuestion.question.trim() ||
+                    !currentQuestion.options.some((opt) => opt.is_correct)
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  إضافة السؤال
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditingVideoQuiz(false)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                onClick={handleVideoQuizUpdate}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                حفظ تغييرات الاختبار
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CustomModal>
+
+      {/* Module Details Dialog (view only) */}
+      <CustomModal
+        open={!!selectedModule && isViewing}
+        onClose={() => {
+          setSelectedModule(null);
+          setIsViewing(false);
+        }}
+        className="max-w-7xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 dark:text-white"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b pb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2 dark:text-white">
+              {selectedModule?.type === "video" && (
+                <PlayCircle className="w-5 h-5" />
+              )}
+              {(selectedModule?.type === "quiz" ||
+                selectedModule?.type === "exam") && (
+                <HelpCircle className="w-5 h-5" />
+              )}
+              {selectedModule?.details?.title}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedModule(null);
+                setIsViewing(false);
+              }}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {selectedModule && (
+            <div className="space-y-6">
+              {/* Show video if module is video */}
+              {selectedModule?.type === "video" && (
+                <div className="aspect-video relative rounded-lg overflow-hidden bg-black">
+                  {selectedModule?.details?.url &&
+                  /(?:youtube\.com\/watch\?v=|youtu\.be\/)/.test(
+                    selectedModule.details.url
+                  ) ? (
+                    // YouTube embed
+                    <iframe
+                      src={`https://www.youtube.com/embed/${(() => {
+                        const match = selectedModule.details.url.match(
+                          /(?:v=|youtu\.be\/)([\w-]+)/
+                        );
+                        return match ? match[1] : "";
+                      })()}`}
+                      title={selectedModule.details.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <video
+                      src={selectedModule?.details?.url}
+                      controls
+                      className="w-full h-full"
+                      poster={selectedModule?.details?.thumbnail}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Show exam/quiz if present */}
+              {(selectedModule?.type === "quiz" ||
+                selectedModule?.type === "exam" ||
+                (Array.isArray(selectedModule?.details?.quiz) &&
+                  selectedModule?.details?.quiz?.length > 0)) && (
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold dark:text-white flex items-center gap-2">
+                      <HelpCircle className="w-5 h-5" />
+                      الأسئلة
+                    </h3>
+                    <Badge variant="outline" className="text-sm">
+                      {(() => {
+                        let questions = [];
+                        if (
+                          selectedModule?.type === "exam" &&
+                          selectedModule.details &&
+                          "questions" in selectedModule.details &&
+                          Array.isArray(
+                            (selectedModule.details as any).questions
+                          )
+                        ) {
+                          questions = (selectedModule.details as any).questions;
+                        } else if (
+                          selectedModule?.type === "quiz" &&
+                          Array.isArray(selectedModule?.details?.quiz) &&
+                          selectedModule.details.quiz[0]?.questions
+                        ) {
+                          questions = selectedModule.details.quiz[0].questions;
+                        } else if (
+                          Array.isArray(selectedModule?.details?.quiz) &&
+                          selectedModule.details.quiz[0]?.questions
+                        ) {
+                          questions = selectedModule.details.quiz[0].questions;
+                        }
+                        return `${questions.length} سؤال`;
+                      })()}
+                    </Badge>
+                  </div>
+
+                  {(() => {
+                    let questions = [];
+                    if (
+                      selectedModule?.type === "exam" &&
+                      selectedModule.details &&
+                      "questions" in selectedModule.details &&
+                      Array.isArray((selectedModule.details as any).questions)
+                    ) {
+                      questions = (selectedModule.details as any).questions;
+                    } else if (
+                      selectedModule?.type === "quiz" &&
+                      Array.isArray(selectedModule?.details?.quiz) &&
+                      selectedModule.details.quiz[0]?.questions
+                    ) {
+                      questions = selectedModule.details.quiz[0].questions;
+                    } else if (
+                      Array.isArray(selectedModule?.details?.quiz) &&
+                      selectedModule.details.quiz[0]?.questions
+                    ) {
+                      questions = selectedModule.details.quiz[0].questions;
+                    }
+
+                    return questions.map((question: any, index: number) => (
+                      <div
+                        key={question.id || index}
+                        className="mb-6 bg-white dark:bg-gray-700 rounded-lg p-4"
+                      >
+                        <p className="font-medium mb-3 dark:text-white">
+                          {index + 1}. {question.question}
+                        </p>
+                        <div className="space-y-2">
+                          {question.options.map(
+                            (option: any, optIdx: number) => (
+                              <div
+                                key={option.id || optIdx}
+                                className={`flex items-center space-x-3 p-3 rounded-md transition-colors ${
+                                  question.correct_answer === optIdx + 1
+                                    ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+                                    : "bg-gray-50 dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-500"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`question-${question.id || index}`}
+                                  id={`option-${option.id || optIdx}`}
+                                  className="h-4 w-4 text-blue-600"
+                                  checked={
+                                    question.correct_answer === optIdx + 1
+                                  }
+                                  readOnly
+                                />
+                                <label
+                                  htmlFor={`option-${option.id || optIdx}`}
+                                  className="flex-1 cursor-pointer"
+                                >
+                                  {option.answer}
+                                  {question.correct_answer === optIdx + 1 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="ml-2 text-xs"
+                                    >
+                                      الإجابة الصحيحة
+                                    </Badge>
+                                  )}
+                                </label>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+
+              {/* Show description */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 dark:text-white">
+                  الوصف
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  {selectedModule?.details?.description}
+                </p>
+              </div>
+
+              {/* Show quiz stats if module is quiz */}
+              {selectedModule?.type === "quiz" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">
+                      عدد الأسئلة
+                    </h3>
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                      {selectedModule?.details?.quiz?.[0]?.questions_count || 0}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">
+                      درجة النجاح
+                    </h3>
+                    <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                      {selectedModule?.details?.quiz?.[0]?.passing_score || 0}%
+                    </p>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">
+                      المدة
+                    </h3>
+                    <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                      {selectedModule?.details?.quiz?.[0]?.duration || 0} دقيقة
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </CustomModal>
 
-      {/* Add Module Dialog */}
-      <Dialog open={isAdding} onOpenChange={setIsAdding}>
-        <DialogContent className="!max-w-7xl max-h-[90vh] w-[90%] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>إضافة درس جديدة</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 ">
-            <div>
-              <label className="block text-sm text-start font-medium mb-1">
-                نوع الدرس
-              </label>
-              <Select
-                value={newModuleForm.type}
-                onValueChange={(value) =>
-                  setNewModuleForm({ ...newModuleForm, type: value })
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue
-                    className="text-start"
-                    placeholder="اختر نوع الدرس"
-                  />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]">
-                  <SelectItem className="text-start w-full" value="video">
-                    فيديو
-                  </SelectItem>
-                  <SelectItem className="text-start w-full" value="quiz">
-                    اختبار
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Enhanced Add Module Dialog */}
+      <CustomModal
+        open={isAdding}
+        onClose={() => setIsAdding(false)}
+        className="max-w-7xl max-h-[90vh] w-[95%] overflow-y-auto bg-white dark:bg-gray-900 dark:text-white"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b pb-4">
+            <h2 className="text-xl font-bold">إضافة درس جديدة</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAdding(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  نوع الدرس
+                </label>
+                <Select
+                  value={newModuleForm.type}
+                  onValueChange={(value) =>
+                    setNewModuleForm({ ...newModuleForm, type: value })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="اختر نوع الدرس" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem
+                      value="video"
+                      className="flex items-center gap-2"
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                      فيديو
+                    </SelectItem>
+                    <SelectItem
+                      value="quiz"
+                      className="flex items-center gap-2"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      اختبار
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  العنوان
+                </label>
+                <Input
+                  value={newModuleForm.title}
+                  onChange={(e) =>
+                    setNewModuleForm({
+                      ...newModuleForm,
+                      title: e.target.value,
+                    })
+                  }
+                  placeholder="أدخل عنوان الدرس"
+                />
+              </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-1">العنوان</label>
-              <Input
-                value={newModuleForm.title}
-                onChange={(e) =>
-                  setNewModuleForm({ ...newModuleForm, title: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">الوصف</label>
+              <label className="block text-sm font-medium mb-2">الوصف</label>
               <Textarea
                 value={newModuleForm.description}
                 onChange={(e) =>
@@ -751,12 +1931,15 @@ const CourseModules = ({
                     description: e.target.value,
                   })
                 }
+                placeholder="أدخل وصف الدرس"
+                rows={3}
               />
             </div>
+
             {newModuleForm.type === "video" ? (
-              <>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-2">
                     رابط الفيديو
                   </label>
                   <Input
@@ -767,173 +1950,257 @@ const CourseModules = ({
                         url: e.target.value,
                       })
                     }
+                    placeholder="https://youtube.com/watch?v=..."
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-2">
                     صورة مصغرة
                   </label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleThumbnailChange}
-                    className="cursor-pointer"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailChange}
+                      className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
                   {newModuleForm.thumbnail && (
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                      <Upload className="w-3 h-3" />
                       تم اختيار: {newModuleForm.thumbnail.name}
                     </p>
                   )}
                 </div>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-2">
+                    هذا الاختبار يتبع
+                  </label>
+                  <Select
+                    value={newModuleForm.exam_belongs_to}
+                    onValueChange={(value: "course" | "video") =>
+                      setNewModuleForm({
+                        ...newModuleForm,
+                        exam_belongs_to: value,
+                        exam_video_id: "",
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="اختر تبعية الاختبار" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="course">الدورة</SelectItem>
+                      <SelectItem value="video">فيديو</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {newModuleForm.exam_belongs_to === "video" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      اختر الفيديو
+                    </label>
+                    <Select
+                      value={newModuleForm.exam_video_id}
+                      onValueChange={(value) =>
+                        setNewModuleForm({
+                          ...newModuleForm,
+                          exam_video_id: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="اختر الفيديو" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999]">
+                        {videos && videos.length > 0 ? (
+                          videos.map((video) => (
+                            <SelectItem
+                              key={video.id}
+                              value={video.id.toString()}
+                            >
+                              {video.title}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>
+                            لا يوجد فيديوهات متاحة
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
                     صورة الاختبار
                   </label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleExamImageChange}
-                    className="cursor-pointer"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleExamImageChange}
+                      className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                    />
+                    <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
                   {newModuleForm.exam_image && (
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                      <Upload className="w-3 h-3" />
                       تم اختيار: {newModuleForm.exam_image.name}
                     </p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    عدد الأسئلة
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={newModuleForm.questions_count || ""}
-                    onChange={(e) =>
-                      setNewModuleForm({
-                        ...newModuleForm,
-                        questions_count: parseInt(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    مدة الاختبار (بالدقائق)
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={newModuleForm.duration || ""}
-                    onChange={(e) =>
-                      setNewModuleForm({
-                        ...newModuleForm,
-                        duration: parseInt(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    درجة النجاح
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={newModuleForm.passing_score || ""}
-                    onChange={(e) =>
-                      setNewModuleForm({
-                        ...newModuleForm,
-                        passing_score: parseInt(e.target.value) || 0,
-                      })
-                    }
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      عدد الأسئلة
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newModuleForm.questions_count || ""}
+                      onChange={(e) =>
+                        setNewModuleForm({
+                          ...newModuleForm,
+                          questions_count: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="عدد أسئلة الاختبار"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      مدة الاختبار (بالدقائق)
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newModuleForm.duration || ""}
+                      onChange={(e) =>
+                        setNewModuleForm({
+                          ...newModuleForm,
+                          duration: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="المدة بالدقائق"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      درجة النجاح
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={newModuleForm.passing_score || ""}
+                      onChange={(e) =>
+                        setNewModuleForm({
+                          ...newModuleForm,
+                          passing_score: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="النسبة المئوية للنجاح"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-4 mt-6">
-                  <h3 className="text-lg font-semibold">إضافة أسئلة</h3>
+                {/* Enhanced Questions Section */}
+                <div className="space-y-6 border-t pt-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <HelpCircle className="w-5 h-5" />
+                      إضافة أسئلة الاختبار
+                    </h3>
+                    <Badge variant="outline" className="px-3 py-1">
+                      {newModuleForm.questions.length} من{" "}
+                      {newModuleForm.questions_count} سؤال
+                    </Badge>
+                  </div>
 
                   {/* Current Questions List */}
                   {newModuleForm.questions.length > 0 && (
                     <div className="space-y-4">
-                      <h4 className="font-medium">الأسئلة المضافة</h4>
-                      {newModuleForm.questions.map((q, index) => (
-                        <div key={index} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <p className="font-medium">{q.question}</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeQuestion(index)}
-                            >
-                              <Trash className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                          <div className="space-y-2">
-                            {q.options.map((opt, optIndex) => (
-                              <div
-                                key={optIndex}
-                                className={`flex items-center gap-2 ${
-                                  opt.is_correct ? "text-green-600" : ""
-                                }`}
+                      <h4 className="font-medium text-green-700 dark:text-green-300">
+                        الأسئلة المضافة
+                      </h4>
+                      <div className="max-h-60 overflow-y-auto space-y-3">
+                        {newModuleForm.questions.map((q, index) => (
+                          <div
+                            key={index}
+                            className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/20"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <p className="font-medium text-sm">
+                                {index + 1}. {q.question}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeQuestion(index)}
+                                className="text-red-500 hover:text-red-700"
                               >
-                                <span>{optIndex + 1}.</span>
-                                <span>{opt.answer}</span>
-                                {opt.is_correct && (
-                                  <span className="text-xs">(إجابة صحيحة)</span>
-                                )}
-                              </div>
-                            ))}
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {q.options.map((opt, optIndex) => (
+                                <div
+                                  key={optIndex}
+                                  className={`p-2 rounded ${
+                                    opt.is_correct
+                                      ? "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200"
+                                      : "bg-gray-100 dark:bg-gray-700"
+                                  }`}
+                                >
+                                  {optIndex + 1}. {opt.answer}
+                                  {opt.is_correct && (
+                                    <span className="ml-1">✓</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   {/* Add New Question Form */}
-                  <div className="border rounded-lg p-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        نوع السؤال
-                      </label>
-                      <Select
-                        value={currentQuestion.type}
-                        onValueChange={(value: "msq" | "tf" | "written") =>
-                          setQuestionType(value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="اختر نوع السؤال" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[9999]">
-                          <SelectItem value="msq">اختيار من متعدد</SelectItem>
-                          <SelectItem value="tf">صح أو خطأ</SelectItem>
-                          <SelectItem value="written">إجابة كتابية</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="border rounded-lg p-6 bg-blue-50 dark:bg-blue-900/20">
+                    <h4 className="font-medium mb-4 text-blue-900 dark:text-blue-100">
+                      إضافة سؤال جديد
+                    </h4>
 
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        السؤال
-                      </label>
-                      <Textarea
-                        value={currentQuestion.question}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            question: e.target.value,
-                          })
-                        }
-                        placeholder="أدخل السؤال هنا"
-                      />
-                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          السؤال
+                        </label>
+                        <Textarea
+                          value={currentQuestion.question}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              question: e.target.value,
+                            })
+                          }
+                          placeholder="أدخل السؤال هنا"
+                          rows={2}
+                        />
+                      </div>
 
-                    {currentQuestion.type === "msq" && (
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="block text-sm font-medium">
@@ -944,110 +2211,95 @@ const CourseModules = ({
                             variant="outline"
                             size="sm"
                             onClick={addOption}
+                            className="text-blue-600 border-blue-200"
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             إضافة خيار
                           </Button>
                         </div>
-                        {currentQuestion.options.map((option, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Input
-                              value={option.answer}
-                              onChange={(e) =>
-                                updateOption(index, e.target.value)
-                              }
-                              placeholder={`الخيار ${index + 1}`}
-                            />
-                            <Button
-                              variant={option.is_correct ? "soft" : "outline"}
-                              size="sm"
-                              onClick={() => setCorrectAnswer(index)}
-                            >
-                              {option.is_correct
-                                ? "إجابة صحيحة"
-                                : "تحديد كإجابة صحيحة"}
-                            </Button>
-                            {currentQuestion.options.length > 2 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeOption(index)}
-                                className="text-red-500"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
 
-                    {currentQuestion.type === "tf" && (
-                      <div className="space-y-3">
-                        <label className="block text-sm font-medium">
-                          الإجابة الصحيحة
-                        </label>
-                        <div className="flex gap-2">
-                          <Button
-                            variant={
-                              currentQuestion.options[0].is_correct
-                                ? "soft"
-                                : "outline"
-                            }
-                            className="flex-1"
-                            onClick={() => setCorrectAnswer(0)}
-                          >
-                            صح
-                          </Button>
-                          <Button
-                            variant={
-                              currentQuestion.options[1].is_correct
-                                ? "soft"
-                                : "outline"
-                            }
-                            className="flex-1"
-                            onClick={() => setCorrectAnswer(1)}
-                          >
-                            خطأ
-                          </Button>
+                        <div className="grid grid-cols-1 gap-3">
+                          {currentQuestion.options.map((option, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2"
+                            >
+                              <span className="text-sm font-medium w-6">
+                                {index + 1}.
+                              </span>
+                              <Input
+                                value={option.answer}
+                                onChange={(e) =>
+                                  updateOption(index, e.target.value)
+                                }
+                                placeholder={`الخيار ${index + 1}`}
+                                className="flex-1"
+                              />
+                              <Button
+                                variant={
+                                   "outline"
+                                }
+                                size="sm"
+                                onClick={() => setCorrectAnswer(index)}
+                                className={
+                                  option.is_correct
+                                    ? "bg-green-600 hover:bg-green-700"
+                                    : ""
+                                }
+                              >
+                                {option.is_correct ? "صحيح ✓" : "تحديد كصحيح"}
+                              </Button>
+                              {currentQuestion.options.length > 2 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeOption(index)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    )}
 
-                    {currentQuestion.type === "written" && (
-                      <div className="space-y-3">
-                        <label className="block text-sm font-medium">
-                          الإجابة النموذجية
-                        </label>
-                        <Textarea
-                          value={currentQuestion.written_answer}
-                          onChange={(e) =>
-                            setCurrentQuestion({
-                              ...currentQuestion,
-                              written_answer: e.target.value,
-                            })
-                          }
-                          placeholder="أدخل الإجابة النموذجية هنا"
-                        />
-                      </div>
-                    )}
-
-                    <Button onClick={addQuestion} className="w-full">
-                      إضافة السؤال
-                    </Button>
+                      <Button
+                        onClick={addQuestion}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        disabled={
+                          !currentQuestion.question.trim() ||
+                          !currentQuestion.options.some((opt) => opt.is_correct)
+                        }
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        إضافة السؤال
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
-            <DialogFooter>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setIsAdding(false)}>
                 إلغاء
               </Button>
-              <Button onClick={handleAddModule}>إضافة</Button>
-            </DialogFooter>
+              <Button
+                onClick={handleAddModule}
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={
+                  !newModuleForm.title.trim() ||
+                  !newModuleForm.description.trim()
+                }
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                إضافة الدرس
+              </Button>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </CustomModal>
     </div>
   );
 };
