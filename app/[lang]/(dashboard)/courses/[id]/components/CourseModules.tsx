@@ -33,6 +33,7 @@ import {
 import { useParams } from "next/navigation";
 import CustomModal from "@/components/ui/CustomModal";
 import { Badge } from "@/components/ui/badge";
+import * as XLSX from "xlsx";
 
 const CourseModules = ({
   courseId,
@@ -196,12 +197,11 @@ const CourseModules = ({
       // For quiz/exam, populate the form with existing data
       const examDetails = module.details;
 
-      const questions =
-        (Array.isArray((examDetails as any)?.questions)
-          ? (examDetails as any).questions
-          : Array.isArray(examDetails?.quiz)
-            ? examDetails.quiz[0]?.questions
-            : []);
+      const questions = Array.isArray((examDetails as any)?.questions)
+        ? (examDetails as any).questions
+        : Array.isArray(examDetails?.quiz)
+        ? examDetails.quiz[0]?.questions
+        : [];
 
       const transformedQuestions =
         questions?.map((q: any) => ({
@@ -222,13 +222,19 @@ const CourseModules = ({
         thumbnail: null,
         questions_count:
           (examDetails as any)?.questions_count ??
-          (Array.isArray(examDetails?.quiz) ? examDetails.quiz[0]?.questions_count : 0),
+          (Array.isArray(examDetails?.quiz)
+            ? examDetails.quiz[0]?.questions_count
+            : 0),
         duration:
           (examDetails as any)?.duration ??
-          (Array.isArray(examDetails?.quiz) ? examDetails.quiz[0]?.duration : 0),
+          (Array.isArray(examDetails?.quiz)
+            ? examDetails.quiz[0]?.duration
+            : 0),
         passing_score:
           (examDetails as any)?.passing_score ??
-          (Array.isArray(examDetails?.quiz) ? examDetails.quiz[0]?.passing_score : 0),
+          (Array.isArray(examDetails?.quiz)
+            ? examDetails.quiz[0]?.passing_score
+            : 0),
         exam_image: null,
         questions: transformedQuestions,
       });
@@ -689,6 +695,97 @@ const CourseModules = ({
     return <FileText className="w-8 h-8 text-gray-500" />;
   };
 
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = evt.target?.result;
+      if (!data) return;
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Assume first row is header: ["Question", "Option 1", "Option 2", "Option 3", "Option 4", "Correct Option"]
+      const questions = json.slice(1).map((row) => {
+        const [question, opt1, opt2, opt3, opt4, correct] = row;
+        const options = [
+          { answer: opt1, is_correct: correct == 1 },
+          { answer: opt2, is_correct: correct == 2 },
+          { answer: opt3, is_correct: correct == 3 },
+          { answer: opt4, is_correct: correct == 4 },
+        ];
+        return { question, options };
+      });
+
+      setNewModuleForm((prev) => ({
+        ...prev,
+        questions: [...prev.questions, ...questions],
+        questions_count: prev.questions_count || questions.length,
+      }));
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // Export questions as Excel
+  const handleExportQuestions = () => {
+    if (!selectedModule) return;
+    let questions = [];
+    if (
+      selectedModule?.type === "exam" &&
+      selectedModule.details &&
+      "questions" in selectedModule.details &&
+      Array.isArray((selectedModule.details as any).questions)
+    ) {
+      questions = (selectedModule.details as any).questions;
+    } else if (
+      selectedModule?.type === "quiz" &&
+      Array.isArray(selectedModule?.details?.quiz) &&
+      selectedModule.details.quiz[0]?.questions
+    ) {
+      questions = selectedModule.details.quiz[0].questions;
+    } else if (
+      Array.isArray(selectedModule?.details?.quiz) &&
+      selectedModule.details.quiz[0]?.questions
+    ) {
+      questions = selectedModule.details.quiz[0].questions;
+    }
+    if (!questions.length) return;
+    // Prepare data for Excel
+    const data = [
+      [
+        "السؤال",
+        "الخيار 1",
+        "الخيار 2",
+        "الخيار 3",
+        "الخيار 4",
+        "رقم الإجابة الصحيحة (1-4)",
+      ],
+      ...questions.map((q: any) => {
+        const correctIdx = q.correct_answer
+          ? q.correct_answer
+          : q.options.findIndex((opt: any) => opt.is_correct) + 1;
+        return [
+          q.question,
+          q.options[0]?.answer || "",
+          q.options[1]?.answer || "",
+          q.options[2]?.answer || "",
+          q.options[3]?.answer || "",
+          correctIdx,
+        ];
+      }),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Questions");
+    XLSX.writeFile(
+      wb,
+      `questions_${selectedModule.details?.title || "quiz"}.xlsx`
+    );
+  };
+
   return (
     <div className="mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
       <div className="p-6">
@@ -748,11 +845,7 @@ const CourseModules = ({
                         <h3 className="text-lg font-semibold dark:text-white truncate">
                           {module?.details?.title}
                         </h3>
-                        <Badge
-                          variant={
-                             "outline"
-                          }
-                        >
+                        <Badge variant={"outline"}>
                           {module.type === "video" ? "فيديو" : "اختبار"}
                         </Badge>
                       </div>
@@ -1131,9 +1224,7 @@ const CourseModules = ({
                                           className="flex-1"
                                         />
                                         <Button
-                                          variant={
-                                           "outline"
-                                          }
+                                          variant={"outline"}
                                           size="sm"
                                           onClick={() => {
                                             const newOptions =
@@ -1298,9 +1389,7 @@ const CourseModules = ({
                                   className="flex-1"
                                 />
                                 <Button
-                                  variant={
-                                     "outline"
-                                  }
+                                  variant={"outline"}
                                   size="sm"
                                   onClick={() => setCorrectAnswer(index)}
                                   className={
@@ -1569,7 +1658,7 @@ const CourseModules = ({
                           className="flex-1"
                         />
                         <Button
-                          variant={ "outline"}
+                          variant={"outline"}
                           size="sm"
                           onClick={() => setCorrectAnswer(index)}
                           className={
@@ -1634,7 +1723,7 @@ const CourseModules = ({
           setSelectedModule(null);
           setIsViewing(false);
         }}
-        className="max-w-7xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 dark:text-white"
+        className="!max-w-7xl w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 dark:text-white"
       >
         <div className="space-y-6">
           <div className="flex items-center justify-between border-b pb-4">
@@ -1704,33 +1793,48 @@ const CourseModules = ({
                       <HelpCircle className="w-5 h-5" />
                       الأسئلة
                     </h3>
-                    <Badge variant="outline" className="text-sm">
-                      {(() => {
-                        let questions = [];
-                        if (
-                          selectedModule?.type === "exam" &&
-                          selectedModule.details &&
-                          "questions" in selectedModule.details &&
-                          Array.isArray(
-                            (selectedModule.details as any).questions
-                          )
-                        ) {
-                          questions = (selectedModule.details as any).questions;
-                        } else if (
-                          selectedModule?.type === "quiz" &&
-                          Array.isArray(selectedModule?.details?.quiz) &&
-                          selectedModule.details.quiz[0]?.questions
-                        ) {
-                          questions = selectedModule.details.quiz[0].questions;
-                        } else if (
-                          Array.isArray(selectedModule?.details?.quiz) &&
-                          selectedModule.details.quiz[0]?.questions
-                        ) {
-                          questions = selectedModule.details.quiz[0].questions;
-                        }
-                        return `${questions.length} سؤال`;
-                      })()}
-                    </Badge>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="text-sm">
+                        {(() => {
+                          let questions = [];
+                          if (
+                            selectedModule?.type === "exam" &&
+                            selectedModule.details &&
+                            "questions" in selectedModule.details &&
+                            Array.isArray(
+                              (selectedModule.details as any).questions
+                            )
+                          ) {
+                            questions = (selectedModule.details as any)
+                              .questions;
+                          } else if (
+                            selectedModule?.type === "quiz" &&
+                            Array.isArray(selectedModule?.details?.quiz) &&
+                            selectedModule.details.quiz[0]?.questions
+                          ) {
+                            questions =
+                              selectedModule.details.quiz[0].questions;
+                          } else if (
+                            Array.isArray(selectedModule?.details?.quiz) &&
+                            selectedModule.details.quiz[0]?.questions
+                          ) {
+                            questions =
+                              selectedModule.details.quiz[0].questions;
+                          }
+                          return `${questions.length} سؤال`;
+                        })()}
+                      </Badge>
+                      {/* Export Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportQuestions}
+                        className="border-green-300 text-green-700 hover:bg-green-100"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        تصدير الأسئلة إلى Excel
+                      </Button>
+                    </div>
                   </div>
 
                   {(() => {
@@ -2236,9 +2340,7 @@ const CourseModules = ({
                                 className="flex-1"
                               />
                               <Button
-                                variant={
-                                   "outline"
-                                }
+                                variant={"outline"}
                                 size="sm"
                                 onClick={() => setCorrectAnswer(index)}
                                 className={
@@ -2278,6 +2380,33 @@ const CourseModules = ({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {newModuleForm.type !== "video" ? (
+              <div className="space-y-6">
+                {/* Excel Upload Section */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    رفع ملف الأسئلة (Excel)
+                  </label>
+                  <Input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleExcelUpload}
+                    className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    يجب أن يكون الملف بصيغة Excel ويحتوي على الأعمدة: السؤال،
+                    الخيار 1، الخيار 2، الخيار 3، الخيار 4، رقم الإجابة الصحيحة
+                    (1-4)
+                  </p>
+                </div>
+                // ...rest of the quiz/exam form...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* ...rest of the video form... */}
               </div>
             )}
 
