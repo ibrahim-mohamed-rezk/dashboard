@@ -123,6 +123,13 @@ function BooksDataTable() {
     file: null,
   });
 
+      const [filters, setFilters] = useState({
+        subject_id: "",
+        search: "",
+        teacher_id: "",
+        level_id: "",
+      });
+
   // Mock data for dropdowns - replace with actual API calls
   const [subjects, setSubjects] = useState<{ id: number; name: string }[]>([]);
   const [levels, setLevels] = useState<{ id: number; name: string }[]>([]);
