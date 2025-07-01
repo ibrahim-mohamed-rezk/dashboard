@@ -21,13 +21,6 @@ import {
 } from "@/components/ui/table";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import {
   Dialog,
@@ -61,26 +54,6 @@ interface Book {
   count: number;
   is_favorite: boolean;
   is_purchased: boolean;
-}
-
-interface PaginationMeta {
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-}
-
-interface PaginationLinks {
-  first: string;
-  last: string;
-  prev: string | null;
-  next: string | null;
-}
-
-interface ApiResponse {
-  data: Book[];
-  meta: PaginationMeta;
-  links: PaginationLinks;
 }
 
 type FormData = {
@@ -123,12 +96,13 @@ function BooksDataTable() {
     file: null,
   });
 
-      const [filters, setFilters] = useState({
-        subject_id: "",
-        search: "",
-        teacher_id: "",
-        level_id: "",
-      });
+  const [filters, setFilters] = useState({
+    subject_id: "",
+    search: "",
+    teacher_id: "",
+    level_id: "",
+    type: "",
+  });
 
   // Mock data for dropdowns - replace with actual API calls
   const [subjects, setSubjects] = useState<{ id: number; name: string }[]>([]);
@@ -138,11 +112,11 @@ function BooksDataTable() {
   >([]);
 
   // refetch books
-  const refetchBooks = async (page: number = 1) => {
+  const refetchBooks = async () => {
     try {
       const response = await getData(
-        `books?page=${page}`,
-        {},
+        `books`,
+        { page: currentPage, ...filters },
         {
           Authorization: `Bearer ${token}`,
         }
@@ -217,13 +191,17 @@ function BooksDataTable() {
     fetchData();
   }, []);
 
-  // feach data
+  // feach filters data
   useEffect(() => {
     feachSubjectsData();
     feachLevelsData();
     fetchTeachers();
-    refetchBooks();
   }, [token]);
+
+  // feach data
+  useEffect(() => {
+    refetchBooks();
+  }, [token, filters, currentPage]);
 
   // handle input change
   const handleInputChange = (
@@ -398,13 +376,6 @@ function BooksDataTable() {
       throw error;
     }
   };
-
-  // fetch books from api
-  useEffect(() => {
-    if (token) {
-      refetchBooks(currentPage);
-    }
-  }, [token, currentPage]);
 
   // Update useEffect to set form data when editing book changes
   useEffect(() => {
@@ -804,16 +775,73 @@ function BooksDataTable() {
 
   return (
     <>
-      <div className="flex items-center gap-2 px-4 mb-4">
+      <div className="flex flex-wrap items-center gap-2 px-4 mb-4">
         {/* search input */}
         <Input
           placeholder="بحث بالاسم..."
-          value={(table.getColumn("name")?.getFilterValue() as string) || ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
+          value={filters.search}
+          onChange={(event) => {
+            setFilters((prev) => ({ ...prev, search: event.target.value }));
+          }}
           className="max-w-sm min-w-[200px] h-10"
         />
+        {/* subject filter */}
+        <select
+          value={filters.subject_id}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, subject_id: e.target.value }));
+          }}
+          className="min-w-[140px] h-10 border rounded px-2"
+        >
+          <option value="">كل المواضيع</option>
+          {subjects.map((subject) => (
+            <option key={subject.id} value={subject.id}>
+              {subject.name}
+            </option>
+          ))}
+        </select>
+        {/* level filter */}
+        <select
+          value={filters.level_id}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, level_id: e.target.value }));
+          }}
+          className="min-w-[120px] h-10 border rounded px-2"
+        >
+          <option value="">كل المستويات</option>
+          {levels.map((level) => (
+            <option key={level.id} value={level.id}>
+              {level.name}
+            </option>
+          ))}
+        </select>
+        {/* teacher filter */}
+        <select
+          value={filters.teacher_id}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, teacher_id: e.target.value }));
+          }}
+          className="min-w-[140px] h-10 border rounded px-2"
+        >
+          <option value="">كل المعلمين</option>
+          {teachers.map((teacher) => (
+            <option key={teacher.id} value={teacher.id}>
+              {teacher.user.full_name}
+            </option>
+          ))}
+        </select>
+        {/* type filter */}
+        <select
+          value={filters.type}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, type: e.target.value }));
+          }}
+          className="min-w-[100px] h-10 border rounded px-2"
+        >
+          <option value="">كل الأنواع</option>
+          <option value="free">مجاني</option>
+          <option value="paid">مدفوع</option>
+        </select>
         {/* add book Dialog */}
         <Dialog>
           <DialogTrigger asChild>
@@ -959,7 +987,7 @@ function BooksDataTable() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetchBooks(currentPage - 1)}
+              onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
               className="h-9 px-4 font-medium"
             >
@@ -974,7 +1002,7 @@ function BooksDataTable() {
                     key={pageNumber}
                     variant={"outline"}
                     size="sm"
-                    onClick={() => refetchBooks(pageNumber)}
+                    onClick={() => setCurrentPage(pageNumber)}
                     className={`w-9 h-9 font-medium transition-all duration-200 ${
                       pageNumber === currentPage
                         ? "scale-110"
@@ -990,7 +1018,7 @@ function BooksDataTable() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetchBooks(currentPage + 1)}
+              onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               className="h-9 px-4 font-medium"
             >
