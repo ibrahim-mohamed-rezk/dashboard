@@ -743,6 +743,23 @@ function CoursesTable() {
                   <X className="w-4 h-4" />
                 </button>
               </>
+            ) : editingCourse && editingCourse.cover ? (
+              <>
+                <img
+                  src={editingCourse.cover}
+                  alt="Cover preview"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, cover: undefined }))
+                  }
+                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full p-6 text-center">
                 <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
@@ -1140,7 +1157,7 @@ function CoursesTable() {
               </SelectContent>
             </Select>
           )}
-        
+
           <Select value={levelFilter} onValueChange={setSubjectFilter}>
             <SelectTrigger className="w-full sm:w-[130px] h-10">
               <SelectValue placeholder="المادة" />
@@ -1263,7 +1280,25 @@ function CoursesTable() {
               <DialogTrigger asChild>
                 <Button
                   className="flex items-center gap-2 h-10 w-full sm:w-auto"
-                  onClick={() => setAddCourse(true)}
+                  onClick={() => {
+                    setAddCourse(true);
+                    setEditingCourse(null);
+                    setFormData({
+                      teacher_id: 0,
+                      subject_id: 0,
+                      level_id: 0,
+                      title: "",
+                      slug: "",
+                      description: "",
+                      type: "free",
+                      position: "online",
+                      meta_description: "",
+                      meta_keywords: "",
+                      status: "active",
+                      price: "0",
+                      cover: undefined,
+                    });
+                  }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   إضافة كورس
@@ -1408,7 +1443,7 @@ function CoursesTable() {
       {/* Edit Course Dialog */}
       <Dialog open={editCourse} onOpenChange={setEditCourse}>
         <DialogContent
-          className="w-full max-w-7xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
+          className="!w-full !max-w-7xl md:!max-w-7xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
