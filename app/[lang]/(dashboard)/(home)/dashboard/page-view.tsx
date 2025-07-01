@@ -26,7 +26,10 @@ const DashboardPageView = ({ trans, statistics }: DashboardPageViewProps) => {
         <div className="text-2xl font-medium text-default-800 ">
           التحليلات {trans?.dashboard}
         </div>
-        <DatePickerWithRange />
+        <div className="flex items-center gap-2">
+          <DatePickerWithRange />
+          <DashboardSelect />
+        </div>
       </div>
       {/* reports area */}
       <div className="grid grid-cols-12  gap-6 ">

@@ -17,20 +17,28 @@ const Dashboard = async ({
   const formatDate = (date: Date) => date.toISOString();
 
   // Use params date if available, otherwise use current date in ISO format
-  const startDate = (paramsData.from as string) || formatDate(new Date());
+  const startDate =
+    paramsData.from && typeof paramsData.from === "string"
+      ? new Date(paramsData.from).toISOString().slice(0, 10)
+      : null;
 
   // Use params end date if available, otherwise use current date + 1 month in ISO format
   const endDate =
-    (paramsData.to as string) ||
-    formatDate(new Date(new Date().setMonth(new Date().getMonth() + 1)));
+    paramsData.to && typeof paramsData.to === "string"
+      ? new Date(paramsData.to).toISOString().slice(0, 10)
+      : null;
 
   const filterBy = (paramsData.filter_by as string) || "month";
 
   const fetchData = async () => {
     try {
       const response = await getData(
-        `statistics?start_date=${startDate}&end_date=${endDate}&filter_by=${filterBy}`,
-        {},
+        `statistics`,
+        {
+          start_date: startDate,
+          end_date: endDate,
+          filter_by: filterBy,
+        },
         new AxiosHeaders({
           Authorization: `Bearer ${token}`,
         })
