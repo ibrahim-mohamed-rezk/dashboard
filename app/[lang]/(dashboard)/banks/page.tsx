@@ -346,14 +346,14 @@ function BanksTable() {
     switch (type) {
       case "course":
         return (
-          <Badge className="bg-blue-100 text-blue-800">
+          <Badge className="bg-blue-100 gap-[5px] text-blue-800">
             <GraduationCap className="w-3 h-3 mr-1" />
             كورس
           </Badge>
         );
       case "teacher":
         return (
-          <Badge className="bg-green-100 text-green-800">
+          <Badge className="bg-green-100 gap-[5px] text-green-800">
             <Users className="w-3 h-3 mr-1" />
             معلم
           </Badge>
@@ -445,7 +445,7 @@ function BanksTable() {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-[5px] space-x-2">
           <Building2 className="w-4 h-4 text-gray-500" />
           <Link href={`/ar/banks/${row.original.id}`} className="font-medium">
             {row.getValue("name")}
@@ -480,7 +480,7 @@ function BanksTable() {
         if (bankType === "course") {
           const course = courses.find((c) => c.id === bankId);
           return (
-            <div className="flex items-center !justify-center space-x-2">
+            <div className="flex items-center !justify-center gap-[5px] space-x-2">
               <GraduationCap className="w-4 h-4 text-blue-500" />
               <span className="font-medium ">
                 {course?.title || `كورس #${bankId}`}
@@ -490,7 +490,7 @@ function BanksTable() {
         } else {
           const teacher = teachers.find((t) => t.id === bankId);
           return (
-            <div className="flex items-center !justify-center space-x-2">
+            <div className="flex items-center !justify-center gap-[5px] space-x-2">
               <Users className="w-4 h-4 text-green-500" />
               <span className="font-medium">
                 {teacher?.user?.full_name || `معلم #${bankId}`}
