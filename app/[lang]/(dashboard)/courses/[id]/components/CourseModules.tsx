@@ -278,6 +278,7 @@ const CourseModules = ({
       formData.append("title", editForm.title);
       formData.append("description", editForm.description);
       formData.append("_method", "PUT");
+      formData.append("created_at", editForm.created_at);
 
       let endpoint = "videos";
 
@@ -293,7 +294,7 @@ const CourseModules = ({
         selectedModule.type === "quiz" ||
         selectedModule.type === "exam"
       ) {
-        formData.append("questions_count", editForm.questions_count.toString());
+        formData.append("questions_count", editForm.questions.length.toString());
         formData.append("duration", editForm.duration.toString());
         formData.append("passing_score", editForm.passing_score.toString());
 
