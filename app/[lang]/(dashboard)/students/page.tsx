@@ -171,7 +171,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setLevel(response.levels);
+      setLevel(response.data);
     } catch (error) {
       console.log(error);
     }

@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   const { token, user } = body;
 
   const response = NextResponse.json({ message: "Logged in" });
-  if (token) response.cookies.set("token", token, { maxAge: 60 * 60 });
+  if (token) response.cookies.set("token", token, { maxAge: 60 * 60* 24 });
   if (user)
     response.cookies.set("user", user, {
       maxAge: 60 * 60 * 24,

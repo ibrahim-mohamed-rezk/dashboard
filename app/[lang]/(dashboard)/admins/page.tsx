@@ -360,6 +360,12 @@ function BasicDataTable() {
       teacher_modules: teacherModules,
       admin_modules: admin.modules.map((m) => m.id),
     });
+    // Set selected teachers immediately to match formData
+    const selectedTeachersList =
+      teachers?.filter((teacher) =>
+        admin.teachers.some((t) => t.id === teacher.id)
+      ) || [];
+    setSelectedTeachers(selectedTeachersList);
     setIsEdit(true);
     setIsOpen(true);
   };
@@ -437,17 +443,6 @@ function BasicDataTable() {
       admin_modules: [],
     }));
   };
-
-  // Update selectedTeachers when editing
-  useEffect(() => {
-    if (isEdit && editingAdmin) {
-      const selectedTeachersList =
-        teachers?.filter((teacher) =>
-          editingAdmin.teachers.some((t) => t.id === teacher.id)
-        ) || [];
-      setSelectedTeachers(selectedTeachersList);
-    }
-  }, [isEdit, editingAdmin, teachers]);
 
   // columns of table
   const columns: ColumnDef<AdminTypes>[] = [

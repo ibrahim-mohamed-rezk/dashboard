@@ -139,7 +139,7 @@ function BooksDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setLevels(response.levels);
+      setLevels(response.data);
     } catch (error) {
       console.log(error);
     }

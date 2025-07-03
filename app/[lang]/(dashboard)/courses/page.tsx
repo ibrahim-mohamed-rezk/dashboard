@@ -412,7 +412,7 @@ function CoursesTable() {
           lang: "ar",
         })
       );
-      setLevels(response.levels);
+      setLevels(response.data);
     } catch (error) {
       console.error("Error fetching levels:", error);
     }
@@ -909,7 +909,7 @@ function CoursesTable() {
           <option value="" className="dark:bg-gray-800 dark:!text-white">
             اختر المستوى
           </option>
-          {levels.map((level) => (
+          {levels?.map((level) => (
             <option
               key={level.id}
               value={level.id}
