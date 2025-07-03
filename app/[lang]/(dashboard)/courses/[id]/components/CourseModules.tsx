@@ -67,6 +67,7 @@ const CourseModules = ({
       options: { id?: number; answer: string; is_correct: boolean }[];
       correct_answer?: number;
     }[],
+    created_at: "",
   });
 
   const [newModuleForm, setNewModuleForm] = useState({
@@ -85,6 +86,7 @@ const CourseModules = ({
     }[],
     exam_belongs_to: "course" as "course" | "video",
     exam_video_id: "",
+    created_at: "",
   });
 
   const [currentQuestion, setCurrentQuestion] = useState({
@@ -191,6 +193,7 @@ const CourseModules = ({
         passing_score: 0,
         exam_image: null,
         questions: [],
+        created_at: "",
       });
       setIsEditing(true);
     } else if (module.type === "quiz" || module.type === "exam") {
@@ -237,6 +240,7 @@ const CourseModules = ({
             : 0),
         exam_image: null,
         questions: transformedQuestions,
+        created_at: examDetails?.created_at || "",
       });
       setIsEditing(true);
     }
@@ -445,6 +449,7 @@ const CourseModules = ({
       formData.append("title", newModuleForm.title);
       formData.append("description", newModuleForm.description);
       formData.append("course_id", courseId);
+      formData.append("created_at", newModuleForm.created_at);
 
       let endpoint = "course-sections";
       if (newModuleForm.type === "video") {
@@ -466,7 +471,7 @@ const CourseModules = ({
         }
         formData.append(
           "questions_count",
-          newModuleForm.questions_count.toString()
+          newModuleForm.questions.length.toString()
         );
         newModuleForm.questions.forEach((question, index) => {
           const questionNumber = index + 1;
@@ -491,6 +496,9 @@ const CourseModules = ({
         if (newModuleForm.exam_image) {
           formData.append("image", newModuleForm.exam_image);
         }
+        if (newModuleForm.created_at) {
+          formData.append("created_at", newModuleForm.created_at);
+        }
         endpoint = "exams";
       }
 
@@ -514,6 +522,7 @@ const CourseModules = ({
         questions: [],
         exam_belongs_to: "course",
         exam_video_id: "",
+        created_at: "",
       });
       toast.success("تم إضافة الدرس بنجاح");
     } catch (error) {
@@ -787,7 +796,7 @@ const CourseModules = ({
   };
 
   return (
-    <div className="mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
+    <div className="mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden text-right rtl">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold dark:text-white">محتوى الدورة</h2>
@@ -849,6 +858,19 @@ const CourseModules = ({
                           {module.type === "video" ? "فيديو" : "اختبار"}
                         </Badge>
                       </div>
+                      {/* Show created_at date */}
+                      {module?.details?.created_at && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          يبدأ في{" "}
+                          {new Date(
+                            module.details.created_at
+                          ).toLocaleDateString("ar-EG", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </div>
+                      )}
 
                       <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
                         {module?.details?.description}
@@ -1072,6 +1094,24 @@ const CourseModules = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Date input for created_at */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2 dark:text-white">
+                      تاريخ بدايه الدرس
+                    </label>
+                    <Input
+                      type="date"
+                      value={editForm.created_at || ""}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          created_at: e.target.value,
+                        }))
+                      }
+                      className="bg-white dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1082,16 +1122,16 @@ const CourseModules = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2 dark:text-white">
-                        عدد الأسئلة
+                        تاريخ بدايه الاختبار
                       </label>
                       <Input
-                        type="number"
-                        min="1"
-                        value={editForm.questions_count || ""}
+                        type="date"
+                        min={new Date().toISOString().split("T")[0]}
+                        value={editForm.created_at || ""}
                         onChange={(e) =>
                           setEditForm((prev) => ({
                             ...prev,
-                            questions_count: parseInt(e.target.value) || 0,
+                            created_at: e.target.value,
                           }))
                         }
                         className="bg-white dark:bg-gray-800 dark:text-white"
@@ -1164,8 +1204,7 @@ const CourseModules = ({
                         الأسئلة المتاحة
                       </h4>
                       <Badge variant="outline">
-                        {editForm.questions.length} من{" "}
-                        {editForm.questions_count} سؤال
+                        {editForm.questions.length} سؤال
                       </Badge>
                     </div>
 
@@ -1479,24 +1518,23 @@ const CourseModules = ({
 
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Replace questions_count input with created_at date input */}
               <div>
                 <label className="block text-sm font-medium mb-2 dark:text-white">
-                  عدد الأسئلة
+                  تاريخ بدايه الدرس
                 </label>
                 <Input
-                  type="number"
-                  min="1"
-                  value={editForm.questions_count || ""}
+                  type="date"
+                  value={editForm.created_at || ""}
                   onChange={(e) =>
                     setEditForm((prev) => ({
                       ...prev,
-                      questions_count: parseInt(e.target.value) || 0,
+                      created_at: e.target.value,
                     }))
                   }
                   className="bg-white dark:bg-gray-800 dark:text-white"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-2 dark:text-white">
                   المدة (دقيقة)
@@ -1514,7 +1552,6 @@ const CourseModules = ({
                   className="bg-white dark:bg-gray-800 dark:text-white"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-2 dark:text-white">
                   درجة النجاح (%)
@@ -1548,7 +1585,7 @@ const CourseModules = ({
                   variant="outline"
                   className="border-blue-200 text-blue-700"
                 >
-                  {editForm.questions.length} من {editForm.questions_count}
+                  {editForm.questions.length} سؤال
                 </Badge>
               </div>
             </div>
@@ -1986,22 +2023,20 @@ const CourseModules = ({
                     setNewModuleForm({ ...newModuleForm, type: value })
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full text-right">
                     <SelectValue placeholder="اختر نوع الدرس" />
                   </SelectTrigger>
                   <SelectContent className="z-[9999]">
                     <SelectItem
                       value="video"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 text-right"
                     >
-                      <PlayCircle className="w-4 h-4" />
                       فيديو
                     </SelectItem>
                     <SelectItem
                       value="quiz"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 text-right"
                     >
-                      <HelpCircle className="w-4 h-4" />
                       اختبار
                     </SelectItem>
                   </SelectContent>
@@ -2077,6 +2112,23 @@ const CourseModules = ({
                       تم اختيار: {newModuleForm.thumbnail.name}
                     </p>
                   )}
+                </div>
+
+                {/* Date input for created_at */}
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-white">
+                    تاريخ بدايه الدرس
+                  </label>
+                  <Input
+                    type="date"
+                    value={newModuleForm.created_at || ""}
+                    onChange={(e) =>
+                      setNewModuleForm({
+                        ...newModuleForm,
+                        created_at: e.target.value,
+                      })
+                    }
+                  />
                 </div>
               </div>
             ) : (
@@ -2166,19 +2218,18 @@ const CourseModules = ({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      عدد الأسئلة
+                      تاريخ بدايه الاختبار
                     </label>
                     <Input
-                      type="number"
-                      min="1"
-                      value={newModuleForm.questions_count || ""}
+                      type="date"
+                      min={new Date().toISOString().split("T")[0]}
+                      value={newModuleForm.created_at || ""}
                       onChange={(e) =>
                         setNewModuleForm({
                           ...newModuleForm,
-                          questions_count: parseInt(e.target.value) || 0,
+                          created_at: e.target.value,
                         })
                       }
-                      placeholder="عدد أسئلة الاختبار"
                     />
                   </div>
 
