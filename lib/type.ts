@@ -161,6 +161,8 @@ export interface StudentTypes {
   user: {
     id: number;
     name: string;
+    image: string;
+    full_name: string;
     email: string;
     phone: string;
     role: string;

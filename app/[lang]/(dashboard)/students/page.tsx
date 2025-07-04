@@ -294,9 +294,9 @@ function BasicDataTable() {
         return (
           <div className="flex items-center gap-3">
             <Avatar className="rounded-full">
-              <AvatarFallback>{user.user?.avatar}</AvatarFallback>
+              <AvatarFallback>{user.user?.image}</AvatarFallback>
             </Avatar>
-            <span>{user.user?.name ?? "N/A"}</span>
+            <span>{user.user?.full_name ?? "N/A"}</span>
           </div>
         );
       },

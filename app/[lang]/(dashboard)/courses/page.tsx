@@ -610,6 +610,15 @@ function CoursesTable() {
       ),
     },
     {
+      id: "teacher_name",
+      header: "المعلم",
+      cell: ({ row }) => {
+        const teacherId = row.original.teacher_id;
+        const teacher = teachers.find((t) => t.id === teacherId);
+        return teacher ? teacher.user.full_name : "-";
+      },
+    },
+    {
       accessorKey: "type",
       header: "النوع",
       cell: ({ row }) => getTypeBadge(row.getValue("type")),
