@@ -169,7 +169,6 @@ function BasicDataTable() {
       console.log(error);
     }
   };
-  console.log(data, teachers, modules)
 
   // refetch admins
   useEffect(() => {
@@ -231,11 +230,19 @@ function BasicDataTable() {
         : prev.teachers.filter((id) => id !== teacherId);
 
       // Update teacher_modules array to match teachers array
-      const updatedTeacherModules = checked
-        ? [...prev.teacher_modules, []]
-        : prev.teacher_modules.filter(
-            (_, index) => prev.teachers[index] !== teacherId
-          );
+      let updatedTeacherModules;
+      if (checked) {
+        // When adding a teacher, add an empty modules array
+        const teacherIndex = updatedTeachers.indexOf(teacherId);
+        updatedTeacherModules = [...prev.teacher_modules];
+        updatedTeacherModules[teacherIndex] = [];
+      } else {
+        // When removing a teacher, remove their modules array
+        const oldTeacherIndex = prev.teachers.indexOf(teacherId);
+        updatedTeacherModules = prev.teacher_modules.filter(
+          (_, index) => index !== oldTeacherIndex
+        );
+      }
 
       return {
         ...prev,
@@ -343,32 +350,74 @@ function BasicDataTable() {
     }
   };
 
-  const handleEdit = (admin: AdminTypes) => {
-    setEditingAdmin(admin);
-    const teacherIds = admin.teachers.map((t) => t.id);
-    const teacherModules = admin.teachers.map((t) =>
-      t.modules.map((m) => m.id)
-    );
+ const handleEdit = (admin: AdminTypes) => {
+   setEditingAdmin(admin);
+   setSearchQuery(""); // Reset search query
 
-    setFormData({
-      full_name: admin.full_name,
-      email: admin.email,
-      phone: admin.phone,
-      password: "",
-      role: admin.role,
-      teachers: teacherIds,
-      teacher_modules: teacherModules,
-      admin_modules: admin.modules.map((m) => m.id),
-    });
-    // Set selected teachers immediately to match formData
-    const selectedTeachersList =
-      teachers?.filter((teacher) =>
-        admin.teachers.some((t) => t.id === teacher.id)
-      ) || [];
-    setSelectedTeachers(selectedTeachersList);
-    setIsEdit(true);
-    setIsOpen(true);
-  };
+   // Filter out teachers with null id
+   const validTeachers = admin.teachers.filter((t) => t.id !== null);
+
+   // Extract teacher IDs (excluding null ones)
+   const teacherIds = validTeachers.map((t) => t.id); // => [1, 2, 3]
+
+   // Extract all current teacher IDs
+   const currentTeacherIds = teachers?.map((t) => t.id) || []; // From your state
+
+   // Compute difference: IDs in admin.teachers but not in current teachers
+   const difference = teacherIds.filter(
+     (id) => !currentTeacherIds.includes(id)
+   );
+
+   // Extract modules for each teacher, preserving the order
+   const teacherModules = validTeachers.map((t) => {
+     const uniqueModuleIds = [
+       ...new Set(t.modules.filter((m) => m.access).map((m) => m.id)),
+     ];
+     return uniqueModuleIds;
+   });
+
+   // Extract admin modules that have access = true
+   const adminModuleIds = admin.modules
+     .filter((m) => m.access)
+     .map((m) => m.id);
+
+   setFormData({
+     full_name: admin.full_name,
+     email: admin.email,
+     phone: admin.phone,
+     password: "",
+     role: admin.role,
+     teachers: teacherIds,
+     teacher_modules: teacherModules,
+     admin_modules: adminModuleIds,
+   });
+
+   // Create selected teachers list
+   const selectedTeachersList = validTeachers.map((adminTeacher) => {
+     const existingTeacher = teachers?.find((t) => t.user.id === adminTeacher.id);
+     if (existingTeacher) {
+       return existingTeacher;
+     }
+     return {
+       id: adminTeacher.user.id,
+       user: {
+         id: adminTeacher.user.id,
+         full_name: adminTeacher.name || "Unknown Teacher",
+         email: `teacher${adminTeacher.user.id}@example.com`,
+         phone: "",
+         avatar: "",
+       },
+       modules: adminTeacher.modules,
+     } as Teacher;
+   });
+
+   setSelectedTeachers(selectedTeachersList);
+   setIsEdit(true);
+   setIsOpen(true);
+
+   // Return difference array
+   return difference;
+ };
 
   const filteredTeachers = teachers?.filter((teacher) => {
     const searchLower = searchQuery.toLowerCase();
@@ -376,23 +425,46 @@ function BasicDataTable() {
   });
 
   const handleTeacherSelect = (teacher: Teacher) => {
-    if (!isTeacherSelected(teacher.id)) {
+    // Check if teacher is already selected by checking both the formData.teachers and selectedTeachers
+    const isAlreadyInFormData = formData.teachers.includes(teacher.user.id);
+    const isAlreadyInSelectedTeachers = selectedTeachers.some(
+      (t) => t.id === teacher.user.id
+    );
+
+    if (!isAlreadyInFormData && !isAlreadyInSelectedTeachers) {
       setSelectedTeachers((prev) => [...prev, teacher]);
-      handleTeacherChange(teacher.id, true);
+      handleTeacherChange(teacher.user.id, true);
     }
   };
 
   const handleTeacherRemove = (teacherId: number) => {
+    // Find the index of the teacher before removing
+    const teacherIndex = formData.teachers.indexOf(teacherId);
+
+    // Remove from selectedTeachers
     setSelectedTeachers((prev) => prev.filter((t) => t.id !== teacherId));
-    handleTeacherChange(teacherId, false);
+
+    // Remove from formData (teachers and their modules)
+    setFormData((prev) => {
+      const updatedTeachers = prev.teachers.filter((id) => id !== teacherId);
+      const updatedTeacherModules = prev.teacher_modules.filter(
+        (_, index) => index !== teacherIndex
+      );
+
+      return {
+        ...prev,
+        teachers: updatedTeachers,
+        teacher_modules: updatedTeacherModules,
+      };
+    });
   };
 
   const handleAddAllTeachers = () => {
     const allTeachers = teachers || [];
     setSelectedTeachers(allTeachers);
     allTeachers.forEach((teacher) => {
-      if (!isTeacherSelected(teacher.id)) {
-        handleTeacherChange(teacher.id, true);
+      if (!isTeacherSelected(teacher.user.id)) {
+        handleTeacherChange(teacher.user.id, true);
       }
     });
   };
@@ -574,13 +646,23 @@ function BasicDataTable() {
             className="max-w-sm min-w-[200px] h-10"
           />
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog
+          open={isOpen}
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) {
+              // Reset search query when closing dialog
+              setSearchQuery("");
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button
               onClick={() => {
                 setIsEdit(false);
                 setEditingAdmin(null);
                 setSelectedTeachers([]);
+                setSearchQuery("");
                 setFormData({
                   full_name: "",
                   email: "",
@@ -663,16 +745,21 @@ function BasicDataTable() {
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {selectedTeachers.map((teacher) => (
+                    {/* Remove duplicates based on teacher id before mapping */}
+                    {Array.from(
+                      new Map(
+                        selectedTeachers.map((teacher) => [teacher.user.id, teacher])
+                      ).values()
+                    ).map((teacher) => (
                       <Badge
-                        key={teacher.id}
+                        key={teacher.user.id}
                         variant="outline"
                         className="flex items-center gap-1"
                       >
                         {teacher.user.full_name}
                         <button
                           type="button"
-                          onClick={() => handleTeacherRemove(teacher.id)}
+                          onClick={() => handleTeacherRemove(teacher.user.id)}
                           className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         >
                           <X className="h-3 w-3" />
@@ -681,6 +768,11 @@ function BasicDataTable() {
                       </Badge>
                     ))}
                   </div>
+                  {selectedTeachers.length > 0 && isEdit && (
+                    <div className="text-sm text-muted-foreground mb-2">
+                      المعلمون المعينون حاليًا مع صلاحياتهم معروضة أدناه
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Input
                       placeholder="البحث عن المعلمين..."
@@ -689,29 +781,39 @@ function BasicDataTable() {
                       className="w-full"
                     />
                     <div className="border rounded-md max-h-[200px] overflow-y-auto">
-                      {filteredTeachers?.map((teacher) => (
-                        <div
-                          key={teacher.id}
-                          className={cn(
-                            "flex items-center justify-between p-2 hover:bg-accent cursor-pointer",
-                            isTeacherSelected(teacher.id) && "bg-accent"
-                          )}
-                          onClick={() => handleTeacherSelect(teacher)}
-                        >
-                          <div className="flex flex-col">
-                            <span>{teacher.user.full_name}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {teacher.user.email}
-                            </span>
+                      {filteredTeachers?.map((teacher) => {
+                        const isSelected = formData.teachers.includes(
+                          teacher.user.id
+                        );
+                        return (
+                          <div
+                            key={teacher.user.id}
+                            className={cn(
+                              "flex items-center justify-between p-2 hover:bg-accent",
+                              isSelected && "bg-accent",
+                              !isSelected && "cursor-pointer"
+                            )}
+                            onClick={() => {
+                              if (!isSelected) {
+                                handleTeacherSelect(teacher);
+                              }
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              <span>{teacher.user.full_name}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {teacher.user.email}
+                              </span>
+                            </div>
+                            {isSelected && (
+                              <Checkbox
+                                checked={true}
+                                className="pointer-events-none"
+                              />
+                            )}
                           </div>
-                          {isTeacherSelected(teacher.id) && (
-                            <Checkbox
-                              checked={true}
-                              className="pointer-events-none"
-                            />
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -721,10 +823,15 @@ function BasicDataTable() {
                     <Label className="text-sm font-medium">
                       صلاحيات المعلمين
                     </Label>
-                    {selectedTeachers.map((teacher) => (
+                    {/* Remove duplicates based on teacher id before mapping */}
+                    {Array.from(
+                      new Map(
+                        selectedTeachers.map((teacher) => [teacher.user.id, teacher])
+                      ).values()
+                    ).map((teacher) => (
                       <div
-                        key={teacher.id}
-                        className="space-y-2 border-b border-[#e5e5e5] pb-[10px]"
+                        key={teacher.user.id}
+                        className="space-y-2 border-b border-[#e5e5e5] pb-[10px] last:border-b-0"
                       >
                         <div className="flex items-center justify-between">
                           <Label className="font-medium">
@@ -736,7 +843,7 @@ function BasicDataTable() {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                handleSelectAllTeacherModules(teacher.id)
+                                handleSelectAllTeacherModules(teacher.user.id)
                               }
                               className="h-8"
                             >
@@ -747,7 +854,7 @@ function BasicDataTable() {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                handleDeselectAllTeacherModules(teacher.id)
+                                handleDeselectAllTeacherModules(teacher.user.id)
                               }
                               className="h-8"
                             >
@@ -764,21 +871,21 @@ function BasicDataTable() {
                                 className="flex items-center space-x-2 gap-[5px]"
                               >
                                 <Checkbox
-                                  id={`teacher-${teacher.id}-module-${module.id}`}
+                                  id={`teacher-${teacher.user.id}-module-${module.id}`}
                                   checked={isTeacherModuleSelected(
-                                    teacher.id,
+                                    teacher.user.id,
                                     module.id
                                   )}
                                   onCheckedChange={(checked) =>
                                     handleTeacherModuleChange(
-                                      teacher.id,
+                                      teacher.user.id,
                                       module.id,
                                       checked as boolean
                                     )
                                   }
                                 />
                                 <Label
-                                  htmlFor={`teacher-${teacher.id}-module-${module.id}`}
+                                  htmlFor={`teacher-${teacher.user.id}-module-${module.id}`}
                                   className="text-sm"
                                 >
                                   {module.name}

@@ -62,6 +62,7 @@ export interface Module {
 
 export interface Teacher {
   id: number;
+  name: string;
   user: {
     id: number;
     full_name: string;
