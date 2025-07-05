@@ -293,7 +293,7 @@ function BasicDataTable() {
       header: "تاريخ البداية",
       cell: ({ row }) => (
         <div>
-          {new Date(row.original.valid_from).toLocaleDateString("ar-SA")}
+          {new Date(row.original.valid_from).toLocaleDateString("en-US")}
         </div>
       ),
     },
@@ -301,7 +301,7 @@ function BasicDataTable() {
       accessorKey: "valid_to",
       header: "تاريخ النهاية",
       cell: ({ row }) => (
-        <div>{new Date(row.original.valid_to).toLocaleDateString("ar-SA")}</div>
+        <div>{new Date(row.original.valid_to).toLocaleDateString("en-US")}</div>
       ),
     },
     {
@@ -327,7 +327,7 @@ function BasicDataTable() {
       header: "تاريخ الإنشاء",
       cell: ({ row }) => (
         <div>
-          {new Date(row.original.created_at).toLocaleDateString("ar-SA")}
+          {new Date(row.original.created_at).toLocaleDateString("en-US")}
         </div>
       ),
     },
@@ -336,7 +336,7 @@ function BasicDataTable() {
       header: "تاريخ التحديث",
       cell: ({ row }) => (
         <div>
-          {new Date(row.original.updated_at).toLocaleDateString("ar-SA")}
+          {new Date(row.original.updated_at).toLocaleDateString("en-US")}
         </div>
       ),
     },
