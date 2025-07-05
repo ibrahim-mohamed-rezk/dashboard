@@ -200,6 +200,9 @@ export interface SubscriptionCodeTypes {
   status: string;
   updated_at: string;
   created_at: string;
+  price?: number | string;
+  level_id?: number;
+  teacher_name?: string;
 }
 
 

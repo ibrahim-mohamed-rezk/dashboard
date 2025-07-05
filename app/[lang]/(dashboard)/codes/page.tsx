@@ -72,6 +72,12 @@ function BasicDataTable() {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const [levels, setLevels] = useState<{ id: number; name: string }[]>([]);
+  const [price, setPrice] = useState<string>("");
+  const [selectedLevelId, setSelectedLevelId] = useState<number | null>(null);
+
+  const [isUsedFilter, setIsUsedFilter] = useState<string>("");
+
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("تم نسخ الكود بنجاح");
@@ -94,6 +100,22 @@ function BasicDataTable() {
     }
   };
 
+  // Fetch levels for admin
+  const fetchLevels = async () => {
+    try {
+      const response = await getData(
+        "levels",
+        {},
+        new AxiosHeaders({
+          Authorization: `Bearer ${token}`,
+        })
+      );
+      setLevels(response.data);
+    } catch (error) {
+      console.log("Failed to fetch levels");
+    }
+  };
+
   // refetch users
   const refetchUsers = async () => {
     setIsLoading(true);
@@ -104,12 +126,13 @@ function BasicDataTable() {
           page: pagination.pageIndex + 1,
           per_page: pagination.pageSize,
           teacher_id: selectedTeacherId || undefined,
+          is_used: isUsedFilter !== "" ? isUsedFilter : undefined,
         },
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data.data);
+      setData(response.data);
       setPagination((prev) => ({
         ...prev,
         total: response.data.total,
@@ -120,6 +143,7 @@ function BasicDataTable() {
         links: response.data.links,
       }));
     } catch (error) {
+      setData([]);
       console.log(error);
     } finally {
       setIsLoading(false);
@@ -129,7 +153,13 @@ function BasicDataTable() {
   // feach users from api
   useEffect(() => {
     refetchUsers();
-  }, [pagination.pageIndex, pagination.pageSize, token, selectedTeacherId]);
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    token,
+    selectedTeacherId,
+    isUsedFilter,
+  ]);
 
   // get token from next api
   useEffect(() => {
@@ -141,6 +171,7 @@ function BasicDataTable() {
         setUser(userData);
         if (userData.role === "admin") {
           fetchTeachers();
+          fetchLevels();
         }
       } catch (error) {
         throw error;
@@ -165,6 +196,8 @@ function BasicDataTable() {
           teacher_id: user?.id,
           valid_from: validFrom,
           valid_to: validTo,
+          price: price,
+          level_id: selectedLevelId,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -172,6 +205,8 @@ function BasicDataTable() {
       );
       setGeneratedCode(response.data);
       setIsDialogOpen(true);
+      setPrice("");
+      setSelectedLevelId(null);
     } catch (error) {
       console.error("Error generating student code:", error);
     }
@@ -192,6 +227,8 @@ function BasicDataTable() {
           teacher_id: selectedTeacherId,
           valid_from: validFrom,
           valid_to: validTo,
+          price: price,
+          level_id: selectedLevelId,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -203,6 +240,8 @@ function BasicDataTable() {
       setSelectedTeacherId(null);
       setValidFrom("");
       setValidTo("");
+      setPrice("");
+      setSelectedLevelId(null);
     } catch (error) {
       console.error("Error generating student code:", error);
     }
@@ -289,6 +328,22 @@ function BasicDataTable() {
       ),
     },
     {
+      accessorKey: "price",
+      header: "السعر",
+      cell: ({ row }) => {
+        const price = row.original.price;
+        return price && Number(price) > 0 ? `${price} ج.م` : "مجاني";
+      },
+    },
+    {
+      accessorKey: "level_id",
+      header: "المستوى",
+      cell: ({ row }) => {
+        const level = levels.find((l) => l.id === row.original.level_id);
+        return level ? level.name : "-";
+      },
+    },
+    {
       accessorKey: "valid_from",
       header: "تاريخ البداية",
       cell: ({ row }) => (
@@ -340,6 +395,14 @@ function BasicDataTable() {
         </div>
       ),
     },
+    {
+      accessorKey: "teacher_name",
+      header: "اسم المعلم",
+      cell: ({ row }) => {
+        
+        return row.original.teacher_name;
+      },
+    },
   ];
 
   // table
@@ -385,6 +448,19 @@ function BasicDataTable() {
             }
             className="max-w-sm min-w-[200px] h-10"
           />
+          {/* is_used filter */}
+          <select
+            className="h-10 px-3 border rounded-md"
+            value={isUsedFilter}
+            onChange={(e) => {
+              setIsUsedFilter(e.target.value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          >
+            <option value="">كل الحالات</option>
+            <option value="1">مستخدم</option>
+            <option value="0">غير مستخدم</option>
+          </select>
           {/* teacher filter */}
           {user?.role === "admin" && (
             <select
@@ -421,7 +497,7 @@ function BasicDataTable() {
           <DialogHeader>
             <DialogTitle>كود الطالب </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 overflow-auto max-h-[90vh]">
             {generatedCode?.map((code) => (
               <div
                 key={code.id}
@@ -506,6 +582,36 @@ function BasicDataTable() {
                   className="w-40"
                 />
               </div>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-sm">السعر:</label>
+              <Input
+                type="number"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-24"
+                placeholder="السعر"
+              />
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-sm">المستوى:</label>
+              <select
+                className="w-40 p-2 border rounded-md"
+                value={selectedLevelId || ""}
+                onChange={(e) =>
+                  setSelectedLevelId(
+                    e.target.value ? Number(e.target.value) : null
+                  )
+                }
+              >
+                <option value="">اختر المستوى</option>
+                {levels.map((level) => (
+                  <option key={level.id} value={level.id}>
+                    {level.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <Button
               onClick={handleGenerateCodes}
