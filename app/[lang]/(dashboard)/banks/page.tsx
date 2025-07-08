@@ -88,6 +88,7 @@ interface Bank {
   position: "online" | "offline";
   created_at: string;
   updated_at: string;
+  level_id: string;
 }
 
 interface FormData {
@@ -96,6 +97,7 @@ interface FormData {
   banktable_id: number;
   banktable_type: "course" | "teacher";
   position: "online" | "offline";
+  level_id: string;
 }
 
 interface PaginationMeta {
@@ -135,9 +137,6 @@ function BanksTable() {
   const [paginationLinks, setPaginationLinks] =
     useState<PaginationLinks | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
-
-  const [userRole, setUserRole] = useState<string>("admin");
-  const [userId, setUserId] = useState<number>(1);
   const [token, setToken] = useState<string | null>("sample_token");
   const [editBank, setEditBank] = useState<boolean>(false);
   const [addBank, setAddBank] = useState<boolean>(false);
@@ -147,22 +146,28 @@ function BanksTable() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [courses, setCourses] = useState<CoursesData[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [levels, setLevels] = useState<any[]>([]);
+  4;
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     price: "",
     banktable_id: 1,
     banktable_type: "course",
     position: "online",
+    level_id: levels[0]?.id || 1,
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [banktableTypeFilter, setBanktableTypeFilter] = useState("all");
-  // New filters
+  // Enhanced filters
+  const [subjectFilter, setSubjectFilter] = useState("all");
+  const [bankTypeFilter, setBankTypeFilter] = useState("all"); // course, teacher, all
   const [priceFilter, setPriceFilter] = useState("all"); // all, free, paid
   const [positionFilter, setPositionFilter] = useState("all"); // all, online, offline
+  const [levelFilter, setLevelFilter] = useState("all");
   const [teacherIdFilter, setTeacherIdFilter] = useState("all");
 
   // get token from next api
@@ -186,12 +191,13 @@ function BanksTable() {
       const params: any = {
         page,
       };
-      if (banktableTypeFilter !== "all")
-        params.banktable_type = banktableTypeFilter;
+      if (subjectFilter !== "all") params.subject_id = subjectFilter;
+      if (bankTypeFilter !== "all") params.banktable_type = bankTypeFilter;
       if (priceFilter !== "all") params.price = priceFilter;
       if (positionFilter !== "all") params.position = positionFilter;
       if (globalFilter) params.search = globalFilter;
       if (teacherIdFilter !== "all") params.teacher_id = teacherIdFilter;
+      if (levelFilter !== "all") params.level_id = levelFilter;
       const response = await getData(`banks`, params, {
         Authorization: `Bearer ${token}`,
       });
@@ -209,14 +215,17 @@ function BanksTable() {
     if (token) {
       fetchData(currentPage);
     }
+    // eslint-disable-next-line
   }, [
     token,
     currentPage,
-    banktableTypeFilter,
+    subjectFilter,
+    bankTypeFilter,
     priceFilter,
     positionFilter,
     globalFilter,
     teacherIdFilter,
+    levelFilter,
   ]);
 
   // function to fetch courses
@@ -231,6 +240,40 @@ function BanksTable() {
         })
       );
       setCourses(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // function to fetch levels
+  const fetchLevels = async () => {
+    if (!token) return;
+    try {
+      const response = await getData(
+        `/levels`,
+        {},
+        new AxiosHeaders({
+          Authorization: `Bearer ${token}`,
+        })
+      );
+      setLevels(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // function to fetch subjects
+  const fetchSubjects = async () => {
+    if (!token) return;
+    try {
+      const response = await getData(
+        `/subjects`,
+        {},
+        new AxiosHeaders({
+          Authorization: `Bearer ${token}`,
+        })
+      );
+      setSubjects(response.data);
     } catch (error) {
       console.log(error);
     }
@@ -258,6 +301,8 @@ function BanksTable() {
     if (token) {
       fetchCourses();
       fetchTeachers();
+      fetchLevels();
+      fetchSubjects();
     }
   }, [token]);
 
@@ -293,8 +338,9 @@ function BanksTable() {
           name: formData.name,
           price: formData.price ? formData.price : null,
           banktable_id: formData.banktable_id,
-          banktable_type: formData.banktable_type,
+          level_id: formData.level_id,
           position: formData.position,
+          banktable_type: "course",
         },
         {
           Authorization: `Bearer ${token}`,
@@ -308,6 +354,7 @@ function BanksTable() {
         banktable_id: 1,
         banktable_type: "course",
         position: "online",
+        level_id: "1",
       });
       await fetchData(currentPage);
       toast.success("تم إضافة البنك بنجاح");
@@ -332,6 +379,7 @@ function BanksTable() {
       banktable_id: bank.banktable_id,
       banktable_type: bank.banktable_type,
       position: bank.position || "online",
+      level_id: bank.level_id || "1",
     });
     setEditBank(true);
   };
@@ -592,8 +640,9 @@ function BanksTable() {
           name: formData.name,
           price: formData.price ? formData.price : null,
           banktable_id: formData.banktable_id,
-          banktable_type: formData.banktable_type,
+          banktable_type: "course",
           position: formData.position,
+          level_id: formData.level_id,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -608,6 +657,7 @@ function BanksTable() {
         banktable_id: 1,
         banktable_type: "course",
         position: "online",
+        level_id: "1",
       });
       await fetchData(currentPage);
       toast.success("تم تعديل البنك بنجاح");
@@ -623,7 +673,7 @@ function BanksTable() {
     <div className="space-y-4">
       {/* Enhanced Header with Filters and Actions */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-1 flex-col sm:flex-row gap-2 max-w-2xl">
+        <div className="flex flex-1 flex-col sm:flex-row gap-2 max-w-4xl">
           <div className="relative flex-1 order-1 sm:order-none">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
@@ -634,17 +684,18 @@ function BanksTable() {
             />
           </div>
 
-          <Select
-            value={banktableTypeFilter}
-            onValueChange={setBanktableTypeFilter}
-          >
+          {/* Subject Filter */}
+          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
             <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="النوع" />
+              <SelectValue placeholder="المادة" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">جميع الأنواع</SelectItem>
-              <SelectItem value="course">كورس</SelectItem>
-              <SelectItem value="teacher">معلم</SelectItem>
+              <SelectItem value="all">كل المواد</SelectItem>
+              {subjects.map((subject) => (
+                <SelectItem key={subject.id} value={subject.id.toString()}>
+                  {subject.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -669,6 +720,21 @@ function BanksTable() {
               <SelectItem value="all">كل المواقع</SelectItem>
               <SelectItem value="online">أونلاين</SelectItem>
               <SelectItem value="offline">أوفلاين</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Level Filter */}
+          <Select value={levelFilter} onValueChange={setLevelFilter}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="المستوى" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل المستويات</SelectItem>
+              {levels.map((level) => (
+                <SelectItem key={level.id} value={level.id.toString()}>
+                  {level.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -760,6 +826,7 @@ function BanksTable() {
                       banktable_id: 1,
                       banktable_type: "course",
                       position: "online",
+                      level_id: "1",
                     });
                   }}
                 >
@@ -818,35 +885,32 @@ function BanksTable() {
                         htmlFor="banktable_type"
                         className="text-sm font-medium"
                       >
-                        النوع *
+                        المستوى *
                       </label>
                       <select
                         id="banktable_type"
                         name="banktable_type"
                         className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                        value={formData.banktable_type}
+                        value={formData.level_id}
                         onChange={(e) =>
-                          handleBanktableTypeChange(
-                            e.target.value as "course" | "teacher"
-                          )
+                          setFormData((prev) => ({
+                            ...prev,
+                            level_id: e.target.value,
+                          }))
                         }
                         required
                       >
-                        <option
-                          value="course"
-                          className="dark:bg-gray-800 dark:!text-white"
-                        >
-                          كورس
-                        </option>
-                        <option
-                          value="teacher"
-                          className="dark:bg-gray-800 dark:!text-white"
-                        >
-                          معلم
-                        </option>
+                        {levels.map((level) => (
+                          <option
+                            key={level.id}
+                            value={level.id}
+                            className="dark:bg-gray-800 dark:!text-white"
+                          >
+                            {level.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
-
                     <div className="space-y-2">
                       <label
                         htmlFor="banktable_id"
@@ -1004,24 +1068,6 @@ function BanksTable() {
             </div>
           </div>
         </div>
-        <div className="bg-purple-50 dark:bg-purple-950/50 p-4 rounded-lg border dark:border-purple-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-purple-600 dark:text-purple-400">
-                بنوك المعلمين
-              </p>
-              <p className="text-2xl font-bold text-purple-900 dark:text-purple-200">
-                {
-                  data.filter((bank) => bank.banktable_type === "teacher")
-                    .length
-                }
-              </p>
-            </div>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-              <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-        </div>
         <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg border dark:border-yellow-900/50">
           <div className="flex items-center justify-between">
             <div>
@@ -1037,6 +1083,29 @@ function BanksTable() {
             </div>
           </div>
         </div>
+        <div className="bg-gradient-to-br from-yellow-50 via-yellow-100 to-yellow-200 dark:from-yellow-950/60 dark:via-yellow-900/50 dark:to-yellow-950/80 p-4 rounded-lg border border-yellow-200 dark:border-yellow-900/50 shadow-sm transition-all hover:scale-[1.025] hover:shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                البنوك المجانية
+              </p>
+              <p className="text-2xl font-extrabold text-yellow-900 dark:text-yellow-100 mt-1">
+                {
+                  data.filter(
+                    (bank) =>
+                      bank.price === null ||
+                      bank.price === 0 ||
+                      bank.price === undefined
+                  ).length
+                }
+              </p>
+            </div>
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/60 rounded-lg flex items-center justify-center shadow-inner">
+              <CreditCard className="h-7 w-7 text-yellow-600 dark:text-yellow-300" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Results Summary */}
@@ -1045,9 +1114,13 @@ function BanksTable() {
           عرض {paginationMeta?.from || 1} إلى{" "}
           {paginationMeta?.to || data.length} من{" "}
           {paginationMeta?.total || data.length} بنك
-          {(banktableTypeFilter !== "all" || globalFilter) && (
-            <span className="text-blue-600"> (مفلتر)</span>
-          )}
+          {(subjectFilter !== "all" ||
+            bankTypeFilter !== "all" ||
+            priceFilter !== "all" ||
+            positionFilter !== "all" ||
+            levelFilter !== "all" ||
+            teacherIdFilter !== "all" ||
+            globalFilter) && <span className="text-blue-600"> (مفلتر)</span>}
         </div>
         <div className="flex items-center gap-2">
           <span>الصفحة</span>
@@ -1112,42 +1185,37 @@ function BanksTable() {
                   </div>
 
                   <div className="space-y-2">
-                    <label
-                      htmlFor="edit-banktable_type"
-                      className="text-sm font-medium"
-                    >
-                      النوع *
+                    <label htmlFor="edit-price" className="text-sm font-medium">
+                      المستوي
                     </label>
                     <select
                       id="edit-banktable_type"
                       name="banktable_type"
                       className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                      value={formData.banktable_type}
+                      value={formData.level_id}
                       onChange={(e) =>
-                        handleBanktableTypeChange(
-                          e.target.value as "course" | "teacher"
-                        )
+                        setFormData((prev) => ({
+                          ...prev,
+                          level_id: e.target.value,
+                        }))
                       }
                       required
                     >
-                      <option
-                        value="course"
-                        className="dark:bg-gray-800 dark:!text-white"
-                      >
-                        كورس
-                      </option>
-                      <option
-                        value="teacher"
-                        className="dark:bg-gray-800 dark:!text-white"
-                      >
-                        معلم
-                      </option>
+                      {levels.map((level) => (
+                        <option
+                          key={level.id}
+                          value={level.id}
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          {level.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="space-y-2">
                     <label
-                      htmlFor="edit-banktable_id"
+                      htmlFor="banktable_id"
                       className="text-sm font-medium"
                     >
                       {formData.banktable_type === "course"
@@ -1156,7 +1224,7 @@ function BanksTable() {
                       *
                     </label>
                     <select
-                      id="edit-banktable_id"
+                      id="banktable_id"
                       name="banktable_id"
                       className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
                       value={formData.banktable_id}

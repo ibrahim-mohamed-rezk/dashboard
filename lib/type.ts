@@ -153,6 +153,7 @@ export interface CoursesData {
   price?: string;
   position?: string;
   slug?: string;
+  online_count: number;
   modules: CoursModules[];
 }
 
@@ -209,6 +210,14 @@ export interface SubscriptionCodeTypes {
 export interface Statistics {
   students: {
     total: number;
+    details?: Array<{
+      student_id: number;
+      full_name: string | null;
+      online_purchases_count: number;
+      online_revenue: number;
+      subscription_code_count: number;
+      offline_revenue: number;
+    }>;
     by_month: {
       [key: string]: number;
     };
@@ -218,6 +227,18 @@ export interface Statistics {
   };
   teachers: {
     total: number;
+    details?: Array<{
+      teacher_id: number;
+      full_name: string;
+      course_count: number;
+      online_purchases_count: number;
+      online_revenue: number;
+      subscription_code_count: number;
+      offline_revenue: number;
+      book_count: number;
+      book_purchase_count: number;
+      book_revenue: number;
+    }>;
     by_month: {
       [key: string]: number;
     };
@@ -245,6 +266,37 @@ export interface Statistics {
   };
   courses: {
     total: number;
+    online_count: number;
+    offline_count?: number;
+    purchases_count: number;
+    online_course_details: any[];
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  blogs: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  course_views: {
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  blog_views: {
+    total: number;
     by_month: {
       [key: string]: number;
     };
@@ -271,22 +323,11 @@ export interface Statistics {
     };
   };
   books: {
-    total: number;
-    by_month: {
-      [key: string]: number;
-    };
-    by_week: {
-      [key: string]: number;
-    };
-  };
-  blogs: {
-    total: number;
-    by_month: {
-      [key: string]: number;
-    };
-    by_week: {
-      [key: string]: number;
-    };
+    by_level?: Array<{ level_id: number; count: number }>;
+    by_subject?: Array<{ subject_id: number; count: number }>;
+    total?: number;
+    by_month?: { [key: string]: number };
+    by_week?: { [key: string]: number };
   };
   purchases: {
     total: number;
