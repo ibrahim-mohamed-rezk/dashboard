@@ -159,7 +159,11 @@ function BanksTable() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [banktableTypeFilter, setBanktableTypeFilter] = useState("all");
+  // New filters
+  const [priceFilter, setPriceFilter] = useState("all"); // all, free, paid
+  const [positionFilter, setPositionFilter] = useState("all"); // all, online, offline
+  const [teacherIdFilter, setTeacherIdFilter] = useState("all");
 
   // get token from next api
   useEffect(() => {
@@ -176,16 +180,21 @@ function BanksTable() {
     fetchData();
   }, []);
 
-  // get data from api with pagination
+  // get data from api with pagination and filters
   const fetchData = async (page: number = 1) => {
     try {
-      const response = await getData(
-        `banks?page=${page}`,
-        {},
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
+      const params: any = {
+        page,
+      };
+      if (banktableTypeFilter !== "all")
+        params.banktable_type = banktableTypeFilter;
+      if (priceFilter !== "all") params.price = priceFilter;
+      if (positionFilter !== "all") params.position = positionFilter;
+      if (globalFilter) params.search = globalFilter;
+      if (teacherIdFilter !== "all") params.teacher_id = teacherIdFilter;
+      const response = await getData(`banks`, params, {
+        Authorization: `Bearer ${token}`,
+      });
       setData(response.data || []);
       setPaginationMeta(response.meta || null);
       setPaginationLinks(response.links || null);
@@ -200,7 +209,15 @@ function BanksTable() {
     if (token) {
       fetchData(currentPage);
     }
-  }, [token, currentPage]);
+  }, [
+    token,
+    currentPage,
+    banktableTypeFilter,
+    priceFilter,
+    positionFilter,
+    globalFilter,
+    teacherIdFilter,
+  ]);
 
   // function to fetch courses
   const fetchCourses = async () => {
@@ -393,20 +410,9 @@ function BanksTable() {
     link.click();
   };
 
-  const filteredData = useMemo(() => {
-    return (data || []).filter((bank) => {
-      const matchesType =
-        typeFilter === "all" || bank.banktable_type === typeFilter;
-      const matchesGlobal =
-        globalFilter === "" ||
-        bank.name.toLowerCase().includes(globalFilter.toLowerCase());
-      return matchesType && matchesGlobal;
-    });
-  }, [data, typeFilter, globalFilter]);
-
   // Pagination handlers
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    fetchData(page);
   };
 
   const handlePreviousPage = () => {
@@ -560,7 +566,7 @@ function BanksTable() {
   ];
 
   const table = useReactTable({
-    data: filteredData,
+    data: data, // Use data directly
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -618,17 +624,20 @@ function BanksTable() {
       {/* Enhanced Header with Filters and Actions */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex flex-1 flex-col sm:flex-row gap-2 max-w-2xl">
-          <div className="relative flex-1">
+          <div className="relative flex-1 order-1 sm:order-none">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="البحث في البنوك..."
+              placeholder="بحث..."
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="pl-10"
             />
           </div>
 
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select
+            value={banktableTypeFilter}
+            onValueChange={setBanktableTypeFilter}
+          >
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="النوع" />
             </SelectTrigger>
@@ -636,6 +645,45 @@ function BanksTable() {
               <SelectItem value="all">جميع الأنواع</SelectItem>
               <SelectItem value="course">كورس</SelectItem>
               <SelectItem value="teacher">معلم</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Price Filter */}
+          <Select value={priceFilter} onValueChange={setPriceFilter}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="السعر" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الأسعار</SelectItem>
+              <SelectItem value="free">مجاني</SelectItem>
+              <SelectItem value="paid">مدفوع</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Position Filter */}
+          <Select value={positionFilter} onValueChange={setPositionFilter}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="الموقع" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل المواقع</SelectItem>
+              <SelectItem value="online">أونلاين</SelectItem>
+              <SelectItem value="offline">أوفلاين</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Teacher Filter */}
+          <Select value={teacherIdFilter} onValueChange={setTeacherIdFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="المعلم" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل المعلمين</SelectItem>
+              {teachers.map((teacher) => (
+                <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                  {teacher.user?.full_name || `معلم #${teacher.id}`}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -700,24 +748,26 @@ function BanksTable() {
           </DropdownMenu>
 
           <Dialog open={addBank} onOpenChange={setAddBank}>
-           {user?.role === "admin" && <DialogTrigger asChild>
-              <Button
-                className="flex items-center gap-2"
-                onClick={() => {
-                  setAddBank(true);
-                  setFormData({
-                    name: "",
-                    price: "",
-                    banktable_id: 1,
-                    banktable_type: "course",
-                    position: "online",
-                  });
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                إضافة بنك
-              </Button>
-            </DialogTrigger>}
+            {user?.role === "admin" && (
+              <DialogTrigger asChild>
+                <Button
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    setAddBank(true);
+                    setFormData({
+                      name: "",
+                      price: "",
+                      banktable_id: 1,
+                      banktable_type: "course",
+                      position: "online",
+                    });
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  إضافة بنك
+                </Button>
+              </DialogTrigger>
+            )}
             <DialogContent
               className="w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
               onPointerDownOutside={(e) => e.preventDefault()}
@@ -995,7 +1045,7 @@ function BanksTable() {
           عرض {paginationMeta?.from || 1} إلى{" "}
           {paginationMeta?.to || data.length} من{" "}
           {paginationMeta?.total || data.length} بنك
-          {(typeFilter !== "all" || globalFilter) && (
+          {(banktableTypeFilter !== "all" || globalFilter) && (
             <span className="text-blue-600"> (مفلتر)</span>
           )}
         </div>
@@ -1305,13 +1355,7 @@ function BanksTable() {
 
       {/* Pagination */}
       {paginationMeta && paginationMeta.last_page > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm text-muted-foreground">
-              عرض {paginationMeta.from} إلى {paginationMeta.to} من{" "}
-              {paginationMeta.total} نتيجة
-            </p>
-          </div>
+        <div className="flex items-center mx-auto justify-center gap-2">
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
