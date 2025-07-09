@@ -47,6 +47,7 @@ import {
   GraduationCap,
   BookOpen,
   TrendingUp,
+  Users2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -488,6 +489,12 @@ function BasicDataTable() {
           >
             حذف
           </Button>
+          <Link href={`/teachers/teacher-groups/${row.original.id}`} passHref legacyBehavior>
+            <Button variant="outline" className="flex items-center gap-1">
+              <Users2 className="w-4 h-4" />
+              المجموعات
+            </Button>
+          </Link>
         </div>
       ),
     },
