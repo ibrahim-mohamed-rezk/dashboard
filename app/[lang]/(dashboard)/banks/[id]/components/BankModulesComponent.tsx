@@ -31,8 +31,10 @@ import {
   CheckSquare,
   Square,
   X,
-  ChevronLeft,
-  ChevronRight,
+  FileText,
+  HelpCircle,
+  Calendar,
+  DollarSign,
 } from "lucide-react";
 import {
   Select,
@@ -66,10 +68,12 @@ interface Bank {
   id: number;
   name: string;
   price: number;
+  level_id: number;
   banktable_id: number;
   banktable_type: string;
   created_at: string;
   updated_at: string;
+  sections: BankSection[];
 }
 
 interface PaginationMeta {
@@ -99,8 +103,7 @@ const BankModulesComponent = ({
   initialBankData,
 }: BankModulesComponentProps) => {
   // State management
-  const [sections, setSections] = useState<BankSection[]>([]);
-  const [banks, setBanks] = useState<Bank[]>([]);
+  const [bankData, setBankData] = useState<Bank[]>([]);
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   const [selectedSection, setSelectedSection] = useState<BankSection | null>(
     null
@@ -119,6 +122,9 @@ const BankModulesComponent = ({
     null
   );
   const [sectionTitle, setSectionTitle] = useState<string>("");
+  const [sectionType, setSectionType] = useState<"questions" | "file">(
+    "questions"
+  );
 
   // Multiple questions form state
   const [multipleQuestions, setMultipleQuestions] = useState<
@@ -139,50 +145,53 @@ const BankModulesComponent = ({
   const fetchBanks = async () => {
     try {
       const response = await getData(
-        "banks",
+        `banks/${bankId}`,
         {},
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setBanks(response.data);
 
-      // Find current bank
-      const currentBank = response.data.find(
-        (bank: Bank) => bank.id.toString() === bankId
-      );
-      setSelectedBank(currentBank || null);
+      setSelectedBank(response.data);
     } catch (error) {
       toast.error("فشل في جلب بيانات البنوك");
-    }
-  };
-
-  // Fetch bank sections with pagination
-  const fetchBankSections = async (page = 1) => {
-    try {
-      setIsLoading(true);
-      const response = await getData(
-        "bank-sections",
-        { page },
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
-      setSections(response.data);
-      setPaginationMeta(response.meta);
-      setCurrentPage(page);
-    } catch (error) {
-      toast.error("فشل في جلب بيانات الأقسام");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   // Initial data fetch
   useEffect(() => {
     fetchBanks();
-    fetchBankSections();
   }, [bankId, token]);
+
+  // Get sections from the current bank data
+  const sections = selectedBank?.sections || [];
+
+  // Enhanced statistics
+  const statistics = useMemo(() => {
+    if (!selectedBank)
+      return {
+        totalSections: 0,
+        totalQuestions: 0,
+        fileCount: 0,
+        questionSections: 0,
+      };
+
+    const totalSections = sections.length;
+    const questionSections = sections.filter(
+      (s) => s.type === "questions"
+    ).length;
+    const fileCount = sections.filter((s) => s.type === "file").length;
+    const totalQuestions = sections.reduce((acc, section) => {
+      return acc + (section.questions?.length || 0);
+    }, 0);
+
+    return {
+      totalSections,
+      totalQuestions,
+      fileCount,
+      questionSections,
+    };
+  }, [selectedBank, sections]);
 
   // Filtered sections
   const filteredSections = useMemo(() => {
@@ -235,7 +244,7 @@ const BankModulesComponent = ({
       await deleteData(`bank-sections/${sectionId}`, {
         Authorization: `Bearer ${token}`,
       });
-      await fetchBankSections(currentPage);
+      await fetchBanks(); // Refresh bank data
       toast.success("تم حذف القسم بنجاح");
     } catch (error) {
       toast.error("حدث خطأ أثناء حذف القسم");
@@ -248,7 +257,12 @@ const BankModulesComponent = ({
   const closeDialog = () => {
     setIsEditing(false);
     setIsViewing(false);
+    setIsAdding(false);
     setSelectedSection(null);
+    setSectionTitle("");
+    setSectionType("questions");
+    setFileToUpload(null);
+    resetMultipleQuestionsForm();
   };
 
   // Handle Update Section
@@ -259,7 +273,7 @@ const BankModulesComponent = ({
       if (selectedSection.type === "file") {
         const formData = new FormData();
         formData.append("name", selectedSection.name);
-        formData.append("bank_id", selectedBank.id.toString());
+        formData.append("bank_id", bankId.toString());
         formData.append("type", "file");
         formData.append("_method", "PUT");
 
@@ -276,7 +290,7 @@ const BankModulesComponent = ({
           "Content-Type": "multipart/form-data",
         });
 
-        await fetchBankSections(currentPage);
+        await fetchBanks();
         setFileToUpload(null);
         closeDialog();
         toast.success("تم تحديث القسم بنجاح");
@@ -286,7 +300,7 @@ const BankModulesComponent = ({
       // Default: handle questions section update
       const formData = new FormData();
       formData.append("name", selectedSection.name);
-      formData.append("bank_id", selectedBank.id.toString());
+      formData.append("bank_id", bankId.toString());
       formData.append("type", "questions");
       formData.append("_method", "PUT");
 
@@ -310,7 +324,7 @@ const BankModulesComponent = ({
         "Content-Type": "multipart/form-data",
       });
 
-      await fetchBankSections(currentPage);
+      await fetchBanks();
       closeDialog();
       toast.success("تم تحديث القسم بنجاح");
     } catch (error) {
@@ -320,61 +334,83 @@ const BankModulesComponent = ({
     }
   };
 
-  // Handle Add Multiple Questions
-  const handleAddMultipleQuestions = async () => {
+  // Handle Add Section (Questions or File)
+  const handleAddSection = async () => {
     if (!selectedBank) {
       toast.error("لم يتم العثور على بيانات البنك");
       return;
     }
 
-    const validQuestions = multipleQuestions.filter((q) => {
-      if (!q.title.trim()) return false;
-      const validOptions = q.questions.filter((opt) => opt.trim() !== "");
-      return validOptions.length >= 2;
-    });
-
-    if (validQuestions.length === 0) {
-      toast.error("يرجى إدخال سؤال واحد صحيح على الأقل");
+    if (!sectionTitle.trim()) {
+      toast.error("يرجى إدخال اسم القسم");
       return;
     }
 
     try {
       setIsLoading(true);
-
       const formData = new FormData();
       formData.append("name", sectionTitle);
-      formData.append("bank_id", selectedBank.id.toString());
-      formData.append("type", "questions");
+      formData.append("bank_id", bankId.toString());
+      formData.append("type", sectionType);
 
-      // Add multiple questions in the same request
-      validQuestions.forEach((question, questionIndex) => {
-        const qIndex = questionIndex + 1; // Start from 1
-
-        formData.append(`questions[${qIndex}][question]`, question.title);
-
-        question.questions.forEach((option, optionIndex) => {
-          if (option.trim()) {
-            formData.append(`questions[${qIndex}][${optionIndex + 1}]`, option);
-          }
+      if (sectionType === "file") {
+        if (!fileToUpload) {
+          toast.error("يرجى اختيار ملف للرفع");
+          return;
+        }
+        formData.append("file", fileToUpload);
+      } else {
+        // Questions type
+        const validQuestions = multipleQuestions.filter((q) => {
+          if (!q.title.trim()) return false;
+          const validOptions = q.questions.filter((opt) => opt.trim() !== "");
+          return validOptions.length >= 2;
         });
 
-        formData.append(
-          `questions[${qIndex}][correct_answer]`,
-          ((question.correct_answer as number) + 1).toString()
-        );
-      });
+        if (validQuestions.length === 0) {
+          toast.error("يرجى إدخال سؤال واحد صحيح على الأقل");
+          return;
+        }
+
+        // Add multiple questions in the same request
+        validQuestions.forEach((question, questionIndex) => {
+          const qIndex = questionIndex + 1;
+          formData.append(`questions[${qIndex}][question]`, question.title);
+          question.questions.forEach((option, optionIndex) => {
+            if (option.trim()) {
+              formData.append(
+                `questions[${qIndex}][${optionIndex + 1}]`,
+                option
+              );
+            }
+          });
+          formData.append(
+            `questions[${qIndex}][correct_answer]`,
+            ((question.correct_answer as number) + 1).toString()
+          );
+        });
+      }
 
       await postData("bank-sections", formData, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
 
-      await fetchBankSections(currentPage);
-      setIsAdding(false);
-      resetMultipleQuestionsForm();
-      toast.success(`تم إضافة ${validQuestions.length} سؤال بنجاح`);
+      await fetchBanks();
+      closeDialog();
+
+      if (sectionType === "file") {
+        toast.success("تم رفع الملف بنجاح");
+      } else {
+        const validQuestions = multipleQuestions.filter((q) => {
+          if (!q.title.trim()) return false;
+          const validOptions = q.questions.filter((opt) => opt.trim() !== "");
+          return validOptions.length >= 2;
+        });
+        toast.success(`تم إضافة ${validQuestions.length} سؤال بنجاح`);
+      }
     } catch (error) {
-      toast.error("حدث خطأ أثناء إضافة الأسئلة");
+      toast.error("حدث خطأ أثناء إضافة القسم");
     } finally {
       setIsLoading(false);
     }
@@ -422,36 +458,6 @@ const BankModulesComponent = ({
     );
   };
 
-  // Handle file upload for file type sections
-  const handleFileUpload = async () => {
-    if (!fileToUpload || !selectedBank) {
-      toast.error("يرجى اختيار ملف للرفع");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const formData = new FormData();
-      formData.append("name", fileToUpload.name);
-      formData.append("bank_id", selectedBank.id.toString());
-      formData.append("type", "file");
-      formData.append("file", fileToUpload);
-
-      await postData("bank-sections", formData, {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      });
-
-      await fetchBankSections(currentPage);
-      setFileToUpload(null);
-      toast.success("تم رفع الملف بنجاح");
-    } catch (error) {
-      toast.error("حدث خطأ أثناء رفع الملف");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Handle View Section
   const handleViewSection = (section: BankSection) => {
     setSelectedSection(section);
@@ -490,7 +496,7 @@ const BankModulesComponent = ({
         )
       );
 
-      await fetchBankSections(currentPage);
+      await fetchBanks();
       setSelectedQuestions([]);
       setIsBulkMode(false);
       toast.success(`تم حذف ${selectedQuestions.length} قسم بنجاح`);
@@ -498,13 +504,6 @@ const BankModulesComponent = ({
       toast.error("حدث خطأ أثناء حذف الأقسام");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Pagination handlers
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= (paginationMeta?.last_page || 1)) {
-      fetchBankSections(page);
     }
   };
 
@@ -528,55 +527,6 @@ const BankModulesComponent = ({
   ) => {
     setEditQuestionsForm(
       editQuestionsForm.map((q, i) => (i === index ? { ...q, ...updates } : q))
-    );
-  };
-
-  // Render pagination
-  const renderPagination = () => {
-    if (!paginationMeta || paginationMeta.last_page <= 1) return null;
-
-    return (
-      <div className="flex items-center justify-between mt-6 px-6 py-4 border-t">
-        <div className="text-sm text-gray-500">
-          عرض {paginationMeta.from} إلى {paginationMeta.to} من{" "}
-          {paginationMeta.total} نتيجة
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            <ChevronRight className="h-4 w-4" />
-            السابق
-          </Button>
-
-          {Array.from(
-            { length: paginationMeta.last_page },
-            (_, i) => i + 1
-          ).map((page) => (
-            <Button
-              key={page}
-              variant={"outline"}
-              size="sm"
-              onClick={() => handlePageChange(page)}
-            >
-              {page}
-            </Button>
-          ))}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === paginationMeta.last_page}
-          >
-            التالي
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
     );
   };
 
@@ -604,35 +554,113 @@ const BankModulesComponent = ({
         </div>
 
         <div className="p-6">
-          <h1 className="text-3xl font-bold mb-4">
+          <h1 className="text-3xl font-bold mb-6">
             {selectedBank?.name || "بنك الأسئلة"}
           </h1>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <p className="text-gray-600 dark:text-gray-300">رقم البنك</p>
-              <p className="font-semibold dark:text-white">
-                {selectedBank?.id || "-"}
-              </p>
+
+          {/* Enhanced Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-600 dark:text-blue-300 text-sm font-medium">
+                    إجمالي الأقسام
+                  </p>
+                  <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
+                    {statistics.totalSections}
+                  </p>
+                </div>
+                <FileText className="h-8 w-8 text-blue-600 dark:text-blue-300" />
+              </div>
             </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-300">السعر</p>
-              <p className="font-semibold dark:text-white">
-                {selectedBank?.price || 0} ج.م
-              </p>
+
+            <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 border border-green-200 dark:border-green-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-600 dark:text-green-300 text-sm font-medium">
+                    إجمالي الأسئلة
+                  </p>
+                  <p className="text-2xl font-bold text-green-800 dark:text-green-100">
+                    {statistics.totalQuestions}
+                  </p>
+                </div>
+                <HelpCircle className="h-8 w-8 text-green-600 dark:text-green-300" />
+              </div>
             </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-300">عدد الأقسام</p>
-              <p className="font-semibold dark:text-white">
-                {paginationMeta?.total || 0}
-              </p>
+
+            <div className="bg-purple-50 dark:bg-purple-900 rounded-lg p-4 border border-purple-200 dark:border-purple-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-600 dark:text-purple-300 text-sm font-medium">
+                    أقسام الأسئلة
+                  </p>
+                  <p className="text-2xl font-bold text-purple-800 dark:text-purple-100">
+                    {statistics.questionSections}
+                  </p>
+                </div>
+                <HelpCircle className="h-8 w-8 text-purple-600 dark:text-purple-300" />
+              </div>
             </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-300">تاريخ الإنشاء</p>
-              <p className="font-semibold dark:text-white">
-                {selectedBank?.created_at
-                  ? new Date(selectedBank.created_at).toLocaleDateString("ar")
-                  : "غير محدد"}
-              </p>
+
+            <div className="bg-orange-50 dark:bg-orange-900 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-600 dark:text-orange-300 text-sm font-medium">
+                    الملفات
+                  </p>
+                  <p className="text-2xl font-bold text-orange-800 dark:text-orange-100">
+                    {statistics.fileCount}
+                  </p>
+                </div>
+                <Upload className="h-8 w-8 text-orange-600 dark:text-orange-300" />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Bank Info */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+              </div>
+              <div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  رقم البنك
+                </p>
+                <p className="font-semibold dark:text-white">
+                  {selectedBank?.id || "-"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-300" />
+              </div>
+              <div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  السعر
+                </p>
+                <p className="font-semibold dark:text-white">
+                  {selectedBank?.price || 0} ج.م
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+              </div>
+              <div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  تاريخ الإنشاء
+                </p>
+                <p className="font-semibold dark:text-white">
+                  {selectedBank?.created_at
+                    ? new Date(selectedBank.created_at).toLocaleDateString("ar")
+                    : "غير محدد"}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -663,7 +691,7 @@ const BankModulesComponent = ({
 
               <Button onClick={() => setIsAdding(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                إضافة أسئلة جديدة
+                إضافة قسم جديد
               </Button>
             </div>
           </div>
@@ -712,33 +740,6 @@ const BankModulesComponent = ({
               </div>
             </div>
           )}
-
-          {/* File Upload Section */}
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold mb-4 dark:text-white">
-              رفع ملف جديد
-            </h3>
-            <div className="flex items-center gap-4">
-              <label className="cursor-pointer flex-1">
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-center">
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                    {fileToUpload ? fileToUpload.name : "اختر ملف للرفع"}
-                  </p>
-                </div>
-                <input
-                  type="file"
-                  onChange={(e) => setFileToUpload(e.target.files?.[0] || null)}
-                  className="hidden"
-                />
-              </label>
-              {fileToUpload && (
-                <Button onClick={handleFileUpload} disabled={isLoading}>
-                  {isLoading ? "جاري الرفع..." : "رفع الملف"}
-                </Button>
-              )}
-            </div>
-          </div>
 
           {/* Sections List */}
           {isLoading && !sections.length ? (
@@ -793,7 +794,13 @@ const BankModulesComponent = ({
                         <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                           القسم {index + 1}
                         </span>
-                        <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            section.type === "questions"
+                              ? "bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300"
+                              : "bg-orange-100 dark:bg-orange-800 text-orange-600 dark:text-orange-300"
+                          }`}
+                        >
                           {section.type === "questions" ? "أسئلة" : "ملف"}
                         </span>
                       </div>
@@ -869,9 +876,6 @@ const BankModulesComponent = ({
             </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {renderPagination()}
       </div>
 
       {/* View/Edit Section Dialog */}
@@ -1219,153 +1223,204 @@ const BankModulesComponent = ({
         </CustomModal>
       )}
 
-      {/* Add Multiple Questions Dialog */}
+      {/* Add Section Dialog */}
       <Dialog open={isAdding} onOpenChange={setIsAdding}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>إضافة أسئلة جديدة</DialogTitle>
+            <DialogTitle>إضافة قسم جديد</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                اسم القسم
-              </label>
-              <Input
-                value={sectionTitle}
-                onChange={(e) => setSectionTitle(e.target.value)}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  اسم القسم
+                </label>
+                <Input
+                  value={sectionTitle}
+                  onChange={(e) => setSectionTitle(e.target.value)}
+                  placeholder="أدخل اسم القسم"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  نوع القسم
+                </label>
+                <select
+                  value={sectionType}
+                  onChange={(e) =>
+                    setSectionType(e.target.value as "questions" | "file")
+                  }
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="" disabled>
+                    اختر نوع القسم
+                  </option>
+                  <option value="questions">أسئلة</option>
+                  <option value="file">ملف</option>
+                </select>
+              </div>
             </div>
-            {multipleQuestions.map((questionForm, index) => (
-              <div key={index} className="border rounded-lg p-4 relative">
-                {multipleQuestions.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeQuestionForm(index)}
-                    className="absolute top-2 right-2 text-red-500"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
 
-                <h3 className="font-medium mb-4">السؤال {index + 1}</h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      عنوان السؤال
-                    </label>
-                    <Textarea
-                      value={questionForm.title}
+            {sectionType === "file" ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    رفع ملف
+                  </label>
+                  <label className="cursor-pointer block border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors text-center">
+                    <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-lg font-medium text-gray-700 mb-2">
+                      {fileToUpload ? fileToUpload.name : "اختر ملف للرفع"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      PNG, JPG, PDF حتى 10MB
+                    </p>
+                    <input
+                      type="file"
                       onChange={(e) =>
-                        updateQuestionForm(index, { title: e.target.value })
+                        setFileToUpload(e.target.files?.[0] || null)
                       }
-                      placeholder="أدخل عنوان السؤال هنا"
-                      rows={3}
+                      className="hidden"
                     />
-                  </div>
+                  </label>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {multipleQuestions.map((questionForm, index) => (
+                  <div key={index} className="border rounded-lg p-4 relative">
+                    {multipleQuestions.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeQuestionForm(index)}
+                        className="absolute top-2 right-2 text-red-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
 
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium">
-                      الخيارات
-                    </label>
-                    {questionForm.questions.map((question, qIndex) => (
-                      <div key={qIndex} className="flex items-center gap-2">
-                        <Input
-                          value={question}
-                          onChange={(e) => {
-                            const newQuestions = [...questionForm.questions];
-                            newQuestions[qIndex] = e.target.value;
+                    <h3 className="font-medium mb-4">السؤال {index + 1}</h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          عنوان السؤال
+                        </label>
+                        <Textarea
+                          value={questionForm.title}
+                          onChange={(e) =>
+                            updateQuestionForm(index, { title: e.target.value })
+                          }
+                          placeholder="أدخل عنوان السؤال هنا"
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium">
+                          الخيارات
+                        </label>
+                        {questionForm.questions.map((question, qIndex) => (
+                          <div key={qIndex} className="flex items-center gap-2">
+                            <Input
+                              value={question}
+                              onChange={(e) => {
+                                const newQuestions = [
+                                  ...questionForm.questions,
+                                ];
+                                newQuestions[qIndex] = e.target.value;
+                                updateQuestionForm(index, {
+                                  questions: newQuestions,
+                                });
+                              }}
+                              placeholder={`الخيار ${qIndex + 1}`}
+                            />
+                            <Button
+                              variant={"outline"}
+                              size="sm"
+                              onClick={() =>
+                                updateQuestionForm(index, {
+                                  correct_answer: qIndex,
+                                })
+                              }
+                            >
+                              {questionForm.correct_answer !== null &&
+                              questionForm.correct_answer === qIndex
+                                ? "إجابة صحيحة ✓"
+                                : "تحديد كإجابة صحيحة"}
+                            </Button>
+                            {questionForm.questions.length > 2 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newQuestions =
+                                    questionForm.questions.filter(
+                                      (_, i) => i !== qIndex
+                                    );
+                                  updateQuestionForm(index, {
+                                    questions: newQuestions,
+                                    correct_answer:
+                                      questionForm.correct_answer !== null &&
+                                      questionForm.correct_answer >= qIndex &&
+                                      questionForm.correct_answer > 0
+                                        ? questionForm.correct_answer - 1
+                                        : questionForm.correct_answer,
+                                  });
+                                }}
+                                className="text-red-500"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newQuestions = [
+                              ...questionForm.questions,
+                              "",
+                            ];
                             updateQuestionForm(index, {
                               questions: newQuestions,
                             });
                           }}
-                          placeholder={`الخيار ${qIndex + 1}`}
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            updateQuestionForm(index, {
-                              correct_answer: qIndex,
-                            })
-                          }
                         >
-                          {questionForm.correct_answer !== null &&
-                          questionForm.correct_answer === qIndex
-                            ? "إجابة صحيحة"
-                            : "تحديد كإجابة صحيحة"}
+                          <Plus className="h-4 w-4 mr-2" />
+                          إضافة خيار
                         </Button>
-                        {questionForm.questions.length > 2 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const newQuestions =
-                                questionForm.questions.filter(
-                                  (_, i) => i !== qIndex
-                                );
-                              updateQuestionForm(index, {
-                                questions: newQuestions,
-                                correct_answer:
-                                  questionForm.correct_answer !== null &&
-                                  questionForm.correct_answer >= qIndex &&
-                                  questionForm.correct_answer > 0
-                                    ? questionForm.correct_answer - 1
-                                    : questionForm.correct_answer,
-                              });
-                            }}
-                            className="text-red-500"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newQuestions = [...questionForm.questions, ""];
-                        updateQuestionForm(index, {
-                          questions: newQuestions,
-                        });
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      إضافة خيار
-                    </Button>
+                    </div>
                   </div>
+                ))}
+
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addQuestionForm}
+                    className="w-full max-w-md"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    إضافة سؤال آخر
+                  </Button>
                 </div>
               </div>
-            ))}
-
-            <div className="flex justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addQuestionForm}
-                className="w-full max-w-md"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                إضافة سؤال آخر
-              </Button>
-            </div>
+            )}
 
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsAdding(false);
-                  resetMultipleQuestionsForm();
-                }}
-              >
+              <Button variant="outline" onClick={closeDialog}>
                 إلغاء
               </Button>
-              <Button onClick={handleAddMultipleQuestions} disabled={isLoading}>
+              <Button onClick={handleAddSection} disabled={isLoading}>
                 {isLoading
                   ? "جاري الإضافة..."
+                  : sectionType === "file"
+                  ? "رفع الملف"
                   : `إضافة ${multipleQuestions.length} سؤال`}
               </Button>
             </DialogFooter>
