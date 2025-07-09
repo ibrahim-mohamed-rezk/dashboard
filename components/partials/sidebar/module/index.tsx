@@ -7,7 +7,7 @@ import { useSidebar } from "@/store";
 import MenuItem from "./menu-item";
 import Link from "next/link";
 import FooterMenu from "./footer-menu";
-import { Graph, Location, SiteLogo } from "@/components/svg";
+import { Cart, Graph, Location, SiteLogo } from "@/components/svg";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
@@ -410,6 +410,36 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         href: "/places",
                         title: "المناطق",
                         icon: Location,
+                      }}
+                      toggleNested={toggleNested}
+                      index={1}
+                      nestedIndex={nestedIndex}
+                      locationName={locationName}
+                    />
+                  </li>
+                )}
+                {user.role === "admin" && (
+                  <li className="mb-1.5 last:mb-0">
+                    <MenuItem
+                      childItem={{
+                        href: "/purchases",
+                        title: "المشتريات",
+                        icon: Cart,
+                      }}
+                      toggleNested={toggleNested}
+                      index={1}
+                      nestedIndex={nestedIndex}
+                      locationName={locationName}
+                    />
+                  </li>
+                )}
+                {user.role === "admin" && (
+                  <li className="mb-1.5 last:mb-0">
+                    <MenuItem
+                      childItem={{
+                        href: "/levels",
+                        title: "المستوىات الدراسيه",
+                        icon: Cart,
                       }}
                       toggleNested={toggleNested}
                       index={1}
