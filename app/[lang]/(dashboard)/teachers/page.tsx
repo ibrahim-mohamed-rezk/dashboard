@@ -60,7 +60,11 @@ interface User {
     phone: string;
     email: string;
     subject_id?: string;
+    online_courses_count?: number;
+    has_offline_courses?: boolean;
   };
+  online_courses_count?: number;
+  has_offline_courses?: boolean;
 }
 
 interface PaginationMeta {
@@ -427,6 +431,41 @@ function BasicDataTable() {
       accessorKey: "phone",
       header: "الهاتف",
       cell: ({ row }) => <div>{row.original.user.phone ?? "N/A"}</div>,
+    },
+    {
+      accessorKey: "online_courses_count",
+      header: "عدد الدورات أونلاين",
+      cell: ({ row }) => {
+        // Try to get from row.original.online_courses_count, fallback to row.original.user.online_courses_count, fallback to 0
+        const count =
+          typeof row.original.online_courses_count === "number"
+            ? row.original.online_courses_count
+            : typeof row.original.user.online_courses_count === "number"
+            ? row.original.user.online_courses_count
+            : 0;
+        return <div>{count}</div>;
+      },
+    },
+    {
+      accessorKey: "has_offline_courses",
+      header: "دورات أوفلاين؟",
+      cell: ({ row }) => {
+        // Try to get from row.original.has_offline_courses, fallback to row.original.user.has_offline_courses, fallback to false
+        const hasOffline =
+          typeof row.original.has_offline_courses === "boolean"
+            ? row.original.has_offline_courses
+            : typeof row.original.user.has_offline_courses === "boolean"
+            ? row.original.user.has_offline_courses
+            : false;
+        return (
+          <Badge
+            variant={hasOffline ? "soft" : "outline"}
+            className={hasOffline ? "bg-green-100 text-green-700" : ""}
+          >
+            {hasOffline ? "نعم" : "لا"}
+          </Badge>
+        );
+      },
     },
     {
       accessorKey: "role",
