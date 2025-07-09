@@ -23,27 +23,24 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Users,
-  GraduationCap,
-  Phone,
-  School,
-} from "lucide-react";
+import { Users, GraduationCap, Phone, School, Edit, X } from "lucide-react";
 
-import { useEffect, useState } from "react";
-import { getData } from "@/lib/axios/server";
+import { useEffect, useState, useRef } from "react";
+import { getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
 import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import DatePickerWithRange from "@/components/date-picker-with-range";
+
+// Helper to check if a string is a valid image URL
+function isImageUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  // Accept http(s) and starts with / (for local images)
+  return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(url) ||
+    /^https?:\/\/.+\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)(\?.*)?$/i.test(url) ||
+    /^\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(url);
+}
 
 // Statistics Card Component
 const StatCard = ({
@@ -90,6 +87,392 @@ const StatCard = ({
   );
 };
 
+// Student Update Modal Component
+const StudentUpdateModal = ({
+  isOpen,
+  onClose,
+  student,
+  onUpdate,
+  token,
+  governorates,
+  areas,
+  levels,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  student: StudentTypes | null;
+  onUpdate: () => void;
+  token: string;
+  governorates: any[];
+  areas: any[];
+  levels: any[];
+}) => {
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    avatar: "",
+    password: "",
+    level_id: "",
+    governorate_id: "",
+    area_id: "",
+    father_phone: "",
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<any>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (student) {
+      setFormData({
+        full_name: student.user?.full_name || "",
+        email: student.user?.email || "",
+        phone: student.user?.phone || "",
+        avatar: student.user?.avatar || "",
+        password: "",
+        level_id: student.level_id.toString() || "",
+        governorate_id: student.governorate_id?.toString() || "",
+        area_id: student.area_id?.toString() || "",
+        father_phone: student.father_phone || "",
+      });
+      setAvatarFile(null);
+      // If user image is a valid image URL, show it, else null
+      setAvatarPreview(isImageUrl(student.user?.avatar) ? student.user?.avatar ?? null : null);
+    }
+  }, [student]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!student) return;
+
+    setLoading(true);
+    setErrors({});
+
+    try {
+      // Prepare FormData for multipart/form-data
+      const form = new FormData();
+
+      // Always send these fields
+      form.append("full_name", formData.full_name);
+      form.append("email", formData.email);
+      form.append("phone", formData.phone);
+      form.append("level_id", formData.level_id);
+      form.append("governorate_id", formData.governorate_id);
+      form.append("area_id", formData.area_id);
+      form.append("father_phone", formData.father_phone);
+
+      // Only send password if not empty
+      if (formData.password && formData.password.trim() !== "") {
+        form.append("password", formData.password);
+      }
+
+      // Handle avatar: if a new file is selected, send it; if removed, send empty string; else, don't send
+      if (avatarFile) {
+        form.append("avatar", avatarFile);
+      } else if (formData.avatar === "" && !avatarPreview) {
+        // If avatar is removed, send empty string to remove on backend
+        form.append("avatar", "");
+      }
+
+      // Laravel expects _method: PUT for update
+      form.append("_method", "PUT");
+
+      await postData(
+        `students/${student.user?.id}`,
+        form,
+        {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        }
+      );
+
+      onUpdate();
+      onClose();
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors);
+      } else {
+        console.error("Failed to update student:", error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string | File | null) => {
+    if (field === "avatar") {
+      if (value instanceof File && value) {
+        setAvatarFile(value);
+        setFormData((prev) => ({ ...prev, avatar: "" }));
+        setAvatarPreview(URL.createObjectURL(value));
+      } else if (value === null) {
+        setAvatarFile(null);
+        setFormData((prev) => ({ ...prev, avatar: "" }));
+        setAvatarPreview(null);
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev: any) => ({ ...prev, [field]: null }));
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setFormData((prev) => ({ ...prev, avatar: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            تحديث بيانات الطالب
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Full Name */}
+          <div className="space-y-2">
+            <Label htmlFor="full_name">الاسم الكامل</Label>
+            <Input
+              id="full_name"
+              value={formData.full_name}
+              onChange={(e) => handleInputChange("full_name", e.target.value)}
+              placeholder="أدخل الاسم الكامل"
+              className={errors.full_name ? "border-red-500" : ""}
+            />
+            {errors.full_name && (
+              <p className="text-sm text-red-500">{errors.full_name[0]}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="email">البريد الإلكتروني</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              placeholder="أدخل البريد الإلكتروني"
+              className={errors.email ? "border-red-500" : ""}
+            />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email[0]}</p>
+            )}
+          </div>
+
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">رقم الهاتف</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
+              placeholder="أدخل رقم الهاتف"
+              className={errors.phone ? "border-red-500" : ""}
+            />
+            {errors.phone && (
+              <p className="text-sm text-red-500">{errors.phone[0]}</p>
+            )}
+          </div>
+
+          {/* Father Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="father_phone">هاتف الأب</Label>
+            <Input
+              id="father_phone"
+              value={formData.father_phone}
+              onChange={(e) =>
+                handleInputChange("father_phone", e.target.value)
+              }
+              placeholder="أدخل هاتف الأب"
+              className={errors.father_phone ? "border-red-500" : ""}
+            />
+            {errors.father_phone && (
+              <p className="text-sm text-red-500">{errors.father_phone[0]}</p>
+            )}
+          </div>
+
+          {/* Password */}
+          <div className="space-y-2">
+            <Label htmlFor="password">كلمة المرور (اختياري)</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => handleInputChange("password", e.target.value)}
+              placeholder="أدخل كلمة مرور جديدة"
+              className={errors.password ? "border-red-500" : ""}
+            />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password[0]}</p>
+            )}
+          </div>
+
+          {/* Avatar */}
+          <div className="space-y-2">
+            <Label htmlFor="avatar">الصورة الشخصية</Label>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                {avatarPreview ? (
+                  isImageUrl(avatarPreview) ? (
+                    <img
+                      src={avatarPreview}
+                      alt="صورة الطالب"
+                      className="w-16 h-16 rounded-full object-cover border"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 border">
+                      <span>لا صورة</span>
+                    </div>
+                  )
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 border">
+                    <span>لا صورة</span>
+                  </div>
+                )}
+                {avatarPreview && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveAvatar}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                    title="إزالة الصورة"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files && e.target.files[0];
+                  handleInputChange("avatar", file || null);
+                }}
+                className={errors.avatar ? "border-red-500" : ""}
+              />
+            </div>
+            {errors.avatar && (
+              <p className="text-sm text-red-500">{errors.avatar[0]}</p>
+            )}
+          </div>
+
+          {/* Governorate */}
+          <div className="space-y-2">
+            <Label htmlFor="governorate_id">المحافظة</Label>
+            <select
+              id="governorate_id"
+              value={formData.governorate_id}
+              onChange={(e) =>
+                handleInputChange("governorate_id", e.target.value)
+              }
+              className={`w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm ${
+                errors.governorate_id ? "border-red-500" : ""
+              }`}
+            >
+              <option value="">اختر المحافظة</option>
+              {governorates?.map((gov: any) => (
+                <option key={gov.id} value={gov.id.toString()}>
+                  {gov.name}
+                </option>
+              ))}
+            </select>
+            {errors.governorate_id && (
+              <p className="text-sm text-red-500">{errors.governorate_id[0]}</p>
+            )}
+          </div>
+
+          {/* Area */}
+          <div className="space-y-2">
+            <Label htmlFor="area_id">المنطقة</Label>
+            <select
+              id="area_id"
+              value={formData.area_id}
+              onChange={(e) => handleInputChange("area_id", e.target.value)}
+              className={`w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm ${
+                errors.area_id ? "border-red-500" : ""
+              }`}
+            >
+              <option value="">اختر المنطقة</option>
+              {areas?.map((area: any) => (
+                <option key={area.id} value={area.id.toString()}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+            {errors.area_id && (
+              <p className="text-sm text-red-500">{errors.area_id[0]}</p>
+            )}
+          </div>
+
+          {/* Level */}
+          <div className="space-y-2">
+            <Label htmlFor="level_id">المرحلة</Label>
+            <select
+              id="level_id"
+              value={formData.level_id}
+              onChange={(e) => handleInputChange("level_id", e.target.value)}
+              className={`w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm ${
+                errors.level_id ? "border-red-500" : ""
+              }`}
+            >
+              <option value="">اختر المرحلة</option>
+              {levels?.map((level: any) => (
+                <option key={level.id} value={level.id.toString()}>
+                  {level.name}
+                </option>
+              ))}
+            </select>
+            {errors.level_id && (
+              <p className="text-sm text-red-500">{errors.level_id[0]}</p>
+            )}
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {loading ? "جاري التحديث..." : "تحديث"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 function BasicDataTable() {
   const [data, setData] = useState<StudentTypes[]>([]);
   const [token, setToken] = useState("");
@@ -97,6 +480,10 @@ function BasicDataTable() {
   const [governorates, setGovernorates] = useState<any[]>([]);
   const [area, setArea] = useState<any[]>([]);
   const [level, setLevel] = useState<any[]>([]);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<StudentTypes | null>(
+    null
+  );
   // const [subjects, setSubjects] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     governorate_id: "",
@@ -197,7 +584,6 @@ function BasicDataTable() {
   //       "subjects",
   //       {},
 
-  
   //       {
   //         Authorization: `Bearer ${token}`,
   //       }
@@ -284,6 +670,16 @@ function BasicDataTable() {
     feachData();
   }, []);
 
+  const handleUpdateClick = (student: StudentTypes) => {
+    setSelectedStudent(student);
+    setUpdateModalOpen(true);
+  };
+
+  const handleUpdateModalClose = () => {
+    setUpdateModalOpen(false);
+    setSelectedStudent(null);
+  };
+
   // columns of table
   const columns: ColumnDef<StudentTypes>[] = [
     {
@@ -291,10 +687,29 @@ function BasicDataTable() {
       header: "الاسم الكامل",
       cell: ({ row }) => {
         const user = row.original;
+        const avatarUrl = user.user?.avatar;
         return (
           <div className="flex items-center gap-3">
             <Avatar className="rounded-full">
-              <AvatarFallback>{user.user?.image}</AvatarFallback>
+              {isImageUrl(avatarUrl) ? (
+                // Show image if it's a valid image URL
+                <img
+                  src={avatarUrl}
+                  alt={user.user?.full_name || "Avatar"}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <AvatarFallback>
+                  {/* Show initials or fallback */}
+                  {user.user?.full_name
+                    ? user.user.full_name
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                    : "?"}
+                </AvatarFallback>
+              )}
             </Avatar>
             <span>{user.user?.full_name ?? "N/A"}</span>
           </div>
@@ -346,6 +761,20 @@ function BasicDataTable() {
         <Badge variant="outline" className="capitalize">
           {row.original.user?.role ?? "student"}
         </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "الإجراءات",
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleUpdateClick(row.original)}
+          className="h-8 w-8 p-0"
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
       ),
     },
   ];
@@ -421,124 +850,112 @@ function BasicDataTable() {
           {/* Governorate Filter */}
           <div className="min-w-[180px]">
             <Label htmlFor="governorate">المحافظة</Label>
-            <Select
+            <select
+              id="governorate"
               value={filters.governorate_id}
-              onValueChange={(value) => {
+              onChange={(e) => {
                 setFilters((prev) => ({
                   ...prev,
-                  governorate_id: value,
+                  governorate_id: e.target.value,
                   area_id: "",
                 }));
                 setArea([]); // Optionally clear area if governorate changes
                 feachAreaData();
                 refetchUsers();
               }}
+              className="w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm"
             >
-              <SelectTrigger id="governorate">
-                <SelectValue placeholder="اختر المحافظة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
-                {governorates?.map((g: any) => (
-                  <SelectItem key={g.id} value={g.id + ""}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">الكل</option>
+              {governorates?.map((g: any) => (
+                <option key={g.id} value={g.id + ""}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
           </div>
           {/* Area Filter */}
           <div className="min-w-[180px]">
             <Label htmlFor="area">المنطقة</Label>
-            <Select
+            <select
+              id="area"
               value={filters.area_id}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, area_id: value }));
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, area_id: e.target.value }));
                 refetchUsers();
               }}
+              className="w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm"
             >
-              <SelectTrigger id="area">
-                <SelectValue placeholder="اختر المنطقة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
-                {area?.map((a: any) => (
-                  <SelectItem key={a.id} value={a.id + ""}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">الكل</option>
+              {area?.map((a: any) => (
+                <option key={a.id} value={a.id + ""}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
           </div>
           {/* Level Filter */}
           <div className="min-w-[180px]">
             <Label htmlFor="level">المرحلة</Label>
-            <Select
+            <select
+              id="level"
               value={filters.level_id}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, level_id: value }));
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, level_id: e.target.value }));
                 refetchUsers();
               }}
+              className="w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm"
             >
-              <SelectTrigger id="level">
-                <SelectValue placeholder="اختر المرحلة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
-                {level?.map((l: any) => (
-                  <SelectItem key={l.id} value={l.id + ""}>
-                    {l.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">الكل</option>
+              {level?.map((l: any) => (
+                <option key={l.id} value={l.id + ""}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
           </div>
           {/* Subject Filter */}
           {/* <div className="min-w-[180px]">
             <Label htmlFor="subject">المادة</Label>
-            <Select
+            <select
+              id="subject"
               value={filters.subject_id}
-              onValueChange={(value) => {
-                setFilters((prev) => ({ ...prev, subject_id: value }));
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, subject_id: e.target.value }));
                 refetchUsers();
               }}
+              className="w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm"
             >
-              <SelectTrigger id="subject">
-                <SelectValue placeholder="اختر المادة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
-                {subjects?.map((s: any) => (
-                  <SelectItem key={s.id} value={s.id + ""}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">الكل</option>
+              {subjects?.map((s: any) => (
+                <option key={s.id} value={s.id + ""}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
           </div> */}
           {/* Teacher Filter (admin only) */}
           {user?.role === "admin" && (
             <div className="min-w-[180px]">
               <Label htmlFor="teacher">المعلم</Label>
-              <Select
+              <select
+                id="teacher"
                 value={filters.teacher_id}
-                onValueChange={(value) => {
-                  setFilters((prev) => ({ ...prev, teacher_id: value }));
+                onChange={(e) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    teacher_id: e.target.value,
+                  }));
                   refetchUsers();
                 }}
+                className="w-full px-3 flex justify-between items-center read-only:bg-background disabled:cursor-not-allowed disabled:opacity-50 transition duration-300 border-default-300 text-default-500 focus:outline-none focus:border-default-500/50 disabled:bg-default-200 placeholder:text-accent-foreground/50 border rounded-lg h-10 text-sm"
               >
-                <SelectTrigger id="teacher">
-                  <SelectValue placeholder="اختر المعلم" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">الكل</SelectItem>
-                  {teachers?.map((t: any) => (
-                    <SelectItem key={t.id} value={t.id + ""}>
-                      {t.user.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">الكل</option>
+                {teachers?.map((t: any) => (
+                  <option key={t.id} value={t.id + ""}>
+                    {t.user.full_name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
           {/* Gender Filter */}
@@ -717,6 +1134,18 @@ function BasicDataTable() {
           </Button>
         </div>
       </div>
+
+      {/* Student Update Modal */}
+      <StudentUpdateModal
+        isOpen={updateModalOpen}
+        onClose={handleUpdateModalClose}
+        student={selectedStudent}
+        onUpdate={refetchUsers}
+        token={token}
+        governorates={governorates}
+        areas={area}
+        levels={level}
+      />
     </>
   );
 }
