@@ -91,7 +91,7 @@ function TeacherGroupsDataTable() {
   const refetchGroups = async (page: number = 1) => {
     try {
       const response = await getData(
-        `teacher-groups?page=${page}`,
+        `teacher-groups/${teacherId}`,
         {},
         {
           Authorization: `Bearer ${token}`,
