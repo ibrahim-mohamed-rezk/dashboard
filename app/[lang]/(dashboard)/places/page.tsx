@@ -48,11 +48,21 @@ interface Area {
   governorate_id: number;
 }
 
+interface PaginationMeta {
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+interface GovernoratesResponse {
+  data: Governorate[];
+  meta: PaginationMeta;
+}
+
 interface AreasResponse {
   data: Area[];
-  meta: {
-    total: number;
-  };
+  meta: PaginationMeta;
 }
 
 // Statistics Card Component
@@ -103,8 +113,31 @@ const StatCard = ({
 };
 
 function GovernoratesAreasManagement() {
+  // Governorates state
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
+  const [governoratesMeta, setGovernoratesMeta] = useState<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+  });
+  const [governoratePageIndex, setGovernoratePageIndex] = useState(0); // 0-based
+  const [governoratePageSize, setGovernoratePageSize] = useState(10);
+  const [governorateSearch, setGovernorateSearch] = useState("");
+
+  // Areas state
   const [areas, setAreas] = useState<Area[]>([]);
+  const [areasMeta, setAreasMeta] = useState<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+  });
+  const [areaPageIndex, setAreaPageIndex] = useState(0); // 0-based
+  const [areaPageSize, setAreaPageSize] = useState(10);
+  const [areaSearch, setAreaSearch] = useState("");
+
+  // Token and tab
   const [token, setToken] = useState("");
   const [activeTab, setActiveTab] = useState<"governorates" | "areas">(
     "governorates"
@@ -132,13 +165,13 @@ function GovernoratesAreasManagement() {
 
   // Statistics
   const statistics = {
-    totalGovernorates: governorates.length,
-    totalAreas: areas.length,
+    totalGovernorates: governoratesMeta.total,
+    totalAreas: areasMeta.total,
     averageAreasPerGovernorate:
-      governorates.length > 0
-        ? Math.round(areas.length / governorates.length)
+      governoratesMeta.total > 0
+        ? Math.round(areasMeta.total / governoratesMeta.total)
         : 0,
-    activeLocations: governorates.length + areas.length,
+    activeLocations: governoratesMeta.total + areasMeta.total,
   };
 
   // Get token from API
@@ -156,46 +189,91 @@ function GovernoratesAreasManagement() {
   }, []);
 
   // Fetch governorates
-  const refetchGovernorates = async () => {
+  const refetchGovernorates = async (
+    pageIndex = governoratePageIndex,
+    pageSize = governoratePageSize,
+    search = governorateSearch
+  ) => {
     try {
+      const params: any = {
+        page: pageIndex + 1,
+        per_page: pageSize,
+      };
+      if (search) params.search = search;
       const response = await getData(
         "governorates",
-        {},
+        params,
         {
           Authorization: `Bearer ${token}`,
         }
       );
       setGovernorates(response.data || []);
+      setGovernoratesMeta(response.meta || {
+        current_page: 1,
+        last_page: 1,
+        per_page: pageSize,
+        total: 0,
+      });
     } catch (error) {
       console.error("Error fetching governorates:", error);
     }
   };
 
   // Fetch areas
-  const refetchAreas = async () => {
+  const refetchAreas = async (
+    pageIndex = areaPageIndex,
+    pageSize = areaPageSize,
+    search = areaSearch
+  ) => {
     try {
+      const params: any = {
+        page: pageIndex + 1,
+        per_page: pageSize,
+      };
+      if (search) params.search = search;
       const response = await getData(
         "areas",
-        {},
+        params,
         {
           Authorization: `Bearer ${token}`,
         }
       );
       setAreas(response.data || []);
+      setAreasMeta(response.meta || {
+        current_page: 1,
+        last_page: 1,
+        per_page: pageSize,
+        total: 0,
+      });
     } catch (error) {
       console.error("Error fetching areas:", error);
     }
   };
 
-  // Fetch data when token is available
+  // Fetch data when token or pagination/search changes
   useEffect(() => {
     if (token) {
       refetchGovernorates();
       refetchAreas();
     }
+    // eslint-disable-next-line
   }, [token]);
 
-  console.log(areas, governorates);
+  // Governorates pagination/search effect
+  useEffect(() => {
+    if (token) {
+      refetchGovernorates(governoratePageIndex, governoratePageSize, governorateSearch);
+    }
+    // eslint-disable-next-line
+  }, [governoratePageIndex, governoratePageSize, governorateSearch, token]);
+
+  // Areas pagination/search effect
+  useEffect(() => {
+    if (token) {
+      refetchAreas(areaPageIndex, areaPageSize, areaSearch);
+    }
+    // eslint-disable-next-line
+  }, [areaPageIndex, areaPageSize, areaSearch, token]);
 
   // Governorate form handlers
   const handleGovernorateInputChange = (
@@ -405,6 +483,7 @@ function GovernoratesAreasManagement() {
       id: "areas_count",
       header: "عدد المناطق",
       cell: ({ row }) => {
+        // This will only count areas in the current page, not all pages!
         const count = areas.filter(
           (area) => area.governorate_id === row.original.id
         ).length;
@@ -506,6 +585,27 @@ function GovernoratesAreasManagement() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    pageCount: governoratesMeta.last_page,
+    state: {
+      pagination: {
+        pageIndex: governoratePageIndex,
+        pageSize: governoratePageSize,
+      },
+    },
+    onPaginationChange: (updater) => {
+      if (typeof updater === "function") {
+        const next = updater({
+          pageIndex: governoratePageIndex,
+          pageSize: governoratePageSize,
+        });
+        setGovernoratePageIndex(next.pageIndex);
+        setGovernoratePageSize(next.pageSize);
+      } else if (typeof updater === "object") {
+        setGovernoratePageIndex(updater.pageIndex);
+        setGovernoratePageSize(updater.pageSize);
+      }
+    },
   });
 
   const areaTable = useReactTable({
@@ -515,7 +615,94 @@ function GovernoratesAreasManagement() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    pageCount: areasMeta.last_page,
+    state: {
+      pagination: {
+        pageIndex: areaPageIndex,
+        pageSize: areaPageSize,
+      },
+    },
+    onPaginationChange: (updater) => {
+      if (typeof updater === "function") {
+        const next = updater({
+          pageIndex: areaPageIndex,
+          pageSize: areaPageSize,
+        });
+        setAreaPageIndex(next.pageIndex);
+        setAreaPageSize(next.pageSize);
+      } else if (typeof updater === "object") {
+        setAreaPageIndex(updater.pageIndex);
+        setAreaPageSize(updater.pageSize);
+      }
+    },
   });
+
+  // Pagination Controls Component
+  function PaginationControls({
+    table,
+    pageIndex,
+    setPageIndex,
+    pageSize,
+    setPageSize,
+    totalRows,
+    lastPage,
+    pageSizeOptions = [5, 10, 20, 50, 100],
+  }: {
+    table: any;
+    pageIndex: number;
+    setPageIndex: (idx: number) => void;
+    pageSize: number;
+    setPageSize: (size: number) => void;
+    totalRows: number;
+    lastPage: number;
+    pageSizeOptions?: number[];
+  }) {
+    return (
+      <div className="flex flex-row items-center justify-center gap-2 py-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageIndex(0)}
+            disabled={pageIndex === 0}
+          >
+            {"<<"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
+            disabled={pageIndex === 0}
+          >
+            {"<"}
+          </Button>
+          <span className="text-sm">
+            صفحة{" "}
+            <strong>
+              {pageIndex + 1} من {lastPage}
+            </strong>
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageIndex(Math.min(lastPage - 1, pageIndex + 1))}
+            disabled={pageIndex + 1 >= lastPage}
+          >
+            {">"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPageIndex(lastPage - 1)}
+            disabled={pageIndex + 1 >= lastPage}
+          >
+            {">>"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -581,16 +768,11 @@ function GovernoratesAreasManagement() {
               <input
                 type="text"
                 placeholder="البحث في المحافظات..."
-                value={
-                  (governorateTable
-                    .getColumn("name")
-                    ?.getFilterValue() as string) || ""
-                }
-                onChange={(event) =>
-                  governorateTable
-                    .getColumn("name")
-                    ?.setFilterValue(event.target.value)
-                }
+                value={governorateSearch}
+                onChange={(event) => {
+                  setGovernorateSearch(event.target.value);
+                  setGovernoratePageIndex(0);
+                }}
                 className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -687,6 +869,15 @@ function GovernoratesAreasManagement() {
                 )}
               </TableBody>
             </Table>
+            <PaginationControls
+              table={governorateTable}
+              pageIndex={governoratePageIndex}
+              setPageIndex={setGovernoratePageIndex}
+              pageSize={governoratePageSize}
+              setPageSize={setGovernoratePageSize}
+              totalRows={governoratesMeta.total}
+              lastPage={governoratesMeta.last_page}
+            />
           </div>
         </>
       )}
@@ -699,15 +890,11 @@ function GovernoratesAreasManagement() {
               <input
                 type="text"
                 placeholder="البحث في المناطق..."
-                value={
-                  (areaTable.getColumn("name")?.getFilterValue() as string) ||
-                  ""
-                }
-                onChange={(event) =>
-                  areaTable
-                    .getColumn("name")
-                    ?.setFilterValue(event.target.value)
-                }
+                value={areaSearch}
+                onChange={(event) => {
+                  setAreaSearch(event.target.value);
+                  setAreaPageIndex(0);
+                }}
                 className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -822,6 +1009,15 @@ function GovernoratesAreasManagement() {
                 )}
               </TableBody>
             </Table>
+            <PaginationControls
+              table={areaTable}
+              pageIndex={areaPageIndex}
+              setPageIndex={setAreaPageIndex}
+              pageSize={areaPageSize}
+              setPageSize={setAreaPageSize}
+              totalRows={areasMeta.total}
+              lastPage={areasMeta.last_page}
+            />
           </div>
         </>
       )}
