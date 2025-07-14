@@ -239,7 +239,7 @@ function BanksTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setCourses(response.data);
+      setCourses(response.courses);
     } catch (error) {
       console.log(error);
     }
