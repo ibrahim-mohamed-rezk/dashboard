@@ -131,31 +131,16 @@ interface FormData {
 }
 
 interface PaginationMeta {
-  current_page: number;
-  from: number;
-  last_page: number;
-  links: {
-    url: string | null;
-    label: string;
-    active: boolean;
-  }[];
-  path: string;
-  per_page: number;
-  to: number;
   total: number;
-}
-
-interface PaginationLinks {
-  first: string;
-  last: string;
-  prev: string | null;
-  next: string | null;
-}
-
-interface ApiResponse {
-  data: Course[];
-  links: PaginationLinks;
-  meta: PaginationMeta;
+  count: number;
+  per_page: number;
+  current_page: number;
+  last_page: number;
+  next_page_url: string | null;
+  prev_page_url: string | null;
+  has_more_pages: boolean;
+  from: number;
+  to: number;
 }
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/150";
@@ -204,8 +189,8 @@ function CoursesTable() {
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
     null
   );
-  const [paginationLinks, setPaginationLinks] =
-    useState<PaginationLinks | null>(null);
+  const [statistics, setStatistics] = useState<any>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (
@@ -373,10 +358,9 @@ function CoursesTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      const apiResponse = response as ApiResponse;
-      setData(apiResponse.data);
-      setPaginationMeta(apiResponse.meta);
-      setPaginationLinks(apiResponse.links);
+      setData(response.courses);
+      setPaginationMeta(response.pagination);
+      setStatistics(response.statistics);
     } catch (error) {
       toast.error("Failed to fetch courses");
     } finally {
@@ -1227,6 +1211,26 @@ function CoursesTable() {
               <SelectItem value="offline">أوفلاين</SelectItem>
             </SelectContent>
           </Select>
+          {/* Reset Filters Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 h-10 w-full sm:w-auto"
+            onClick={() => {
+              setGlobalFilter("");
+              setTeacherFilter("all");
+              setSubjectFilter("all");
+              setLevelFilter("all");
+              setFromDateFilter("");
+              setToDateFilter("");
+              setTypeFilter("all");
+              setPositionFilter("all");
+              fetchData();
+            }}
+          >
+            <X className="h-4 w-4 mr-2" />
+            إعادة تعيين الفلاتر
+          </Button>
         </div>
         <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-2 md:mt-0 md:ml-2 items-stretch sm:items-center justify-end w-full md:w-auto">
           <Button
@@ -1377,7 +1381,7 @@ function CoursesTable() {
                 إجمالي الكورسات
               </p>
               <p className="text-2xl font-bold text-blue-900 dark:text-blue-200">
-                {data.length}
+                {statistics?.totalCount}
               </p>
             </div>
             <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
@@ -1385,14 +1389,29 @@ function CoursesTable() {
             </div>
           </div>
         </div>
+        <div className="bg-purple-50 dark:bg-purple-950/50 p-4 rounded-lg border dark:border-purple-900/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-purple-600 dark:text-purple-400">
+                الكورسات المدفوعة
+              </p>
+              <p className="text-2xl font-bold text-purple-900 dark:text-purple-200">
+                {statistics?.paidCount}
+              </p>
+            </div>
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+              <Download className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+        </div>
         <div className="bg-green-50 dark:bg-green-950/50 p-4 rounded-lg border dark:border-green-900/50">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-green-600 dark:text-green-400">
-                الكورسات النشطة
+                الكورسات المجانية
               </p>
               <p className="text-2xl font-bold text-green-900 dark:text-green-200">
-                {data.filter((course) => course.status === "active").length}
+                {statistics?.freeCount}
               </p>
             </div>
             <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
@@ -1400,7 +1419,8 @@ function CoursesTable() {
             </div>
           </div>
         </div>
-        <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg border dark:border-yellow-900/50">
+
+        {/* <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg border dark:border-yellow-900/50">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-yellow-600 dark:text-yellow-400">
@@ -1414,22 +1434,7 @@ function CoursesTable() {
               <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
-        </div>
-        <div className="bg-purple-50 dark:bg-purple-950/50 p-4 rounded-lg border dark:border-purple-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-purple-600 dark:text-purple-400">
-                الكورسات المدفوعة
-              </p>
-              <p className="text-2xl font-bold text-purple-900 dark:text-purple-200">
-                {data.filter((course) => course.type === "paid").length}
-              </p>
-            </div>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-              <Download className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Results Summary */}
@@ -1642,37 +1647,30 @@ function CoursesTable() {
                 fetchData(paginationMeta.current_page - 1);
               }
             }}
-            disabled={!paginationLinks?.prev}
+            disabled={!paginationMeta?.prev_page_url}
           >
             السابق
           </Button>
           <div className="flex items-center gap-1">
-            {paginationMeta?.links.map((link, index) => {
-              if (
-                link.label === "&laquo; Previous" ||
-                link.label === "Next &raquo;"
-              ) {
-                return null;
-              }
-              return (
-                <Button
-                  key={index}
-                  variant={link.active ? "soft" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    if (link.url) {
-                      const page = new URL(link.url).searchParams.get("page");
-                      if (page) {
-                        fetchData(parseInt(page));
-                      }
+            {paginationMeta &&
+              Array.from({
+                length: paginationMeta.last_page || 1,
+              }).map((_, idx) => {
+                const page = idx + 1;
+                return (
+                  <Button
+                    key={page}
+                    variant={
+                      paginationMeta.current_page === page ? "soft" : "outline"
                     }
-                  }}
-                  disabled={!link.url}
-                >
-                  {link.label}
-                </Button>
-              );
-            })}
+                    size="sm"
+                    onClick={() => fetchData(page)}
+                    disabled={paginationMeta.current_page === page}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
           </div>
           <Button
             variant="outline"
@@ -1685,7 +1683,7 @@ function CoursesTable() {
                 fetchData(paginationMeta.current_page + 1);
               }
             }}
-            disabled={!paginationLinks?.next}
+            disabled={!paginationMeta?.next_page_url}
           >
             التالي
           </Button>
