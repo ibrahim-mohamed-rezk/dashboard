@@ -303,7 +303,7 @@ const CourseModules = ({
       ) {
         formData.append(
           "questions_count",
-          editForm.questions.length.toString()
+          editForm.questions_count.toString()
         );
         formData.append("duration", editForm.duration.toString());
         formData.append("passing_score", editForm.passing_score.toString());
