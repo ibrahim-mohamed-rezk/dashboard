@@ -272,6 +272,13 @@ const CourseModules = ({
 
   const handleUpdate = async () => {
     if (!selectedModule) return;
+    if (
+      (selectedModule.type === "quiz" || selectedModule.type === "exam") &&
+      editForm.questions_count > editForm.questions.length
+    ) {
+      toast.error("عدد اسئله غير كافي");
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -294,7 +301,10 @@ const CourseModules = ({
         selectedModule.type === "quiz" ||
         selectedModule.type === "exam"
       ) {
-        formData.append("questions_count", editForm.questions.length.toString());
+        formData.append(
+          "questions_count",
+          editForm.questions.length.toString()
+        );
         formData.append("duration", editForm.duration.toString());
         formData.append("passing_score", editForm.passing_score.toString());
 
@@ -445,6 +455,13 @@ const CourseModules = ({
 
   const handleAddModule = async () => {
     try {
+      if (
+        newModuleForm.type === "quiz" &&
+        newModuleForm.questions_count > newModuleForm.questions.length
+      ) {
+        toast.error("عدد اسئله غير كافي");
+        return;
+      }
       const formData = new FormData();
       formData.append("type", newModuleForm.type);
       formData.append("title", newModuleForm.title);
@@ -1138,7 +1155,23 @@ const CourseModules = ({
                         className="bg-white dark:bg-gray-800 dark:text-white"
                       />
                     </div>
-
+                    <div>
+                      <label className="block text-sm font-medium mb-2 dark:text-white">
+                        عدد الأسئلة
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={editForm.questions_count || ""}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            questions_count: parseInt(e.target.value) || 0,
+                          }))
+                        }
+                        className="bg-white dark:bg-gray-800 dark:text-white"
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium mb-2 dark:text-white">
                         المدة (دقيقة)
@@ -1156,7 +1189,6 @@ const CourseModules = ({
                         className="bg-white dark:bg-gray-800 dark:text-white"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium mb-2 dark:text-white">
                         درجة النجاح (%)
@@ -2219,6 +2251,23 @@ const CourseModules = ({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
+                      عدد الأسئلة
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newModuleForm.questions_count || ""}
+                      onChange={(e) =>
+                        setNewModuleForm({
+                          ...newModuleForm,
+                          questions_count: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="عدد الأسئلة"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
                       تاريخ بدايه الاختبار
                     </label>
                     <Input
@@ -2233,7 +2282,6 @@ const CourseModules = ({
                       }
                     />
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       مدة الاختبار (بالدقائق)
@@ -2251,7 +2299,6 @@ const CourseModules = ({
                       placeholder="المدة بالدقائق"
                     />
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       درجة النجاح

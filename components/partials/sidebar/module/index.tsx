@@ -428,7 +428,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       }}
                       toggleNested={toggleNested}
                       index={1}
-                      nestedIndex={nestedIndex}
+                      nestedIndex={nestedIndex} 
                       locationName={locationName}
                     />
                   </li>
