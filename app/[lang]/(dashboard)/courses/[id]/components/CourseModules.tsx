@@ -489,7 +489,7 @@ const CourseModules = ({
         }
         formData.append(
           "questions_count",
-          newModuleForm.questions.length.toString()
+          newModuleForm.questions_count.toString()
         );
         newModuleForm.questions.forEach((question, index) => {
           const questionNumber = index + 1;
