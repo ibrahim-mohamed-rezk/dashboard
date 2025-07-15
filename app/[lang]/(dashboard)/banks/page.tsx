@@ -33,6 +33,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -78,6 +80,7 @@ import axios, { AxiosHeaders } from "axios";
 import toast from "react-hot-toast";
 import { CoursesData, Teacher, User } from "@/lib/type";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Bank {
   id: number;
@@ -89,6 +92,7 @@ interface Bank {
   created_at: string;
   updated_at: string;
   level_id: string;
+  image?: string | null;
 }
 
 interface FormData {
@@ -98,6 +102,7 @@ interface FormData {
   banktable_type: "course" | "teacher";
   position: "online" | "offline";
   level_id: string;
+  image: File | null;
 }
 
 interface PaginationMeta {
@@ -147,7 +152,6 @@ function BanksTable() {
   const [courses, setCourses] = useState<CoursesData[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [levels, setLevels] = useState<any[]>([]);
-  4;
   const [subjects, setSubjects] = useState<any[]>([]);
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -156,7 +160,9 @@ function BanksTable() {
     banktable_type: "course",
     position: "online",
     level_id: levels[0]?.id || 1,
+    image: null,
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -318,6 +324,24 @@ function BanksTable() {
     }));
   };
 
+  // Handle image file selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData((prev) => ({
+        ...prev,
+        image: file,
+      }));
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Handle banktable_type change and reset banktable_id
   const handleBanktableTypeChange = (value: "course" | "teacher") => {
     setFormData((prev) => ({
@@ -332,21 +356,22 @@ function BanksTable() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await postData(
-        "banks",
-        {
-          name: formData.name,
-          price: formData.price ? formData.price : null,
-          banktable_id: formData.banktable_id,
-          level_id: formData.level_id,
-          position: formData.position,
-          banktable_type: "course",
-        },
-        {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        }
-      );
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("price", formData.price ? formData.price : "");
+      formDataToSend.append("banktable_id", formData.banktable_id.toString());
+      formDataToSend.append("level_id", formData.level_id);
+      formDataToSend.append("position", formData.position);
+      formDataToSend.append("banktable_type", "course");
+
+      if (formData.image) {
+        formDataToSend.append("image", formData.image);
+      }
+
+      await postData("banks", formDataToSend, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      });
       setAddBank(false);
       setFormData({
         name: "",
@@ -355,7 +380,9 @@ function BanksTable() {
         banktable_type: "course",
         position: "online",
         level_id: "1",
+        image: null,
       });
+      setImagePreview(null);
       await fetchData(currentPage);
       toast.success("تم إضافة البنك بنجاح");
     } catch (error) {
@@ -380,7 +407,9 @@ function BanksTable() {
       banktable_type: bank.banktable_type,
       position: bank.position || "online",
       level_id: bank.level_id || "1",
+      image: null,
     });
+    setImagePreview(bank.image || null);
     setEditBank(true);
   };
 
@@ -487,6 +516,35 @@ function BanksTable() {
 
   const columns: ColumnDef<Bank>[] = [
     {
+      accessorKey: "image",
+      header: "الصورة",
+      cell: ({ row }) => {
+        const image = row.getValue("image") as string | null;
+        return (
+          <div className="flex items-center justify-center">
+            {image ? (
+              <div className="relative w-12 h-12 rounded-lg overflow-hidden">
+                <Image
+                  src={image}
+                  alt={row.getValue("name")}
+                  fill
+                  className="object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/placeholder-bank.png"; // Fallback image
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-gray-400" />
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "name",
       header: ({ column }) => (
         <Button
@@ -516,6 +574,18 @@ function BanksTable() {
           <span className="font-medium text-green-600">{price} ج.م</span>
         ) : (
           <Badge variant="outline">مجاني</Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "level_id",
+      header: "المستوي",
+      cell: ({ row }) => {
+        const level = levels.find((l) => l.id === row.getValue("level_id"));
+        return level ? (
+          <span className="font-medium text-green-600">{level.name}</span>
+        ) : (
+          <Badge variant="outline">غير محدد</Badge>
         );
       },
     },
@@ -634,21 +704,23 @@ function BanksTable() {
     setIsLoading(true);
     setEditError(null);
     try {
-      await postData(
-        `banks/${id}?_method=PUT`,
-        {
-          name: formData.name,
-          price: formData.price ? formData.price : null,
-          banktable_id: formData.banktable_id,
-          banktable_type: "course",
-          position: formData.position,
-          level_id: formData.level_id,
-        },
-        {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        }
-      );
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("price", formData.price ? formData.price : "");
+      formDataToSend.append("banktable_id", formData.banktable_id.toString());
+      formDataToSend.append("banktable_type", "course");
+      formDataToSend.append("position", formData.position);
+      formDataToSend.append("level_id", formData.level_id);
+      formDataToSend.append("_method", "PUT");
+
+      if (formData.image) {
+        formDataToSend.append("image", formData.image);
+      }
+
+      await postData(`banks/${id}`, formDataToSend, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      });
       setEditBank(false);
       setEditingBank(null);
       setFormData({
@@ -658,7 +730,9 @@ function BanksTable() {
         banktable_type: "course",
         position: "online",
         level_id: "1",
+        image: null,
       });
+      setImagePreview(null);
       await fetchData(currentPage);
       toast.success("تم تعديل البنك بنجاح");
     } catch (error: any) {
@@ -827,7 +901,9 @@ function BanksTable() {
                       banktable_type: "course",
                       position: "online",
                       level_id: "1",
+                      image: null,
                     });
+                    setImagePreview(null);
                   }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -878,6 +954,59 @@ function BanksTable() {
                         value={formData.price}
                         onChange={handleInputChange}
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="image" className="text-sm font-medium">
+                        صورة البنك
+                      </label>
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-4">
+                          <Input
+                            id="image"
+                            name="image"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="image"
+                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            <Upload className="w-4 h-4" />
+                            اختر صورة
+                          </label>
+                          {formData.image && (
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              {formData.image.name}
+                            </span>
+                          )}
+                        </div>
+                        {imagePreview && (
+                          <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                            <Image
+                              src={imagePreview}
+                              alt="معاينة الصورة"
+                              fill
+                              className="object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  image: null,
+                                }));
+                                setImagePreview(null);
+                              }}
+                              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -1182,6 +1311,56 @@ function BanksTable() {
                       value={formData.price}
                       onChange={handleInputChange}
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="edit-image" className="text-sm font-medium">
+                      صورة البنك
+                    </label>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-4">
+                        <Input
+                          id="edit-image"
+                          name="image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="edit-image"
+                          className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <Upload className="w-4 h-4" />
+                          تغيير الصورة
+                        </label>
+                        {formData.image && (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {formData.image.name}
+                          </span>
+                        )}
+                      </div>
+                      {imagePreview && (
+                        <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                          <Image
+                            src={imagePreview}
+                            alt="معاينة الصورة"
+                            fill
+                            className="object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, image: null }));
+                              setImagePreview(null);
+                            }}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
