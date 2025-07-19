@@ -741,59 +741,92 @@ const BankModulesComponent = ({
             </div>
           )}
 
-          {/* Sections List */}
-          {isLoading && !sections.length ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-300 text-lg">
-                جاري التحميل...
-              </p>
-            </div>
-          ) : filteredSections.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-300 text-lg">
-                {searchTerm || filterType !== "all"
-                  ? "لا توجد أقسام تطابق البحث"
-                  : "لا توجد أقسام متاحة حالياً"}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredSections.map((section, index) => (
-                <div
-                  key={section.id}
-                  className={`border rounded-lg p-4 transition-colors ${
-                    selectedQuestions.includes(section.id)
-                      ? "bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700"
-                  } ${!isBulkMode ? "cursor-pointer" : ""}`}
-                  onClick={() => !isBulkMode && handleViewSection(section)}
-                >
-                  <div className="flex items-start gap-4">
-                    {isBulkMode && (
-                      <div className="mt-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSectionSelect(section.id);
-                          }}
-                          className="p-1"
-                        >
-                          {selectedQuestions.includes(section.id) ? (
-                            <CheckSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          ) : (
-                            <Square className="h-4 w-4 dark:text-gray-400" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
-
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                          القسم {index + 1}
-                        </span>
+          {/* Sections Table */}
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  {isBulkMode && (
+                    <th className="px-4 py-3 text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSelectAll}
+                        className="p-1"
+                      >
+                        {selectedQuestions.length === filteredSections.length &&
+                        filteredSections.length > 0 ? (
+                          <CheckSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        ) : (
+                          <Square className="h-4 w-4 dark:text-gray-400" />
+                        )}
+                      </Button>
+                    </th>
+                  )}
+                  <th className="px-4 py-3 text-right font-bold">#</th>
+                  <th className="px-4 py-3 text-right font-bold">اسم القسم</th>
+                  <th className="px-4 py-3 text-right font-bold">النوع</th>
+                  <th className="px-4 py-3 text-right font-bold">عدد الأسئلة</th>
+                  <th className="px-4 py-3 text-right font-bold">تاريخ الإنشاء</th>
+                  <th className="px-4 py-3 text-right font-bold">ملف</th>
+                  <th className="px-4 py-3 text-right font-bold">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && !sections.length ? (
+                  <tr>
+                    <td colSpan={isBulkMode ? 8 : 7} className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-300 text-lg">
+                        جاري التحميل...
+                      </p>
+                    </td>
+                  </tr>
+                ) : filteredSections.length === 0 ? (
+                  <tr>
+                    <td colSpan={isBulkMode ? 8 : 7} className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-300 text-lg">
+                        {searchTerm || filterType !== "all"
+                          ? "لا توجد أقسام تطابق البحث"
+                          : "لا توجد أقسام متاحة حالياً"}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSections.map((section, index) => (
+                    <tr
+                      key={section.id}
+                      className={`transition-colors ${
+                        selectedQuestions.includes(section.id)
+                          ? "bg-blue-50 dark:bg-blue-900"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                      }`}
+                      onClick={() => !isBulkMode && handleViewSection(section)}
+                      style={{ cursor: !isBulkMode ? "pointer" : undefined }}
+                    >
+                      {isBulkMode && (
+                        <td className="px-4 py-3 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSectionSelect(section.id);
+                            }}
+                            className="p-1"
+                          >
+                            {selectedQuestions.includes(section.id) ? (
+                              <CheckSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            ) : (
+                              <Square className="h-4 w-4 dark:text-gray-400" />
+                            )}
+                          </Button>
+                        </td>
+                      )}
+                      <td className="px-4 py-3 text-right">{index + 1}</td>
+                      <td className="px-4 py-3 text-right font-semibold dark:text-white">
+                        {section.name}
+                      </td>
+                      <td className="px-4 py-3 text-right">
                         <span
                           className={`text-xs px-2 py-1 rounded ${
                             section.type === "questions"
@@ -803,78 +836,83 @@ const BankModulesComponent = ({
                         >
                           {section.type === "questions" ? "أسئلة" : "ملف"}
                         </span>
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2 leading-relaxed dark:text-white">
-                        {section.name}
-                      </h3>
-                      {section.questions && section.questions.length > 0 && (
-                        <div className="text-sm text-gray-600 dark:text-gray-300">
-                          <span className="font-medium">عدد الأسئلة: </span>
-                          {section.questions.length}
-                        </div>
-                      )}
-                      {section.file_path && (
-                        <div className="text-sm text-gray-600 dark:text-gray-300">
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {section.questions && section.questions.length > 0
+                          ? section.questions.length
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {section.created_at
+                          ? new Date(section.created_at).toLocaleDateString("ar")
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {section.file_path ? (
                           <a
                             href={section.file_path}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                            className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            تحميل الملف
+                            <Download className="w-4 h-4" />
+                            تحميل
                           </a>
-                        </div>
-                      )}
-                    </div>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewSection(section);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          عرض
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(section);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          تعديل
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(section.id);
-                          }}
-                        >
-                          <Trash className="h-4 w-4 mr-2" />
-                          حذف
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewSection(section);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              عرض
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(section);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              تعديل
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(section.id);
+                              }}
+                            >
+                              <Trash className="h-4 w-4 mr-2" />
+                              حذف
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

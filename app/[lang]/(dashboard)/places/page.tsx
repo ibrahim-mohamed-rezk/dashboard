@@ -20,7 +20,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -32,9 +32,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { MapPin, Building2, Globe, Map } from "lucide-react";
+import { MapPin, Building2, Globe, Map, Upload, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
+import toast from "react-hot-toast";
 
 // Types
 interface Governorate {
@@ -162,6 +163,14 @@ function GovernoratesAreasManagement() {
   });
 
   const [error, setError] = useState<string | null>(null);
+
+  // Excel upload dialog states
+  const [isExcelDialogOpen, setIsExcelDialogOpen] = useState(false);
+  const [excelType, setExcelType] = useState<"governorates" | "areas">("governorates");
+  const [excelUploading, setExcelUploading] = useState(false);
+
+  // File input refs
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Statistics
   const statistics = {
@@ -380,6 +389,120 @@ function GovernoratesAreasManagement() {
       } else {
         setError("حدث خطأ غير متوقع");
       }
+    }
+  };
+
+  // Excel upload handlers
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExcelUploading(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (excelType === "governorates") {
+        // Expecting: [["name"], ["Cairo"], ["Giza"], ...]
+        const rows = jsonData as string[][];
+        const header = rows[0];
+        if (!header || header[0]?.toLowerCase() !== "name") {
+          toast.error("صيغة ملف المحافظات غير صحيحة. يجب أن يحتوي على عمود 'name'.");
+          setExcelUploading(false);
+          return;
+        }
+        let added = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const name = rows[i][0];
+          if (name && typeof name === "string" && name.trim() !== "") {
+            try {
+              const formData = new FormData();
+              formData.append("name", name.trim());
+              await postData("governorates", formData, {
+                Authorization: `Bearer ${token}`,
+              });
+              added++;
+            } catch (err) {
+              // skip error for this row
+            }
+          }
+        }
+        toast.success(`تمت إضافة ${added} محافظة من ملف الإكسل`);
+        refetchGovernorates();
+      } else if (excelType === "areas") {
+        // Expecting: [["name","governorate_id"], ["Helwan",1], ...]
+        const rows = jsonData as (string | number)[][];
+        const header = rows[0];
+        if (
+          !header ||
+          typeof header[0] !== "string" ||
+          header[0].toLowerCase() !== "name" ||
+          typeof header[1] !== "string" ||
+          header[1].toLowerCase() !== "governorate_id"
+        ) {
+          toast.error(
+            "صيغة ملف المناطق غير صحيحة. يجب أن يحتوي على أعمدة 'name' و 'governorate_id'."
+          );
+          setExcelUploading(false);
+          return;
+        }
+        let added = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const name = rows[i][0];
+          const governorate_id = rows[i][1];
+          if (
+            name &&
+            typeof name === "string" &&
+            name.trim() !== "" &&
+            governorate_id &&
+            !isNaN(Number(governorate_id))
+          ) {
+            try {
+              const formData = new FormData();
+              formData.append("name", name.trim());
+              formData.append("governorate_id", String(governorate_id));
+              await postData("areas", formData, {
+                Authorization: `Bearer ${token}`,
+              });
+              added++;
+            } catch (err) {
+              // skip error for this row
+            }
+          }
+        }
+        toast.success(`تمت إضافة ${added} منطقة من ملف الإكسل`);
+        refetchAreas();
+      }
+    } catch (err) {
+      toast.error("حدث خطأ أثناء قراءة ملف الإكسل.");
+    }
+    setExcelUploading(false);
+    setIsExcelDialogOpen(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Excel download handlers
+  const handleExcelDownload = (type: "governorates" | "areas") => {
+    if (type === "governorates") {
+      const data = [
+        ["name"],
+        ...governorates.map((g) => [g.name]),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Governorates");
+      XLSX.writeFile(wb, "governorates.xlsx");
+    } else if (type === "areas") {
+      const data = [
+        ["name", "governorate_id"],
+        ...areas.map((a) => [a.name, a.governorate_id]),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Areas");
+      XLSX.writeFile(wb, "areas.xlsx");
     }
   };
 
@@ -706,6 +829,39 @@ function GovernoratesAreasManagement() {
 
   return (
     <>
+      {/* Excel Upload/Download Dialog */}
+      <Dialog open={isExcelDialogOpen} onOpenChange={setIsExcelDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {excelType === "governorates"
+                ? "رفع ملف إكسل للمحافظات"
+                : "رفع ملف إكسل للمناطق"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>
+                {excelType === "governorates"
+                  ? "يرجى رفع ملف إكسل يحتوي على عمود 'name' فقط."
+                  : "يرجى رفع ملف إكسل يحتوي على الأعمدة: 'name', 'governorate_id'."}
+              </Label>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              disabled={excelUploading}
+              onChange={handleExcelUpload}
+              className="block w-full border rounded-md p-2"
+            />
+            {excelUploading && (
+              <div className="text-blue-600 text-sm">جاري رفع الملف...</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
@@ -775,6 +931,27 @@ function GovernoratesAreasManagement() {
                 }}
                 className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => {
+                  setExcelType("governorates");
+                  setIsExcelDialogOpen(true);
+                }}
+              >
+                <Upload className="h-4 w-4" />
+                رفع إكسل
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => handleExcelDownload("governorates")}
+              >
+                <Download className="h-4 w-4" />
+                تحميل إكسل
+              </Button>
             </div>
             <Dialog
               open={isGovernorateDialogOpen}
@@ -897,6 +1074,27 @@ function GovernoratesAreasManagement() {
                 }}
                 className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => {
+                  setExcelType("areas");
+                  setIsExcelDialogOpen(true);
+                }}
+              >
+                <Upload className="h-4 w-4" />
+                رفع إكسل
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => handleExcelDownload("areas")}
+              >
+                <Download className="h-4 w-4" />
+                تحميل إكسل
+              </Button>
             </div>
             <Dialog open={isAreaDialogOpen} onOpenChange={setIsAreaDialogOpen}>
               <DialogTrigger asChild>

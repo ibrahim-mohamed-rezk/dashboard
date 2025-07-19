@@ -264,6 +264,7 @@ const CourseModules = ({
         Authorization: `Bearer ${token}`,
       });
       await fetchCourse();
+      fetchVideos();
       toast.success("تم حذف الدرس بنجاح");
     } catch (error) {
       toast.error("حدث خطأ أثناء حذف الدرس");
@@ -301,10 +302,7 @@ const CourseModules = ({
         selectedModule.type === "quiz" ||
         selectedModule.type === "exam"
       ) {
-        formData.append(
-          "questions_count",
-          editForm.questions_count.toString()
-        );
+        formData.append("questions_count", editForm.questions_count.toString());
         formData.append("duration", editForm.duration.toString());
         formData.append("passing_score", editForm.passing_score.toString());
 
@@ -345,6 +343,7 @@ const CourseModules = ({
       });
 
       await fetchCourse();
+      fetchVideos();
       setIsEditing(false);
       setSelectedModule(null);
       toast.success("تم تحديث الدرس بنجاح");
@@ -399,6 +398,7 @@ const CourseModules = ({
       });
 
       await fetchCourse();
+      fetchVideos();
       setIsEditingVideoQuiz(false);
       setSelectedModule(null);
       toast.success("تم تحديث اختبار الفيديو بنجاح");
@@ -526,6 +526,7 @@ const CourseModules = ({
       });
 
       await fetchCourse();
+      fetchVideos();
       setIsAdding(false);
       setNewModuleForm({
         type: "video",
@@ -838,135 +839,119 @@ const CourseModules = ({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {modules.map((module: CoursModules, index) => (
-              <div
-                key={module.id}
-                className="border dark:border-gray-700 rounded-lg p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 cursor-pointer hover:shadow-md"
-                onClick={() => handleModuleClick(module)}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="flex-shrink-0">
-                      {module?.type === "video" &&
-                      module?.details?.thumbnail ? (
-                        <div className="w-20 h-20 relative rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-right rtl">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">#</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">العنوان</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">النوع</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">الوصف</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">تاريخ الإنشاء</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">عدد الأسئلة</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                {modules.map((module: CoursModules, index) => (
+                  <tr
+                    key={module.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 cursor-pointer"
+                    onClick={() => handleModuleClick(module)}
+                  >
+                    <td className="px-4 py-3 font-medium">{index + 1}</td>
+                    <td className="px-4 py-3 flex items-center gap-2 min-w-[180px]">
+                      {module?.type === "video" && module?.details?.thumbnail ? (
+                        <span className="inline-block w-10 h-10 relative rounded overflow-hidden mr-2">
                           <img
                             src={module.details.thumbnail}
                             alt={module.details.title}
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                            <PlayCircle className="w-8 h-8 text-white" />
-                          </div>
-                        </div>
+                          <span className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                            <PlayCircle className="w-5 h-5 text-white" />
+                          </span>
+                        </span>
                       ) : (
-                        <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                        <span className="inline-block w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mr-2">
                           {renderModuleIcon(module)}
-                        </div>
+                        </span>
                       )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold dark:text-white truncate">
-                          {module?.details?.title}
-                        </h3>
-                        <Badge variant={"outline"}>
-                          {module.type === "video" ? "فيديو" : "اختبار"}
-                        </Badge>
-                      </div>
-                      {/* Show created_at date */}
-                      {module?.details?.created_at && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                          يبدأ في{" "}
-                          {new Date(
-                            module.details.created_at
-                          ).toLocaleDateString("ar-EG", {
+                      <span className="truncate">{module?.details?.title}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline">
+                        {module.type === "video" ? "فيديو" : "اختبار"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 max-w-xs truncate">
+                      {module?.details?.description}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                      {module?.details?.created_at
+                        ? new Date(module.details.created_at).toLocaleDateString("ar-EG", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
-                          })}
-                        </div>
-                      )}
-
-                      <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
-                        {module?.details?.description}
-                      </p>
-
-                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                        {module.type === "video" && (
-                          <>
-                            <span>فيديو تعليمي</span>
-                            {module?.details?.has_quiz && (
-                              <Badge variant="outline" className="text-xs">
-                                يحتوي على اختبار (
-                                {module?.details?.quiz?.[0]?.questions_count ||
-                                  0}{" "}
-                                سؤال)
-                              </Badge>
-                            )}
-                          </>
-                        )}
-                        {(module.type === "quiz" || module.type === "exam") && (
-                          <div className="flex items-center gap-2">
-                            <HelpCircle className="w-4 h-4" />
-                            <span>
-                              {module?.details?.questions_count ||
-                                module?.details?.questions?.length ||
-                                0}{" "}
-                              سؤال
-                            </span>
-                          </div>
-                        )}
+                          })
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {module.type === "video" && module?.details?.has_quiz
+                        ? module?.details?.quiz?.[0]?.questions_count || 0
+                        : (module?.details?.questions_count ||
+                          module?.details?.questions?.length ||
+                          0)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(module);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              تعديل
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewModule(module);
+                              }}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              عرض التفاصيل
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(module?.details?.id, module?.type);
+                              }}
+                            >
+                              <Trash className="h-4 w-4 mr-2" />
+                              حذف
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </div>
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(module);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        تعديل
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewModule(module);
-                        }}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        عرض التفاصيل
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(module?.details?.id, module?.type);
-                        }}
-                      >
-                        <Trash className="h-4 w-4 mr-2" />
-                        حذف
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

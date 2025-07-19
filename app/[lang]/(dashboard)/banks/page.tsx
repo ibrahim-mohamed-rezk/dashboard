@@ -176,6 +176,12 @@ function BanksTable() {
   const [levelFilter, setLevelFilter] = useState("all");
   const [teacherIdFilter, setTeacherIdFilter] = useState("all");
 
+  // New filters for price and date range
+  const [priceFrom, setPriceFrom] = useState<string>("");
+  const [priceTo, setPriceTo] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
   // get token from next api
   useEffect(() => {
     const fetchData = async () => {
@@ -204,6 +210,11 @@ function BanksTable() {
       if (globalFilter) params.search = globalFilter;
       if (teacherIdFilter !== "all") params.teacher_id = teacherIdFilter;
       if (levelFilter !== "all") params.level_id = levelFilter;
+      // Add price_from, price_to, date_from, date_to to params if set
+      if (priceFrom) params.price_from = priceFrom;
+      if (priceTo) params.price_to = priceTo;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
       const response = await getData(`banks`, params, {
         Authorization: `Bearer ${token}`,
       });
@@ -232,6 +243,10 @@ function BanksTable() {
     globalFilter,
     teacherIdFilter,
     levelFilter,
+    priceFrom,
+    priceTo,
+    dateFrom,
+    dateTo,
   ]);
 
   // function to fetch courses
@@ -350,6 +365,22 @@ function BanksTable() {
       banktable_id: 1, // Reset to default
     }));
   };
+
+  // --- Add: Reset Filters Handler ---
+  const handleResetFilters = () => {
+    setSubjectFilter("all");
+    setBankTypeFilter("all");
+    setPriceFilter("all");
+    setPositionFilter("all");
+    setLevelFilter("all");
+    setTeacherIdFilter("all");
+    setGlobalFilter("");
+    setPriceFrom("");
+    setPriceTo("");
+    setDateFrom("");
+    setDateTo("");
+  };
+  // ---
 
   // submit course
   const onSubmit = async (e: React.FormEvent) => {
@@ -524,11 +555,10 @@ function BanksTable() {
           <div className="flex items-center justify-center">
             {image ? (
               <div className="relative w-12 h-12 rounded-lg overflow-hidden">
-                <Image
+                <img
                   src={image}
                   alt={row.getValue("name")}
-                  fill
-                  className="object-cover"
+                  className="object-cover w-full h-full"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = "/placeholder-bank.png"; // Fallback image
@@ -552,7 +582,7 @@ function BanksTable() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="h-8 px-2"
         >
-          اسم البنك
+          الموضوع
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
@@ -573,7 +603,7 @@ function BanksTable() {
         return price ? (
           <span className="font-medium text-green-600">{price} ج.م</span>
         ) : (
-          <Badge variant="outline">مجاني</Badge>
+          <span>-</span>
         );
       },
     },
@@ -592,36 +622,27 @@ function BanksTable() {
     {
       accessorKey: "banktable_type",
       header: "النوع",
-      cell: ({ row }) => getTypeBadge(row.getValue("banktable_type")),
+      cell: ({ row }) => {
+        const price = row.getValue("price") as number | null;
+        return price ? (
+          <span className="font-medium text-green-600">مدفوع</span>
+        ) : (
+          <span>مجاني</span>
+        );
+      },
     },
     {
-      accessorKey: "banktable_id",
-      header: "المرتبط بـ",
+      accessorKey: "teacher_name",
+      header: "المعلم",
       cell: ({ row }) => {
-        const bankType = row.getValue("banktable_type") as string;
-        const bankId = row.getValue("banktable_id") as number;
-
-        if (bankType === "course") {
-          const course = courses.find((c) => c.id === bankId);
-          return (
-            <div className="flex items-center !justify-center gap-[5px] space-x-2">
-              <GraduationCap className="w-4 h-4 text-blue-500" />
-              <span className="font-medium ">
-                {course?.title || `كورس #${bankId}`}
-              </span>
-            </div>
-          );
-        } else {
-          const teacher = teachers.find((t) => t.id === bankId);
-          return (
-            <div className="flex items-center !justify-center gap-[5px] space-x-2">
-              <Users className="w-4 h-4 text-green-500" />
-              <span className="font-medium">
-                {teacher?.user?.full_name || `معلم #${bankId}`}
-              </span>
-            </div>
-          );
-        }
+        return <span>{row.getValue("teacher_name")}</span>;
+      },
+    },
+    {
+      accessorKey: "position",
+      header: "الموقع",
+      cell: ({ row }) => {
+        return <span>{row.getValue("position")}</span>;
       },
     },
     {
@@ -629,15 +650,7 @@ function BanksTable() {
       header: "تاريخ الإنشاء",
       cell: ({ row }) => {
         const date = new Date(row.getValue("created_at"));
-        return date.toLocaleDateString("ar-EG");
-      },
-    },
-    {
-      accessorKey: "updated_at",
-      header: "تاريخ التحديث",
-      cell: ({ row }) => {
-        const date = new Date(row.getValue("updated_at"));
-        return date.toLocaleDateString("ar-EG");
+        return date.toLocaleDateString("en-US");
       },
     },
     {
@@ -646,38 +659,84 @@ function BanksTable() {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex items-center justify-center gap-2">
+            <Link href={`/ar/banks/${item.id}`}>
               <Button
                 variant="ghost"
-                className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
+                size="icon"
+                className="h-8 w-8 p-0"
+                title="عرض"
               >
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-blue-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                <span className="sr-only">عرض</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-[160px]">
-              <Link href={`/ar/banks/${item.id}`}>
-                <DropdownMenuItem className="!justify-center">
-                  عرض
-                </DropdownMenuItem>
-              </Link>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="!justify-center"
-                onClick={() => handleEdit(item)}
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 p-0"
+              onClick={() => handleEdit(item)}
+              title="تعديل"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-yellow-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                تعديل
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-600 !justify-center hover:bg-red-50"
-                onClick={() => handleDeleteClick(item)}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2H7a2 2 0 01-2-2v-2a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2z"
+                />
+              </svg>
+              <span className="sr-only">تعديل</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 p-0"
+              onClick={() => handleDeleteClick(item)}
+              title="حذف"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-red-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                حذف
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              <span className="sr-only">حذف</span>
+            </Button>
+          </div>
         );
       },
     },
@@ -746,9 +805,9 @@ function BanksTable() {
   return (
     <div className="space-y-4">
       {/* Enhanced Header with Filters and Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-1 flex-col sm:flex-row gap-2 max-w-4xl">
-          <div className="relative flex-1 order-1 sm:order-none">
+      <div className="flex flex-col gap-4 items-start justify-between">
+        <div className="flex flex-1 flex-wrap gap-2">
+          <div className="relative min-w-[150px] flex-1 order-1 sm:order-none">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="بحث..."
@@ -779,11 +838,57 @@ function BanksTable() {
               <SelectValue placeholder="السعر" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">كل الأسعار</SelectItem>
+              <SelectItem value="all">كل الانواع</SelectItem>
               <SelectItem value="free">مجاني</SelectItem>
               <SelectItem value="paid">مدفوع</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Price From/To Filter */}
+          <div className="flex gap-1 items-center">
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="من سعر"
+              value={priceFrom}
+              onChange={(e) => setPriceFrom(e.target.value)}
+              className="w-[80px]"
+              style={{ direction: "rtl" }}
+            />
+            <span className="text-gray-400">-</span>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="إلى سعر"
+              value={priceTo}
+              onChange={(e) => setPriceTo(e.target.value)}
+              className="w-[80px]"
+              style={{ direction: "rtl" }}
+            />
+          </div>
+
+          {/* Date From/To Filter */}
+          <div className="flex gap-1 items-center">
+            <Input
+              type="date"
+              placeholder="من تاريخ"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-[120px]"
+              style={{ direction: "rtl" }}
+            />
+            <span className="text-gray-400">-</span>
+            <Input
+              type="date"
+              placeholder="إلى تاريخ"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-[120px]"
+              style={{ direction: "rtl" }}
+            />
+          </div>
 
           {/* Position Filter */}
           <Select value={positionFilter} onValueChange={setPositionFilter}>
@@ -826,6 +931,17 @@ function BanksTable() {
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            className="flex items-center gap-2"
+            variant="outline"
+            size="sm"
+            onClick={handleResetFilters}
+            type="button"
+          >
+            <X className="h-4 w-4 mr-2" />
+            إعادة تعيين الفلاتر
+          </Button>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -985,11 +1101,10 @@ function BanksTable() {
                         </div>
                         {imagePreview && (
                           <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                            <Image
+                            <img
                               src={imagePreview}
                               alt="معاينة الصورة"
-                              fill
-                              className="object-cover"
+                              className="object-cover w-full h-full"
                             />
                             <button
                               type="button"
@@ -1249,7 +1364,11 @@ function BanksTable() {
             positionFilter !== "all" ||
             levelFilter !== "all" ||
             teacherIdFilter !== "all" ||
-            globalFilter) && <span className="text-blue-600"> (مفلتر)</span>}
+            globalFilter ||
+            priceFrom ||
+            priceTo ||
+            dateFrom ||
+            dateTo) && <span className="text-blue-600"> (مفلتر)</span>}
         </div>
         <div className="flex items-center gap-2">
           <span>الصفحة</span>
@@ -1342,11 +1461,10 @@ function BanksTable() {
                       </div>
                       {imagePreview && (
                         <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                          <Image
+                          <img
                             src={imagePreview}
                             alt="معاينة الصورة"
-                            fill
-                            className="object-cover"
+                            className="object-cover w-full h-full"
                           />
                           <button
                             type="button"
