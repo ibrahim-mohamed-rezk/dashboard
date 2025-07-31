@@ -1,5 +1,4 @@
 "use client";
-
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,7 +11,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import {
   MoreHorizontal,
   X,
@@ -29,7 +27,6 @@ import {
   Clock,
   Upload,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -69,7 +66,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios, { AxiosHeaders } from "axios";
 import { deleteData, getData, postData } from "@/lib/axios/server";
@@ -77,13 +73,11 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import { Teacher } from "@/lib/type";
 import { user } from "@/app/api/user/data";
-
 function generateSlug(title: string): string {
   const baseSlug = title.toLowerCase().replace(/\s+/g, "-");
   const randomStr = Math.random().toString(36).substring(2, 8);
   return `${baseSlug}-${randomStr}`;
 }
-
 interface Course {
   id: number;
   title: string;
@@ -108,12 +102,10 @@ interface Course {
   is_favorite?: boolean;
   modules?: any[];
 }
-
 interface Level {
   id: number;
   name: string;
 }
-
 interface FormData {
   teacher_id: number;
   subject_id: number;
@@ -129,7 +121,6 @@ interface FormData {
   price: string;
   cover?: File;
 }
-
 interface PaginationMeta {
   total: number;
   count: number;
@@ -142,9 +133,7 @@ interface PaginationMeta {
   from: number;
   to: number;
 }
-
 const DEFAULT_IMAGE = "https://via.placeholder.com/150";
-
 function CoursesTable() {
   const [data, setData] = useState<Course[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -192,8 +181,11 @@ function CoursesTable() {
     null
   );
   const [statistics, setStatistics] = useState<any>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ✅ NEW: Multi-select state
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [deleteSelectedDialogOpen, setDeleteSelectedDialogOpen] = useState<boolean>(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -206,7 +198,6 @@ function CoursesTable() {
       [name]: value,
     }));
   };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFormData((prev) => ({
@@ -215,13 +206,11 @@ function CoursesTable() {
       }));
     }
   };
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
-
       // Add all form fields
       formDataToSend.append("teacher_id", formData.teacher_id.toString());
       formDataToSend.append("subject_id", formData.subject_id.toString());
@@ -235,17 +224,14 @@ function CoursesTable() {
       formDataToSend.append("meta_keywords", formData.meta_keywords);
       formDataToSend.append("status", formData.status);
       formDataToSend.append("price", formData.price);
-
       // Add cover file if exists
       if (formData.cover) {
         formDataToSend.append("cover", formData.cover);
       }
-
       await postData("/courses", formDataToSend, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
-
       toast.success("تم إضافة الكورس بنجاح");
       setAddCourse(false);
       setFormData({
@@ -273,7 +259,6 @@ function CoursesTable() {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     const fetchToken = async () => {
       try {
@@ -287,7 +272,6 @@ function CoursesTable() {
     };
     fetchToken();
   }, []);
-
   // Add teachers fetching for admin
   const fetchTeachers = async () => {
     if (!token || userRole !== "admin") return;
@@ -304,7 +288,6 @@ function CoursesTable() {
       toast.error("Failed to fetch teachers");
     }
   };
-
   // get subjects from api
   const fetchSubjects = async () => {
     if (!token) return;
@@ -321,14 +304,12 @@ function CoursesTable() {
       toast.error("Failed to fetch subjects");
     }
   };
-
   useEffect(() => {
     if (userRole === "admin") {
       fetchTeachers();
     }
     fetchSubjects();
   }, [userRole, token]);
-
   // Update form data when user role changes
   useEffect(() => {
     if (userRole === "teacher") {
@@ -338,7 +319,6 @@ function CoursesTable() {
       }));
     }
   }, [userRole, userId]);
-
   // fetch courses form api
   const fetchData = async (page: number = 1) => {
     if (!token) return;
@@ -371,7 +351,6 @@ function CoursesTable() {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     if (token) {
       fetchData();
@@ -389,7 +368,6 @@ function CoursesTable() {
     priceFrom,
     priceTo,
   ]);
-
   // fetch levels form api
   const fetchLevels = async () => {
     if (!token) return;
@@ -407,13 +385,11 @@ function CoursesTable() {
       console.error("Error fetching levels:", error);
     }
   };
-
   useEffect(() => {
     if (token) {
       fetchLevels();
     }
   }, [token]);
-
   // edit course
   const handleEdit = (course: Course) => {
     setEditingCourse(course);
@@ -433,7 +409,6 @@ function CoursesTable() {
       cover: undefined,
     };
     setFormData(courseData);
-
     // Set form values for validation
     Object.keys(courseData).forEach((key) => {
       handleInputChange({
@@ -443,20 +418,16 @@ function CoursesTable() {
         },
       } as React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>);
     });
-
     setEditCourse(true);
   };
-
   // open delete dialog
   const handleDeleteClick = (course: Course) => {
     setCourseToDelete(course);
     setDeleteDialogOpen(true);
   };
-
   // delete course
   const handleDeleteConfirm = async () => {
     if (!courseToDelete) return;
-
     setIsLoading(true);
     try {
       await deleteData(`/courses/${courseToDelete.id}`, {
@@ -468,6 +439,29 @@ function CoursesTable() {
       setCourseToDelete(null);
     } catch (error) {
       toast.error("فشل في حذف الكورس");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ NEW: Multi-delete handler
+  const handleDeleteSelectedConfirm = async () => {
+    if (selectedRows.size === 0) return;
+    setIsLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedRows).map((id) =>
+          deleteData(`/courses/${id}`, {
+            Authorization: `Bearer ${token}`,
+          })
+        )
+      );
+      toast.success(`تم حذف ${selectedRows.size} كورس(ات) بنجاح`);
+      setSelectedRows(new Set());
+      setDeleteSelectedDialogOpen(false);
+      fetchData(); // Refresh data
+    } catch (error) {
+      toast.error("فشل في حذف بعض الكورسات");
     } finally {
       setIsLoading(false);
     }
@@ -501,7 +495,6 @@ function CoursesTable() {
         return <Badge>غير محدد</Badge>;
     }
   };
-
   const getTypeBadge = (type?: string) => {
     switch (type) {
       case "paid":
@@ -512,45 +505,93 @@ function CoursesTable() {
         return <Badge variant="outline">غير محدد</Badge>;
     }
   };
-
   const exportToCSV = () => {
-    const headers = [
-      "العنوان",
-      "رقم الكورس",
-      "المستوى",
-      "الموضوع",
-      "النوع",
-      "السعر",
-      "الموقع",
-      "الحالة",
-    ];
-    const csvData = data.map((course) => [
-      course.title,
-      course.cour_no,
-      course.level,
-      course.subject,
-      course.type || "",
-      course.price || "",
-      course.position || "",
-      course.status || "",
-    ]);
+  const headers = [
+    "العنوان",
+    "رقم الكورس",
+    "المستوى",
+    "الموضوع",
+    "النوع",
+    "السعر",
+    "الموقع",
+    "الحالة",
+  ];
+  const csvData = data.map((course) => [
+    course.title,
+    course.cour_no,
+    course.level,
+    course.subject,
+    course.type || "",
+    course.price || "",
+    course.position || "",
+    course.status || "",
+  ]);
+  // ✅ Use \n for newline
+  const csvContent = [headers, ...csvData]
+    .map((row) => row.map((cell) => `"${cell}"`).join(","))
+    .join("\n");
+  // Add UTF-8 BOM for proper Arabic display
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "courses.csv";
+  link.click();
+};
 
-    const csvContent = [headers, ...csvData]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    // Add UTF-8 BOM for proper Arabic display
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "courses.csv";
-    link.click();
-  };
-
+  // ✅ NEW: Multi-select column (insert as first column)
   const columns: ColumnDef<Course>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={
+              table.getFilteredRowModel().rows.every((row) =>
+                selectedRows.has(row.original.id)
+              ) &&
+              table.getFilteredRowModel().rows.length > 0
+            }
+            onChange={() => {
+              const newSelected = new Set(selectedRows);
+              const rows = table.getFilteredRowModel().rows;
+              if (
+                rows.every((row) => newSelected.has(row.original.id))
+              ) {
+                rows.forEach((row) => newSelected.delete(row.original.id));
+              } else {
+                rows.forEach((row) => newSelected.add(row.original.id));
+              }
+              setSelectedRows(newSelected);
+            }}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={selectedRows.has(row.original.id)}
+            onChange={() => {
+              const newSelected = new Set(selectedRows);
+              if (newSelected.has(row.original.id)) {
+                newSelected.delete(row.original.id);
+              } else {
+                newSelected.add(row.original.id);
+              }
+              setSelectedRows(newSelected);
+            }}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "title",
       header: ({ column }) => (
@@ -714,7 +755,6 @@ function CoursesTable() {
       columnVisibility,
     },
   });
-
   useEffect(() => {
     table.setPageSize(data.length || 15);
   }, [data.length]);
@@ -792,7 +832,6 @@ function CoursesTable() {
           </div>
         </div>
       </div>
-
       {userRole === "admin" && (
         <div className="space-y-2">
           <label
@@ -829,7 +868,6 @@ function CoursesTable() {
           </select>
         </div>
       )}
-
       <div className="space-y-2">
         <label htmlFor="title" className="text-sm font-medium">
           عنوان الكورس *
@@ -843,7 +881,6 @@ function CoursesTable() {
           required
         />
       </div>
-
       <div className="space-y-2">
         <label htmlFor="subject" className="text-sm font-medium">
           المادة *
@@ -873,21 +910,8 @@ function CoursesTable() {
               {subject.name}
             </option>
           ))}
-          {/* <option value="1" className="dark:bg-gray-800 dark:!text-white">
-            رياضيات
-          </option>
-          <option value="2" className="dark:bg-gray-800 dark:!text-white">
-            علوم
-          </option>
-          <option value="3" className="dark:bg-gray-800 dark:!text-white">
-            لغة عربية
-          </option>
-          <option value="4" className="dark:bg-gray-800 dark:!text-white">
-            لغة إنجليزية
-          </option> */}
         </select>
       </div>
-
       <div className="space-y-2">
         <label htmlFor="level" className="text-sm font-medium">
           المستوى *
@@ -919,7 +943,6 @@ function CoursesTable() {
           ))}
         </select>
       </div>
-
       <div className="space-y-2">
         <label htmlFor="type" className="text-sm font-medium">
           النوع *
@@ -945,7 +968,6 @@ function CoursesTable() {
           </option>
         </select>
       </div>
-
       {formData.type === "paid" && (
         <div className="space-y-2">
           <label htmlFor="price" className="text-sm font-medium">
@@ -964,7 +986,6 @@ function CoursesTable() {
           />
         </div>
       )}
-
       <div className="space-y-2">
         <label htmlFor="position" className="text-sm font-medium">
           الموقع
@@ -992,7 +1013,6 @@ function CoursesTable() {
           </option>
         </select>
       </div>
-
       <div className="space-y-2">
         <label htmlFor="status" className="text-sm font-medium">
           الحالة
@@ -1026,7 +1046,6 @@ function CoursesTable() {
           </option>
         </select>
       </div>
-
       <div className="space-y-2">
         <label htmlFor="meta_description" className="text-sm font-medium">
           وصف الميتا
@@ -1039,7 +1058,6 @@ function CoursesTable() {
           onChange={handleInputChange}
         />
       </div>
-
       <div className="space-y-2">
         <label htmlFor="meta_keywords" className="text-sm font-medium">
           كلمات الميتا
@@ -1052,7 +1070,6 @@ function CoursesTable() {
           onChange={handleInputChange}
         />
       </div>
-
       <div className="space-y-2">
         <label htmlFor="description" className="text-sm font-medium">
           الوصف
@@ -1067,12 +1084,10 @@ function CoursesTable() {
       </div>
     </div>
   );
-
   const updateCourse = async (id: number) => {
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
-
       // Add all form fields
       formDataToSend.append("teacher_id", formData.teacher_id.toString());
       formDataToSend.append("subject_id", formData.subject_id.toString());
@@ -1087,17 +1102,14 @@ function CoursesTable() {
       formDataToSend.append("status", formData.status);
       formDataToSend.append("price", formData.price);
       formDataToSend.append("_method", "PUT");
-
       // Add cover file if exists
       if (formData.cover) {
         formDataToSend.append("cover", formData.cover);
       }
-
       await postData(`/courses/${id}`, formDataToSend, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
-
       toast.success("تم تحديث الكورس بنجاح");
       setEditCourse(false);
       setEditingCourse(null);
@@ -1156,8 +1168,7 @@ function CoursesTable() {
               </SelectContent>
             </Select>
           )}
-
-          <Select value={levelFilter} onValueChange={setSubjectFilter}>
+          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
             <SelectTrigger className="w-full sm:w-[130px] h-10">
               <SelectValue placeholder="المادة" />
             </SelectTrigger>
@@ -1197,17 +1208,6 @@ function CoursesTable() {
             className="w-full sm:w-[120px] h-10"
             placeholder="إلى تاريخ"
           />
-          {/* <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-full sm:w-[110px] h-10">
-              <SelectValue placeholder="النوع" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الأنواع</SelectItem>
-              <SelectItem value="paid">مدفوع</SelectItem>
-              <SelectItem value="free">مجاني</SelectItem>
-            </SelectContent>
-          </Select> */}
-          {/* Price From/To Filter */}
           <div className="flex gap-1 items-center">
             <Input
               type="number"
@@ -1241,7 +1241,6 @@ function CoursesTable() {
               <SelectItem value="offline">أوفلاين</SelectItem>
             </SelectContent>
           </Select>
-          {/* Reset Filters Button */}
           <Button
             variant="outline"
             size="sm"
@@ -1320,6 +1319,20 @@ function CoursesTable() {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* ✅ NEW: Delete Selected Button (only when items are selected) */}
+          {selectedRows.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 h-10 w-full sm:w-auto"
+              onClick={() => setDeleteSelectedDialogOpen(true)}
+            >
+              <X className="h-4 w-4 mr-2" />
+              حذف ({selectedRows.size})
+            </Button>
+          )}
+
           <Dialog open={addCourse} onOpenChange={setAddCourse}>
             {userRole === "admin" && (
               <DialogTrigger asChild>
@@ -1451,22 +1464,6 @@ function CoursesTable() {
             </div>
           </div>
         </div>
-
-        {/* <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg border dark:border-yellow-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                المسودات
-              </p>
-              <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-200">
-                {data.filter((course) => course.status === "draft").length}
-              </p>
-            </div>
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg">
-              <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-            </div>
-          </div>
-        </div> */}
       </div>
 
       {/* Results Summary */}
@@ -1511,7 +1508,6 @@ function CoursesTable() {
             >
               <div className="space-y-6">
                 {formGrid}
-
                 <div className="space-y-2">
                   <label
                     htmlFor="edit-description"
@@ -1528,7 +1524,6 @@ function CoursesTable() {
                     onChange={handleInputChange}
                   />
                 </div>
-
                 {editError && (
                   <Alert variant="soft">
                     <AlertTriangle className="h-4 w-4" />
@@ -1537,7 +1532,6 @@ function CoursesTable() {
                     />
                   </Alert>
                 )}
-
                 <div className="flex gap-3 pt-4">
                   <Button type="submit" disabled={isLoading} className="flex-1">
                     {isLoading ? (
@@ -1593,6 +1587,45 @@ function CoursesTable() {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              disabled={isLoading}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ NEW: Multi-Delete Confirmation Dialog */}
+      <Dialog open={deleteSelectedDialogOpen} onOpenChange={setDeleteSelectedDialogOpen}>
+        <DialogContent className="w-full max-w-7xl dark:bg-gray-900 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              تأكيد الحذف
+            </DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              هل أنت متأكد من حذف <strong>{selectedRows.size}</strong> كورس(ات) المحددة؟ هذا الإجراء لا يمكن التراجع عنه.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={handleDeleteSelectedConfirm}
+              disabled={isLoading}
+              className="flex-1"
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  جاري الحذف...
+                </>
+              ) : (
+                "حذف المحدد"
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteSelectedDialogOpen(false)}
               disabled={isLoading}
             >
               إلغاء
@@ -1726,5 +1759,4 @@ function CoursesTable() {
     </div>
   );
 }
-
 export default CoursesTable;
