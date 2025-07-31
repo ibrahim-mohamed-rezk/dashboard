@@ -159,6 +159,8 @@ function CoursesTable() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [priceFrom, setPriceFrom] = useState<string>("");
+  const [priceTo, setPriceTo] = useState<string>("");
   const [formData, setFormData] = useState<FormData>({
     teacher_id: 0,
     subject_id: 0,
@@ -351,6 +353,8 @@ function CoursesTable() {
           level_id: levelFilter === "all" ? undefined : levelFilter,
           position: positionFilter === "all" ? undefined : positionFilter,
           type: typeFilter === "all" ? undefined : typeFilter,
+          price_from: priceFrom || undefined,
+          price_to: priceTo || undefined,
           from_date: fromDateFilter || undefined,
           to_date: toDateFilter || undefined,
         },
@@ -382,6 +386,8 @@ function CoursesTable() {
     toDateFilter,
     typeFilter,
     positionFilter,
+    priceFrom,
+    priceTo,
   ]);
 
   // fetch levels form api
@@ -1201,6 +1207,30 @@ function CoursesTable() {
               <SelectItem value="free">مجاني</SelectItem>
             </SelectContent>
           </Select> */}
+          {/* Price From/To Filter */}
+          <div className="flex gap-1 items-center">
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="من سعر"
+              value={priceFrom}
+              onChange={(e) => setPriceFrom(e.target.value)}
+              className="w-[100px] sm:w-[120px] h-10"
+              style={{ direction: "rtl" }}
+            />
+            <span className="text-gray-400">-</span>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="إلى سعر"
+              value={priceTo}
+              onChange={(e) => setPriceTo(e.target.value)}
+              className="w-[100px] sm:w-[120px] h-10"
+              style={{ direction: "rtl" }}
+            />
+          </div>
           <Select value={positionFilter} onValueChange={setPositionFilter}>
             <SelectTrigger className="w-full sm:w-[110px] h-10">
               <SelectValue placeholder="الموقع" />
@@ -1218,6 +1248,8 @@ function CoursesTable() {
             className="flex items-center gap-2 h-10 w-full sm:w-auto"
             onClick={() => {
               setGlobalFilter("");
+              setPriceFrom("");
+              setPriceTo("");
               setTeacherFilter("all");
               setSubjectFilter("all");
               setLevelFilter("all");
@@ -1443,7 +1475,9 @@ function CoursesTable() {
           عرض {data.length} من {paginationMeta?.total} كورس
           {(typeFilter !== "all" ||
             positionFilter !== "all" ||
-            globalFilter) && <span className="text-blue-600"> (مفلتر)</span>}
+            globalFilter ||
+            priceFrom ||
+            priceTo) && <span className="text-blue-600"> (مفلتر)</span>}
         </div>
         <div className="flex items-center gap-2">
           <span>الصفحة</span>

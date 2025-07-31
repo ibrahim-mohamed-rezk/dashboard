@@ -66,6 +66,7 @@ const CourseModules = ({
       question: string;
       options: { id?: number; answer: string; is_correct: boolean }[];
       correct_answer?: number;
+      degree: number;
     }[],
     created_at: "",
   });
@@ -83,6 +84,7 @@ const CourseModules = ({
     questions: [] as {
       question: string;
       options: { answer: string; is_correct: boolean }[];
+      degree: number;
     }[],
     exam_belongs_to: "course" as "course" | "video",
     exam_video_id: "",
@@ -99,6 +101,7 @@ const CourseModules = ({
       { answer: "", is_correct: false },
     ],
     written_answer: "",
+    degree: 1, // Default degree is 1
   });
 
   // For editing existing questions
@@ -317,6 +320,10 @@ const CourseModules = ({
             `questions[${questionNumber}][question]`,
             question.question
           );
+          formData.append(
+            `questions[${questionNumber}][degree]`,
+            question.degree.toString()
+          );
 
           question.options.forEach((option, optIndex) => {
             formData.append(
@@ -423,6 +430,7 @@ const CourseModules = ({
           is_correct: q.correct_answer === index + 1,
         })),
         correct_answer: q.correct_answer,
+        degree: q.degree,
       })) || [];
 
     setEditForm((prev) => ({
@@ -509,6 +517,10 @@ const CourseModules = ({
           formData.append(
             `questions[${questionNumber}][answer]`,
             (correctAnswerIndex + 1).toString()
+          );
+          formData.append(
+            `questions[${questionNumber}][degree]`,
+            question.degree.toString()
           );
         });
         if (newModuleForm.exam_image) {
@@ -618,14 +630,20 @@ const CourseModules = ({
           {
             question: currentQuestion.question,
             options: currentQuestion.options,
+            degree: currentQuestion.degree,
           },
         ],
       });
     } else {
       // Add to new module form
+      // setNewModuleForm({
+      //   ...newModuleForm,
+      //   questions: [
+      //     ...newModuleForm.questions, currentQuestion],
+      // });
       setNewModuleForm({
         ...newModuleForm,
-        questions: [...newModuleForm.questions, currentQuestion],
+        questions: [...newModuleForm.questions, { ...currentQuestion }],
       });
     }
 
@@ -639,6 +657,7 @@ const CourseModules = ({
         { answer: "", is_correct: false },
       ],
       written_answer: "",
+      degree: 1,
     });
   };
 
@@ -745,7 +764,7 @@ const CourseModules = ({
           { answer: opt3, is_correct: correct == 3 },
           { answer: opt4, is_correct: correct == 4 },
         ];
-        return { question, options };
+        return { question, options, degree: 1 };
       });
 
       setNewModuleForm((prev) => ({
@@ -843,13 +862,27 @@ const CourseModules = ({
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-right rtl">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">#</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">العنوان</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">النوع</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">الوصف</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">تاريخ الإنشاء</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">عدد الأسئلة</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">إجراءات</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    #
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    العنوان
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    النوع
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    الوصف
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    تاريخ الإنشاء
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    عدد الأسئلة
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    إجراءات
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
@@ -861,7 +894,8 @@ const CourseModules = ({
                   >
                     <td className="px-4 py-3 font-medium">{index + 1}</td>
                     <td className="px-4 py-3 flex items-center gap-2 min-w-[180px]">
-                      {module?.type === "video" && module?.details?.thumbnail ? (
+                      {module?.type === "video" &&
+                      module?.details?.thumbnail ? (
                         <span className="inline-block w-10 h-10 relative rounded overflow-hidden mr-2">
                           <img
                             src={module.details.thumbnail}
@@ -889,7 +923,9 @@ const CourseModules = ({
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                       {module?.details?.created_at
-                        ? new Date(module.details.created_at).toLocaleDateString("ar-EG", {
+                        ? new Date(
+                            module.details.created_at
+                          ).toLocaleDateString("ar-EG", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
@@ -899,9 +935,9 @@ const CourseModules = ({
                     <td className="px-4 py-3">
                       {module.type === "video" && module?.details?.has_quiz
                         ? module?.details?.quiz?.[0]?.questions_count || 0
-                        : (module?.details?.questions_count ||
+                        : module?.details?.questions_count ||
                           module?.details?.questions?.length ||
-                          0)}
+                          0}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -2257,7 +2293,7 @@ const CourseModules = ({
                     </label>
                     <Input
                       type="date"
-                      min={new Date().toISOString().split("T")[0]}
+                      // min={new Date().toISOString().split("T")[0]}
                       value={newModuleForm.created_at || ""}
                       onChange={(e) =>
                         setNewModuleForm({
@@ -2333,6 +2369,9 @@ const CourseModules = ({
                               <p className="font-medium text-sm">
                                 {index + 1}. {q.question}
                               </p>
+                              <span className="text-xs text-blue-600 dark:text-blue-300 mr-2">
+                                الدرجة: {q.degree}
+                              </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -2388,7 +2427,24 @@ const CourseModules = ({
                           rows={2}
                         />
                       </div>
-
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          الدرجة
+                        </label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={currentQuestion.degree}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              degree: parseInt(e.target.value) || 1,
+                            })
+                          }
+                          placeholder="الدرجة (مثلاً: 1)"
+                          className="w-20"
+                        />
+                      </div>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="block text-sm font-medium">
