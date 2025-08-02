@@ -10,7 +10,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-import { Button } from "@/components/ui/button";
+import { Button  } from "@/components/ui/button";
 import { useEffect, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
