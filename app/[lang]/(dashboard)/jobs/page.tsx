@@ -7,8 +7,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  // getRowId,
 } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,9 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Badge } from "@/components/ui/badge";
-
 import {
   Dialog,
   DialogContent,
@@ -30,7 +28,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -90,6 +87,9 @@ function JobsDataTable() {
     salary: "",
   });
 
+  // --- NEW: State for selected rows ---
+  const [rowSelection, setRowSelection] = useState({});
+
   // refetch jobs
   const refetchJobs = async (page: number = 1) => {
     try {
@@ -118,7 +118,6 @@ function JobsDataTable() {
         throw error;
       }
     };
-
     fetchData();
   }, []);
 
@@ -173,7 +172,6 @@ function JobsDataTable() {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       });
-
       reset();
       setFormData({
         title: "",
@@ -211,7 +209,6 @@ function JobsDataTable() {
           "Content-Type": "application/json",
         }
       );
-
       reset();
       setEditingJob(null);
       refetchJobs();
@@ -239,7 +236,6 @@ function JobsDataTable() {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       });
-
       reset();
       setEditingJob(null);
       refetchJobs();
@@ -257,6 +253,22 @@ function JobsDataTable() {
         setError("An unexpected error occurred");
       }
       throw error;
+    }
+  };
+
+  // --- NEW: Bulk delete handler ---
+  const handleBulkDelete = async () => {
+    const selectedIds = Object.keys(rowSelection).map(Number);
+
+    if (!selectedIds.length) return;
+
+    try {
+      await Promise.all(selectedIds.map((id) => deleteJob(id)));
+      setRowSelection({}); // Clear selection
+      refetchJobs(); // Refresh list
+      toast.success(`تم حذف ${selectedIds.length} وظيفة`);
+    } catch (error) {
+      toast.error("حدث خطأ أثناء الحذف");
     }
   };
 
@@ -279,8 +291,36 @@ function JobsDataTable() {
     }
   }, [editingJob]);
 
+  // --- NEW: Selection column ---
+  const selectionColumn: ColumnDef<Job> = {
+    id: "select",
+    header: ({ table }) => (
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          checked={table.getIsAllRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+          className="w-4 h-4 rounded border-gray-300"
+        />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={() => row.toggleSelected()}
+          className="w-4 h-4 rounded border-gray-300"
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  };
+
   // columns of table
   const columns: ColumnDef<Job>[] = [
+    selectionColumn, // Add first
     {
       accessorKey: "title",
       header: "عنوان الوظيفة",
@@ -331,7 +371,7 @@ function JobsDataTable() {
     },
   ];
 
-  // table
+  // --- FIXED: Table config with full selection support ---
   const table = useReactTable({
     data,
     columns,
@@ -339,11 +379,24 @@ function JobsDataTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    // --- Enable row selection ---
+    enableRowSelection: true,
+    // --- Track selection changes ---
+    onRowSelectionChange: setRowSelection,
+    // --- Sync selection state ---
+    state: {
+      rowSelection,
+    },
+    // --- Ensure correct row ID based on job.id ---
+    getRowId: (row) => String(row.id), // Critical: Use actual `id`
   });
+
+  // --- Get selected count ---
+  const selectedRowsCount = Object.keys(rowSelection).length;
 
   return (
     <>
-      <div className="flex items-center gap-2 px-4 mb-4">
+      <div className="flex items-center justify-between gap-2 px-4 mb-4 flex-wrap">
         {/* search input */}
         <Input
           placeholder="بحث بالعنوان..."
@@ -353,90 +406,104 @@ function JobsDataTable() {
           }
           className="max-w-sm min-w-[200px] h-10"
         />
-        {/* add job Dialog */}
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline">إضافة وظيفة</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>إضافة وظيفة جديدة</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="title">عنوان الوظيفة</label>
-                  <Input
-                    {...register("title")}
-                    id="title"
-                    placeholder="أدخل عنوان الوظيفة"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleTitleChange}
-                  />
+
+        <div className="flex gap-2">
+          {/* Show delete selected button only if items selected */}
+          {selectedRowsCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkDelete}
+            >
+              حذف {selectedRowsCount} عنصر
+            </Button>
+          )}
+
+          {/* add job Dialog */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">إضافة وظيفة</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>إضافة وظيفة جديدة</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="title">عنوان الوظيفة</label>
+                    <Input
+                      {...register("title")}
+                      id="title"
+                      placeholder="أدخل عنوان الوظيفة"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleTitleChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="slug">الرابط المختصر</label>
+                    <Input
+                      {...register("slug")}
+                      id="slug"
+                      placeholder="job-slug"
+                      name="slug"
+                      value={formData.slug}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="description">وصف الوظيفة</label>
+                    <textarea
+                      {...register("description")}
+                      id="description"
+                      placeholder="أدخل وصف مفصل للوظيفة"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded min-h-[100px] resize-vertical"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="salary">الراتب</label>
+                    <Input
+                      {...register("salary")}
+                      id="salary"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      name="salary"
+                      value={formData.salary}
+                      onChange={handleInputChange}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label htmlFor="slug">الرابط المختصر</label>
-                  <Input
-                    {...register("slug")}
-                    id="slug"
-                    placeholder="job-slug"
-                    name="slug"
-                    value={formData.slug}
-                    onChange={handleInputChange}
-                  />
+                  {error && (
+                    <p
+                      className="text-red-500 mt-2"
+                      dangerouslySetInnerHTML={{ __html: error }}
+                    />
+                  )}
                 </div>
-                <div>
-                  <label htmlFor="description">وصف الوظيفة</label>
-                  <textarea
-                    {...register("description")}
-                    id="description"
-                    placeholder="أدخل وصف مفصل للوظيفة"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded min-h-[100px] resize-vertical"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="salary">الراتب</label>
-                  <Input
-                    {...register("salary")}
-                    id="salary"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    name="salary"
-                    value={formData.salary}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-              <div>
-                {error && (
-                  <p
-                    className="text-red-500 mt-2"
-                    dangerouslySetInnerHTML={{ __html: error }}
-                  />
-                )}
-              </div>
-              <div className="mt-6 space-y-2">
-                <Button type="submit" className="w-full">
-                  إضافة
-                </Button>
-                <DialogClose asChild>
-                  <Button
-                    ref={dialogCloseRef}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    إلغاء
+                <div className="mt-6 space-y-2">
+                  <Button type="submit" className="w-full">
+                    إضافة
                   </Button>
-                </DialogClose>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                  <DialogClose asChild>
+                    <Button
+                      ref={dialogCloseRef}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      إلغاء
+                    </Button>
+                  </DialogClose>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Edit Job Dialog */}
@@ -575,8 +642,6 @@ function JobsDataTable() {
             >
               السابق
             </Button>
-
-            {/* Page Numbers */}
             <div className="flex items-center gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                 (pageNumber) => (
@@ -596,7 +661,6 @@ function JobsDataTable() {
                 )
               )}
             </div>
-
             <Button
               variant="outline"
               size="sm"

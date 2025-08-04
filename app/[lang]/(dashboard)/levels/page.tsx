@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,7 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import {
   Dialog,
   DialogContent,
@@ -28,7 +26,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -85,7 +82,7 @@ function LevelsDataTable() {
     marketing_teachers: "",
   });
 
-  // refetch levels
+  // Refetch levels
   const refetchLevels = async (page: number = 1) => {
     try {
       const response = await getData(
@@ -104,7 +101,7 @@ function LevelsDataTable() {
     }
   };
 
-  // get token from next api
+  // Get token from Next.js API
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -114,11 +111,10 @@ function LevelsDataTable() {
         throw error;
       }
     };
-
     fetchData();
   }, []);
 
-  // handle input change
+  // Handle input change
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -129,7 +125,7 @@ function LevelsDataTable() {
     }));
   };
 
-  // add level validation schema
+  // Add level validation schema
   const schema = z.object({
     name: z.string().min(2, "اسم المستوى مطلوب"),
     marketing_teachers: z.string().min(2, "اسم التسويق مطلوب"),
@@ -140,17 +136,15 @@ function LevelsDataTable() {
     mode: "all",
   });
 
-  // handle submit for adding new level
+  // Handle submit for adding new level
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
     try {
       await postData("levels", formData, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       });
-
       reset();
       setFormData({
         name: "",
@@ -174,10 +168,9 @@ function LevelsDataTable() {
     }
   };
 
-  // update level
+  // Update level
   const updateLevel = async (id: number) => {
     setEditError(null);
-
     try {
       await postData(
         `levels/${id}`,
@@ -187,7 +180,6 @@ function LevelsDataTable() {
           "Content-Type": "application/json",
         }
       );
-
       reset();
       setEditingLevel(null);
       refetchLevels();
@@ -208,18 +200,16 @@ function LevelsDataTable() {
     }
   };
 
-  // delete level
+  // Delete level (single)
   const deleteLevel = async (id: number) => {
     if (!confirm("هل أنت متأكد من حذف هذا المستوى؟")) {
       return;
     }
-
     try {
       await deleteData(`levels/${id}`, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       });
-
       refetchLevels();
       toast.success("تم حذف المستوى بنجاح");
     } catch (error) {
@@ -237,14 +227,43 @@ function LevelsDataTable() {
     }
   };
 
-  // fetch levels from api
+  // Bulk delete (no per-item confirm)
+  const deleteSelectedLevels = async () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    if (selectedRows.length === 0) return;
+
+    const ids = selectedRows.map((row) => row.original.id);
+    const message = `هل أنت متأكد من حذف ${ids.length} مستوى(مستويات)؟`;
+    if (!confirm(message)) return;
+
+    // Perform deletions one by one (same logic as single delete)
+    for (const id of ids) {
+      try {
+        await deleteData(`levels/${id}`, {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        });
+      } catch (err) {
+        const errorMsg = axios.isAxiosError(err)
+          ? Object.values(err.response?.data?.errors || {}).flat().join(" ")
+          : "حذف فاشل";
+        toast.error(`فشل في حذف المستوى ${id}: ${errorMsg}`);
+      }
+    }
+
+    refetchLevels();
+    toast.success(`تم حذف ${ids.length} مستوى(مستويات) بنجاح`);
+    table.toggleAllPageRowsSelected(false);
+  };
+
+  // Fetch levels from API
   useEffect(() => {
     if (token) {
       refetchLevels(currentPage);
     }
   }, [token, currentPage]);
 
-  // Update useEffect to set form data when editing level changes
+  // Update form data when editing level changes
   useEffect(() => {
     if (editingLevel) {
       setFormData({
@@ -272,8 +291,31 @@ function LevelsDataTable() {
     setEditError(null);
   };
 
-  // columns of table
+  // Columns with multi-select checkbox
   const columns: ColumnDef<Level>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={() => table.toggleAllPageRowsSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={row.getIsSelected()}
+          onChange={() => row.toggleSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "name",
       header: "اسم المستوى",
@@ -312,7 +354,7 @@ function LevelsDataTable() {
     },
   ];
 
-  // table
+  // Table instance with selection
   const table = useReactTable({
     data,
     columns,
@@ -320,12 +362,13 @@ function LevelsDataTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    enableRowSelection: true, // Enable multi-select
   });
 
   return (
     <>
       <div className="flex items-center gap-2 px-4 mb-4">
-        {/* search input */}
+        {/* Search Input */}
         <Input
           placeholder="بحث بالاسم..."
           value={(table.getColumn("name")?.getFilterValue() as string) || ""}
@@ -335,7 +378,18 @@ function LevelsDataTable() {
           className="max-w-sm min-w-[200px] h-10"
         />
 
-        {/* add level Dialog */}
+        {/* Bulk Delete Button */}
+        {table.getFilteredSelectedRowModel().rows.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={deleteSelectedLevels}
+          >
+            حذف المحدد ({table.getFilteredSelectedRowModel().rows.length})
+          </Button>
+        )}
+
+        {/* Add Level Dialog */}
         <Dialog onOpenChange={(open) => !open && handleAddDialogClose()}>
           <DialogTrigger asChild>
             <Button variant="outline">إضافة مستوى</Button>
@@ -483,7 +537,7 @@ function LevelsDataTable() {
         </DialogContent>
       </Dialog>
 
-      {/* levels table */}
+      {/* Levels Table */}
       <div className="overflow-x-auto">
         <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
           <TableHeader>
@@ -538,19 +592,17 @@ function LevelsDataTable() {
             >
               السابق
             </Button>
-
-            {/* Page Numbers */}
             <div className="flex items-center gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                 (pageNumber) => (
                   <Button
                     key={pageNumber}
-                    variant={"outline"}
+                    variant="outline"
                     size="sm"
                     onClick={() => refetchLevels(pageNumber)}
                     className={`w-9 h-9 font-medium transition-all duration-200 ${
                       pageNumber === currentPage
-                        ? "scale-110"
+                        ? "scale-110 bg-blue-100 dark:bg-blue-900"
                         : "hover:scale-105"
                     }`}
                   >
@@ -559,7 +611,6 @@ function LevelsDataTable() {
                 )
               )}
             </div>
-
             <Button
               variant="outline"
               size="sm"

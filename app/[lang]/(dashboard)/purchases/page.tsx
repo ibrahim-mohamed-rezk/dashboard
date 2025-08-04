@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,9 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Badge } from "@/components/ui/badge";
-
 import {
   Select,
   SelectContent,
@@ -29,9 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { useEffect, useState } from "react";
-import { getData, postData } from "@/lib/axios/server";
+import { getData, postData, deleteData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
@@ -104,16 +100,11 @@ function PurchasesDataTable() {
   const [token, setToken] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [purchaseType, setPurchaseType] = useState<"courses" | "books">(
-    "courses"
-  );
+  const [purchaseType, setPurchaseType] = useState<"courses" | "books">("courses");
   const [isLoading, setIsLoading] = useState(false);
 
-  // refetch purchases
-  const refetchPurchases = async (
-    page: number = 1,
-    type: string = purchaseType
-  ) => {
+  // Refetch purchases
+  const refetchPurchases = async (page: number = 1, type: string = purchaseType) => {
     setIsLoading(true);
     try {
       const response = await getData(
@@ -134,28 +125,27 @@ function PurchasesDataTable() {
     }
   };
 
-  // get token from next api
+  // Get token from Next.js API
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
       } catch (error) {
-        throw error;
+        console.error("Failed to fetch token", error);
       }
     };
-
     fetchData();
   }, []);
 
-  // fetch purchases from api
+  // Fetch purchases from API
   useEffect(() => {
     if (token) {
       refetchPurchases(currentPage, purchaseType);
     }
   }, [token, currentPage, purchaseType]);
 
-  // change purchase status
+  // Change purchase status
   const changeStatus = async (
     id: number,
     newStatus: "complete" | "pending" | "failed"
@@ -169,7 +159,6 @@ function PurchasesDataTable() {
           "Content-Type": "application/json",
         }
       );
-
       refetchPurchases(currentPage, purchaseType);
       toast.success("تم تحديث حالة الشراء بنجاح");
     } catch (error) {
@@ -184,20 +173,68 @@ function PurchasesDataTable() {
       } else {
         toast.error("حدث خطأ غير متوقع");
       }
-      throw error;
     }
   };
 
-  // get status badge variant
+  // Delete a single purchase
+  const deletePurchase = async (id: number) => {
+    if (!confirm("هل أنت متأكد من حذف هذا الشراء؟")) {
+      return;
+    }
+    try {
+      await deleteData(`purchases/${id}`, {
+        Authorization: `Bearer ${token}`,
+      });
+      refetchPurchases(currentPage, purchaseType);
+      toast.success("تم حذف الشراء بنجاح");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorData = error.response?.data?.errors;
+        const message = errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "حدث خطأ أثناء الحذف";
+        toast.error(message);
+      } else {
+        toast.error("حدث خطأ غير متوقع");
+      }
+    }
+  };
+
+  // Bulk delete selected purchases
+  const deleteSelectedPurchases = async () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows;
+    if (selectedRows.length === 0) return;
+
+    const ids = selectedRows.map((row) => row.original.id);
+    const message = `هل أنت متأكد من حذف ${ids.length} عملية شراء؟`;
+    if (!confirm(message)) return;
+
+    for (const id of ids) {
+      try {
+        await deleteData(`purchases/${id}`, {
+          Authorization: `Bearer ${token}`,
+        });
+      } catch (err) {
+        const errorMsg = axios.isAxiosError(err)
+          ? Object.values(err.response?.data?.errors || {}).flat().join(" ")
+          : "فشل في الحذف";
+        toast.error(`فشل في حذف الشراء ${id}: ${errorMsg}`);
+      }
+    }
+
+    refetchPurchases(currentPage, purchaseType);
+    toast.success(`تم حذف ${ids.length} عملية شراء بنجاح`);
+    table.toggleAllPageRowsSelected(false);
+  };
+
+  // Get status badge
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "complete":
         return <Badge className="bg-green-500 hover:bg-green-600">مكتمل</Badge>;
       case "pending":
         return (
-          <Badge className="bg-yellow-500 hover:bg-yellow-600">
-            قيد الانتظار
-          </Badge>
+          <Badge className="bg-yellow-500 hover:bg-yellow-600">قيد الانتظار</Badge>
         );
       case "failed":
         return <Badge className="bg-red-500 hover:bg-red-600">فشل</Badge>;
@@ -206,8 +243,31 @@ function PurchasesDataTable() {
     }
   };
 
-  // columns of table
+  // Columns with multi-select
   const columns: ColumnDef<Purchase>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={() => table.toggleAllPageRowsSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={row.getIsSelected()}
+          onChange={() => row.toggleSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "user",
       header: "المستخدم",
@@ -273,27 +333,36 @@ function PurchasesDataTable() {
       cell: ({ row }) => {
         const currentStatus = row.original.status;
         return (
-          <Select
-            value={currentStatus}
-            onValueChange={(value: "complete" | "pending" | "failed") =>
-              changeStatus(row.original.id, value)
-            }
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="complete">مكتمل</SelectItem>
-              <SelectItem value="pending">قيد الانتظار</SelectItem>
-              <SelectItem value="failed">فشل</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2 items-center">
+            <Select
+              value={currentStatus}
+              onValueChange={(value: "complete" | "pending" | "failed") =>
+                changeStatus(row.original.id, value)
+              }
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="complete">مكتمل</SelectItem>
+                <SelectItem value="pending">قيد الانتظار</SelectItem>
+                <SelectItem value="failed">فشل</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => deletePurchase(row.original.id)}
+            >
+              حذف
+            </Button>
+          </div>
         );
       },
     },
   ];
 
-  // table
+  // Table instance with selection enabled
   const table = useReactTable({
     data,
     columns,
@@ -301,12 +370,13 @@ function PurchasesDataTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    enableRowSelection: true,
   });
 
   return (
     <>
       <div className="flex items-center gap-2 px-4 mb-4">
-        {/* search input */}
+        {/* Search Input */}
         <Input
           placeholder="بحث بالاسم..."
           value={(table.getColumn("user")?.getFilterValue() as string) || ""}
@@ -316,7 +386,7 @@ function PurchasesDataTable() {
           className="max-w-sm min-w-[200px] h-10"
         />
 
-        {/* Type filter */}
+        {/* Type Filter */}
         <Select
           value={purchaseType}
           onValueChange={(value: "courses" | "books") => {
@@ -332,9 +402,20 @@ function PurchasesDataTable() {
             <SelectItem value="books">الكتب</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Bulk Delete Button */}
+        {table.getFilteredSelectedRowModel().rows.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={deleteSelectedPurchases}
+          >
+            حذف المحدد ({table.getFilteredSelectedRowModel().rows.length})
+          </Button>
+        )}
       </div>
 
-      {/* purchases table */}
+      {/* Purchases Table */}
       <div className="overflow-x-auto">
         <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
           <TableHeader>
@@ -395,14 +476,12 @@ function PurchasesDataTable() {
             >
               السابق
             </Button>
-
-            {/* Page Numbers */}
             <div className="flex items-center gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                 (pageNumber) => (
                   <Button
                     key={pageNumber}
-                    variant={"outline"}
+                    variant="outline"
                     size="sm"
                     onClick={() => refetchPurchases(pageNumber, purchaseType)}
                     className={`w-9 h-9 font-medium transition-all duration-200 ${
@@ -416,7 +495,6 @@ function PurchasesDataTable() {
                 )
               )}
             </div>
-
             <Button
               variant="outline"
               size="sm"

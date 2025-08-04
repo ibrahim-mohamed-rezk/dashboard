@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import {
   Table,
   TableBody,
@@ -17,9 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Badge } from "@/components/ui/badge";
-
 import { useEffect, useState, useRef } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
 import axios from "axios";
@@ -42,25 +39,21 @@ interface Governorate {
   id: number;
   name: string;
 }
-
 interface Area {
   id: number;
   name: string;
   governorate_id: number;
 }
-
 interface PaginationMeta {
   current_page: number;
   last_page: number;
   per_page: number;
   total: number;
 }
-
 interface GovernoratesResponse {
   data: Governorate[];
   meta: PaginationMeta;
 }
-
 interface AreasResponse {
   data: Area[];
   meta: PaginationMeta;
@@ -84,14 +77,12 @@ const StatCard = ({
     purple: "bg-purple-50 border-purple-200 text-purple-800",
     orange: "bg-orange-50 border-orange-200 text-orange-800",
   };
-
   const iconColorClasses = {
     blue: "text-blue-600",
     green: "text-green-600",
     purple: "text-purple-600",
     orange: "text-orange-600",
   };
-
   return (
     <div
       className={`p-6 rounded-lg border ${colorClasses[color]} dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200`}
@@ -125,7 +116,6 @@ function GovernoratesAreasManagement() {
   const [governoratePageIndex, setGovernoratePageIndex] = useState(0); // 0-based
   const [governoratePageSize, setGovernoratePageSize] = useState(10);
   const [governorateSearch, setGovernorateSearch] = useState("");
-
   // Areas state
   const [areas, setAreas] = useState<Area[]>([]);
   const [areasMeta, setAreasMeta] = useState<PaginationMeta>({
@@ -137,13 +127,11 @@ function GovernoratesAreasManagement() {
   const [areaPageIndex, setAreaPageIndex] = useState(0); // 0-based
   const [areaPageSize, setAreaPageSize] = useState(10);
   const [areaSearch, setAreaSearch] = useState("");
-
   // Token and tab
   const [token, setToken] = useState("");
   const [activeTab, setActiveTab] = useState<"governorates" | "areas">(
     "governorates"
   );
-
   // Governorate dialog states
   const [isGovernorateDialogOpen, setIsGovernorateDialogOpen] = useState(false);
   const [isEditingGovernorate, setIsEditingGovernorate] = useState(false);
@@ -152,7 +140,6 @@ function GovernoratesAreasManagement() {
   const [governorateFormData, setGovernorateFormData] = useState({
     name: "",
   });
-
   // Area dialog states
   const [isAreaDialogOpen, setIsAreaDialogOpen] = useState(false);
   const [isEditingArea, setIsEditingArea] = useState(false);
@@ -161,14 +148,11 @@ function GovernoratesAreasManagement() {
     name: "",
     governorate_id: "",
   });
-
   const [error, setError] = useState<string | null>(null);
-
   // Excel upload dialog states
   const [isExcelDialogOpen, setIsExcelDialogOpen] = useState(false);
   const [excelType, setExcelType] = useState<"governorates" | "areas">("governorates");
   const [excelUploading, setExcelUploading] = useState(false);
-
   // File input refs
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -193,7 +177,6 @@ function GovernoratesAreasManagement() {
         console.error("Error fetching token:", error);
       }
     };
-
     fetchData();
   }, []);
 
@@ -265,7 +248,6 @@ function GovernoratesAreasManagement() {
       refetchGovernorates();
       refetchAreas();
     }
-    // eslint-disable-next-line
   }, [token]);
 
   // Governorates pagination/search effect
@@ -273,7 +255,6 @@ function GovernoratesAreasManagement() {
     if (token) {
       refetchGovernorates(governoratePageIndex, governoratePageSize, governorateSearch);
     }
-    // eslint-disable-next-line
   }, [governoratePageIndex, governoratePageSize, governorateSearch, token]);
 
   // Areas pagination/search effect
@@ -281,7 +262,6 @@ function GovernoratesAreasManagement() {
     if (token) {
       refetchAreas(areaPageIndex, areaPageSize, areaSearch);
     }
-    // eslint-disable-next-line
   }, [areaPageIndex, areaPageSize, areaSearch, token]);
 
   // Governorate form handlers
@@ -300,7 +280,6 @@ function GovernoratesAreasManagement() {
     try {
       const formData = new FormData();
       formData.append("name", governorateFormData.name);
-
       if (isEditingGovernorate && editingGovernorate) {
         formData.append("_method", "PUT");
         await postData(`governorates/${editingGovernorate.id}`, formData, {
@@ -313,7 +292,6 @@ function GovernoratesAreasManagement() {
         });
         toast.success("تم إضافة المحافظة بنجاح");
       }
-
       setIsGovernorateDialogOpen(false);
       setGovernorateFormData({ name: "" });
       refetchGovernorates();
@@ -355,7 +333,6 @@ function GovernoratesAreasManagement() {
       const formData = new FormData();
       formData.append("name", areaFormData.name);
       formData.append("governorate_id", areaFormData.governorate_id);
-
       if (isEditingArea && editingArea) {
         formData.append("_method", "PUT");
         await postData(
@@ -372,7 +349,6 @@ function GovernoratesAreasManagement() {
         });
         toast.success("تم إضافة المنطقة بنجاح");
       }
-
       setIsAreaDialogOpen(false);
       setAreaFormData({ name: "", governorate_id: "" });
       refetchAreas();
@@ -403,9 +379,7 @@ function GovernoratesAreasManagement() {
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
       if (excelType === "governorates") {
-        // Expecting: [["name"], ["Cairo"], ["Giza"], ...]
         const rows = jsonData as string[][];
         const header = rows[0];
         if (!header || header[0]?.toLowerCase() !== "name") {
@@ -425,14 +399,13 @@ function GovernoratesAreasManagement() {
               });
               added++;
             } catch (err) {
-              // skip error for this row
+              // skip
             }
           }
         }
         toast.success(`تمت إضافة ${added} محافظة من ملف الإكسل`);
         refetchGovernorates();
       } else if (excelType === "areas") {
-        // Expecting: [["name","governorate_id"], ["Helwan",1], ...]
         const rows = jsonData as (string | number)[][];
         const header = rows[0];
         if (
@@ -468,7 +441,7 @@ function GovernoratesAreasManagement() {
               });
               added++;
             } catch (err) {
-              // skip error for this row
+              // skip
             }
           }
         }
@@ -526,7 +499,7 @@ function GovernoratesAreasManagement() {
     setIsAreaDialogOpen(true);
   };
 
-  // Delete handlers
+  // Delete handlers (single)
   const handleDeleteGovernorate = async (id: number) => {
     if (
       !window.confirm(
@@ -540,7 +513,7 @@ function GovernoratesAreasManagement() {
       });
       toast.success("تم حذف المحافظة بنجاح");
       refetchGovernorates();
-      refetchAreas(); // In case areas are affected
+      refetchAreas();
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorData = error.response?.data?.errors;
@@ -579,14 +552,86 @@ function GovernoratesAreasManagement() {
     }
   };
 
+  // Bulk delete governors
+  const deleteSelectedGovernorates = async () => {
+    const selectedRows = governorateTable.getFilteredSelectedRowModel().rows;
+    if (selectedRows.length === 0) return;
+
+    const ids = selectedRows.map((row) => row.original.id);
+    const message = `هل أنت متأكد من حذف ${ids.length} محافظة(محافظات)؟ سيتم حذف جميع المناطق التابعة لها.`;
+    if (!confirm(message)) return;
+
+    for (const id of ids) {
+      try {
+        await deleteData(`governorates/${id}`, {
+          Authorization: `Bearer ${token}`,
+        });
+      } catch (err) {
+        console.error(`Failed to delete governorate ${id}`, err);
+      }
+    }
+
+    toast.success(`تم حذف ${ids.length} محافظة(محافظات)`);
+    refetchGovernorates();
+    refetchAreas();
+    governorateTable.toggleAllPageRowsSelected(false);
+  };
+
+  // Bulk delete areas
+  const deleteSelectedAreas = async () => {
+    const selectedRows = areaTable.getFilteredSelectedRowModel().rows;
+    if (selectedRows.length === 0) return;
+
+    const ids = selectedRows.map((row) => row.original.id);
+    const message = `هل أنت متأكد من حذف ${ids.length} منطقة(مناطق)؟`;
+    if (!confirm(message)) return;
+
+    for (const id of ids) {
+      try {
+        await deleteData(`areas/${id}`, {
+          Authorization: `Bearer ${token}`,
+        });
+      } catch (err) {
+        console.error(`Failed to delete area ${id}`, err);
+      }
+    }
+
+    toast.success(`تم حذف ${ids.length} منطقة(مناطق)`);
+    refetchAreas();
+    areaTable.toggleAllPageRowsSelected(false);
+  };
+
   // Get governorate name by ID
   const getGovernorateNameById = (id: number) => {
     const governorate = governorates.find((g) => g.id === id);
     return governorate ? governorate.name : "غير محدد";
   };
 
-  // Governorate columns
+  // Governorate columns with multi-select
   const governorateColumns: ColumnDef<Governorate>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={() => table.toggleAllPageRowsSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={row.getIsSelected()}
+          onChange={() => row.toggleSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "id",
       header: "المعرف",
@@ -606,7 +651,6 @@ function GovernoratesAreasManagement() {
       id: "areas_count",
       header: "عدد المناطق",
       cell: ({ row }) => {
-        // This will only count areas in the current page, not all pages!
         const count = areas.filter(
           (area) => area.governorate_id === row.original.id
         ).length;
@@ -645,8 +689,31 @@ function GovernoratesAreasManagement() {
     },
   ];
 
-  // Area columns
+  // Area columns with multi-select
   const areaColumns: ColumnDef<Area>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={() => table.toggleAllPageRowsSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-blue-600"
+          checked={row.getIsSelected()}
+          onChange={() => row.toggleSelected()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "id",
       header: "المعرف",
@@ -700,7 +767,7 @@ function GovernoratesAreasManagement() {
     },
   ];
 
-  // Tables
+  // Tables with selection enabled
   const governorateTable = useReactTable({
     data: governorates,
     columns: governorateColumns,
@@ -729,6 +796,7 @@ function GovernoratesAreasManagement() {
         setGovernoratePageSize(updater.pageSize);
       }
     },
+    enableRowSelection: true,
   });
 
   const areaTable = useReactTable({
@@ -759,6 +827,7 @@ function GovernoratesAreasManagement() {
         setAreaPageSize(updater.pageSize);
       }
     },
+    enableRowSelection: true,
   });
 
   // Pagination Controls Component
@@ -953,6 +1022,18 @@ function GovernoratesAreasManagement() {
                 تحميل إكسل
               </Button>
             </div>
+
+            {/* Bulk Delete Button for Governorates */}
+            {governorateTable.getFilteredSelectedRowModel().rows.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={deleteSelectedGovernorates}
+              >
+                حذف المحدد ({governorateTable.getFilteredSelectedRowModel().rows.length})
+              </Button>
+            )}
+
             <Dialog
               open={isGovernorateDialogOpen}
               onOpenChange={setIsGovernorateDialogOpen}
@@ -991,9 +1072,7 @@ function GovernoratesAreasManagement() {
                       className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-
                   {error && <div className="text-red-500 text-sm">{error}</div>}
-
                   <Button type="submit" className="w-full">
                     {isEditingGovernorate ? "تحديث" : "إضافة"}
                   </Button>
@@ -1096,6 +1175,18 @@ function GovernoratesAreasManagement() {
                 تحميل إكسل
               </Button>
             </div>
+
+            {/* Bulk Delete Button for Areas */}
+            {areaTable.getFilteredSelectedRowModel().rows.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={deleteSelectedAreas}
+              >
+                حذف المحدد ({areaTable.getFilteredSelectedRowModel().rows.length})
+              </Button>
+            )}
+
             <Dialog open={isAreaDialogOpen} onOpenChange={setIsAreaDialogOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -1129,7 +1220,6 @@ function GovernoratesAreasManagement() {
                       className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-
                   <div className="space-y-2 flex flex-col">
                     <Label htmlFor="governorate_select">المحافظة</Label>
                     <select
@@ -1152,9 +1242,7 @@ function GovernoratesAreasManagement() {
                       ))}
                     </select>
                   </div>
-
                   {error && <div className="text-red-500 text-sm">{error}</div>}
-
                   <Button type="submit" className="w-full">
                     {isEditingArea ? "تحديث" : "إضافة"}
                   </Button>
