@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import { Input } from "@/components/ui/input";
 import { DateRange } from "react-day-picker";
 import {
@@ -19,12 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, GraduationCap, Phone, School, Edit, X } from "lucide-react";
-
+import { Users, GraduationCap, Phone, School, Edit, X, Trash2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
@@ -32,6 +29,8 @@ import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import DatePickerWithRange from "@/components/date-picker-with-range";
+// === NEW ===
+import { Toaster, toast } from "react-hot-toast";
 
 // Helper to check if a string is a valid image URL
 function isImageUrl(url: string | undefined | null): boolean {
@@ -63,7 +62,6 @@ const StatCard = ({
     purple:
       "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
   };
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between">
@@ -123,7 +121,6 @@ const StudentUpdateModal = ({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (student) {
       setFormData({
@@ -145,14 +142,11 @@ const StudentUpdateModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!student) return;
-
     setLoading(true);
     setErrors({});
-
     try {
       // Prepare FormData for multipart/form-data
       const form = new FormData();
-
       // Always send these fields
       form.append("full_name", formData.full_name);
       form.append("email", formData.email);
@@ -161,12 +155,10 @@ const StudentUpdateModal = ({
       form.append("governorate_id", formData.governorate_id);
       form.append("area_id", formData.area_id);
       form.append("father_phone", formData.father_phone);
-
       // Only send password if not empty
       if (formData.password && formData.password.trim() !== "") {
         form.append("password", formData.password);
       }
-
       // Handle avatar: if a new file is selected, send it; if removed, send empty string; else, don't send
       if (avatarFile) {
         form.append("avatar", avatarFile);
@@ -174,10 +166,8 @@ const StudentUpdateModal = ({
         // If avatar is removed, send empty string to remove on backend
         form.append("avatar", "");
       }
-
       // Laravel expects _method: PUT for update
       form.append("_method", "PUT");
-
       await postData(
         `students/${student.user?.id}`,
         form,
@@ -186,20 +176,22 @@ const StudentUpdateModal = ({
           "Content-Type": "multipart/form-data",
         }
       );
-
       onUpdate();
       onClose();
+      // === NEW ===
+      toast.success("تم تحديث بيانات الطالب بنجاح");
     } catch (error: any) {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       } else {
         console.error("Failed to update student:", error);
+        // === NEW ===
+        toast.error("فشل في تحديث الطالب");
       }
     } finally {
       setLoading(false);
     }
   };
-
   const handleInputChange = (field: string, value: string | File | null) => {
     if (field === "avatar") {
       if (value instanceof File && value) {
@@ -219,7 +211,6 @@ const StudentUpdateModal = ({
       setErrors((prev: any) => ({ ...prev, [field]: null }));
     }
   };
-
   const handleRemoveAvatar = () => {
     setAvatarFile(null);
     setAvatarPreview(null);
@@ -228,9 +219,7 @@ const StudentUpdateModal = ({
       fileInputRef.current.value = "";
     }
   };
-
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -247,7 +236,6 @@ const StudentUpdateModal = ({
             <X className="h-4 w-4" />
           </Button>
         </div>
-
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Full Name */}
           <div className="space-y-2">
@@ -263,7 +251,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.full_name[0]}</p>
             )}
           </div>
-
           {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email">البريد الإلكتروني</Label>
@@ -279,7 +266,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.email[0]}</p>
             )}
           </div>
-
           {/* Phone */}
           <div className="space-y-2">
             <Label htmlFor="phone">رقم الهاتف</Label>
@@ -294,7 +280,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.phone[0]}</p>
             )}
           </div>
-
           {/* Father Phone */}
           <div className="space-y-2">
             <Label htmlFor="father_phone">هاتف الأب</Label>
@@ -311,7 +296,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.father_phone[0]}</p>
             )}
           </div>
-
           {/* Password */}
           <div className="space-y-2">
             <Label htmlFor="password">كلمة المرور (اختياري)</Label>
@@ -327,7 +311,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.password[0]}</p>
             )}
           </div>
-
           {/* Avatar */}
           <div className="space-y-2">
             <Label htmlFor="avatar">الصورة الشخصية</Label>
@@ -377,7 +360,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.avatar[0]}</p>
             )}
           </div>
-
           {/* Governorate */}
           <div className="space-y-2">
             <Label htmlFor="governorate_id">المحافظة</Label>
@@ -402,7 +384,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.governorate_id[0]}</p>
             )}
           </div>
-
           {/* Area */}
           <div className="space-y-2">
             <Label htmlFor="area_id">المنطقة</Label>
@@ -425,7 +406,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.area_id[0]}</p>
             )}
           </div>
-
           {/* Level */}
           <div className="space-y-2">
             <Label htmlFor="level_id">المرحلة</Label>
@@ -448,7 +428,6 @@ const StudentUpdateModal = ({
               <p className="text-sm text-red-500">{errors.level_id[0]}</p>
             )}
           </div>
-
           {/* Submit Buttons */}
           <div className="flex justify-end gap-3 pt-4">
             <Button
@@ -468,6 +447,49 @@ const StudentUpdateModal = ({
             </Button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// === NEW === Delete Confirmation Modal with Toast
+const DeleteConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  isMultiple = false,
+  count = 1,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isMultiple?: boolean;
+  count?: number;
+}) => {
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center ${
+        isOpen ? "opacity-100 visible" : "opacity-0 invisible"
+      } transition-opacity`}
+    >
+      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 z-10">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          تأكيد الحذف
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+          {isMultiple
+            ? `هل أنت متأكد أنك تريد حذف ${count} طالب(طلاب)؟ لا يمكن التراجع عن هذا الإجراء.`
+            : "هل أنت متأكد أنك تريد حذف هذا الطالب؟ لا يمكن التراجع عن هذا الإجراء."}
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            إلغاء
+          </Button>
+          <Button variant="outline" size="sm" onClick={onConfirm}>
+            حذف
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -496,7 +518,6 @@ function BasicDataTable() {
     from_date: "",
     search: "",
   });
-
   const [user, setUser] = useState<User | null>(null);
   const [statistics, setStatistics] = useState({
     totalStudents: 0,
@@ -510,8 +531,11 @@ function BasicDataTable() {
     total: 0,
     lastPage: 1,
   });
-
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  // === NEW === Selection & Delete
+  const [selectedToDelete, setSelectedToDelete] = useState<string[]>([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Calculate statistics
   const calculateStatistics = (studentsData: StudentTypes[]) => {
@@ -524,7 +548,6 @@ function BasicDataTable() {
     const studentsWithPhone = studentsData.filter(
       (student) => student.user?.phone
     ).length;
-
     setStatistics({
       totalStudents: pagination.total,
       activeStudents,
@@ -583,7 +606,6 @@ function BasicDataTable() {
   //     const response = await getData(
   //       "subjects",
   //       {},
-
   //       {
   //         Authorization: `Bearer ${token}`,
   //       }
@@ -593,7 +615,6 @@ function BasicDataTable() {
   //     console.log(error);
   //   }
   // };
-
   useEffect(() => {
     feachAreaData();
     feachLevelsData();
@@ -638,7 +659,6 @@ function BasicDataTable() {
         total: response?.meta?.total,
         lastPage: response?.meta?.last_page,
       }));
-
       // Calculate statistics with the fetched data
       calculateStatistics(response.data);
     } catch (error) {
@@ -666,7 +686,6 @@ function BasicDataTable() {
         throw error;
       }
     };
-
     feachData();
   }, []);
 
@@ -680,8 +699,64 @@ function BasicDataTable() {
     setSelectedStudent(null);
   };
 
+  // === NEW === Delete with Toast
+  const handleDeleteStudents = async () => {
+    if (!selectedToDelete.length) return;
+    setIsDeleting(true);
+    try {
+      await Promise.all(
+        selectedToDelete.map((userId) =>
+          axios.delete(`/api/students/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+      refetchUsers();
+      setDeleteModalOpen(false);
+      table.resetRowSelection();
+      // === NEW ===
+      toast.success(
+        selectedToDelete.length === 1
+          ? "تم حذف الطالب بنجاح"
+          : `تم حذف ${selectedToDelete.length} طلاب بنجاح`
+      );
+    } catch (error) {
+      console.error("فشل في حذف الطلاب:", error);
+      // === NEW ===
+      toast.error("تعذر حذف بعض الطلاب. يرجى المحاولة لاحقًا.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // columns of table
   const columns: ColumnDef<StudentTypes>[] = [
+    // === NEW === Selection Column
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={table.getIsAllPageRowsSelected()}
+            onChange={() => table.toggleAllPageRowsSelected()}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={() => row.toggleSelected()}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "full_name",
       header: "الاسم الكامل",
@@ -794,19 +869,25 @@ function BasicDataTable() {
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
       },
+      rowSelection: selectedToDelete.reduce((acc, id) => {
+        const index = data.findIndex((d) => d.user?.id === Number(id));
+        if (index !== -1) acc[index] = true;
+        return acc;
+      }, {} as Record<number, boolean>),
     },
-    onPaginationChange: (updater) => {
-      if (typeof updater === "function") {
-        const newState = updater({
-          pageIndex: pagination.pageIndex,
-          pageSize: pagination.pageSize,
-        });
-        setPagination((prev) => ({
-          ...prev,
-          pageIndex: newState.pageIndex,
-        }));
-      }
-    },
+    onRowSelectionChange: (updater) => {
+  const selection = updater instanceof Function ? updater(table.getState().rowSelection) : updater;
+  const selectedIds = Object.keys(selection)
+    .filter((key) => selection[parseInt(key)])
+    .map((key) => {
+      const userId = data[parseInt(key)]?.user?.id;
+      return userId !== undefined ? userId.toString() : undefined;
+    })
+    .filter((id): id is string => id !== undefined);
+
+  setSelectedToDelete(selectedIds);
+},
+    enableRowSelection: true,
   });
 
   return (
@@ -843,7 +924,6 @@ function BasicDataTable() {
           />
         </div>
       </div>
-
       <div className="flex flex-col gap-2 px-4 mb-4">
         {/* Filters Bar */}
         <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
@@ -1038,9 +1118,21 @@ function BasicDataTable() {
             }}
             className="max-w-sm min-w-[200px] h-10"
           />
+
+          {/* === NEW === Delete Button */}
+          {selectedToDelete.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteModalOpen(true)}
+              className="flex items-center gap-1"
+            >
+              <Trash2 className="w-4 h-4" />
+              حذف ({selectedToDelete.length})
+            </Button>
+          )}
         </div>
       </div>
-
       {/* users table */}
       <div className="overflow-x-auto">
         <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
@@ -1084,7 +1176,6 @@ function BasicDataTable() {
           </TableBody>
         </Table>
       </div>
-
       {/* Pagination Controls */}
       <div className="flex items-center justify-center py-6">
         <div className="flex items-center gap-3">
@@ -1097,7 +1188,6 @@ function BasicDataTable() {
           >
             السابق
           </Button>
-
           {/* Page Numbers */}
           <div className="flex items-center gap-2">
             {Array.from({ length: pagination.lastPage }, (_, i) => i + 1)?.map(
@@ -1122,7 +1212,6 @@ function BasicDataTable() {
               )
             )}
           </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -1134,7 +1223,6 @@ function BasicDataTable() {
           </Button>
         </div>
       </div>
-
       {/* Student Update Modal */}
       <StudentUpdateModal
         isOpen={updateModalOpen}
@@ -1145,6 +1233,15 @@ function BasicDataTable() {
         governorates={governorates}
         areas={area}
         levels={level}
+      />
+
+      {/* === NEW === Delete Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteStudents}
+        isMultiple={selectedToDelete.length > 1}
+        count={selectedToDelete.length}
       />
     </>
   );

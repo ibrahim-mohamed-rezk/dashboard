@@ -9,8 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-
-import { Button  } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
@@ -151,7 +150,6 @@ const BlogForm = ({
         )}
       </div>
     </div>
-
     <div>
       <label
         htmlFor="title"
@@ -170,7 +168,6 @@ const BlogForm = ({
         required
       />
     </div>
-
     <div>
       <label
         htmlFor="description"
@@ -188,7 +185,6 @@ const BlogForm = ({
         required
       />
     </div>
-
     <div>
       <label
         htmlFor="content"
@@ -240,7 +236,6 @@ const BlogForm = ({
         }}
       />
     </div>
-
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label
@@ -258,7 +253,6 @@ const BlogForm = ({
           className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg min-h-[80px] focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         />
       </div>
-
       <div>
         <label
           htmlFor="meta_keywords"
@@ -276,7 +270,6 @@ const BlogForm = ({
         />
       </div>
     </div>
-
     <div className="flex items-center space-x-2">
       <input
         type="checkbox"
@@ -293,7 +286,6 @@ const BlogForm = ({
         نشر المقال
       </label>
     </div>
-
     <div className="mt-6 space-y-2">
       <button
         type="submit"
@@ -327,11 +319,13 @@ function BlogTable() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false); // Bulk dialog
   const [blogToDelete, setBlogToDelete] = useState<Blog | null>(null);
   const [pageSize, setPageSize] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -343,11 +337,13 @@ function BlogTable() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✅ NEW: Selected rows for bulk delete
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target as HTMLInputElement;
-
     if (type === "checkbox") {
       setFormData((prev: FormData) => ({
         ...prev,
@@ -381,11 +377,7 @@ function BlogTable() {
     setIsSubmitting(true);
     try {
       const submitData = new FormData();
-
-      // Generate slug from title
       const slug = generateSlug(formData.title);
-
-      // Add all form fields
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (key === "image" && value instanceof File) {
@@ -399,19 +391,14 @@ function BlogTable() {
           }
         }
       });
-
-      // Add the generated slug
       submitData.append("slug", slug);
-
       if (editingBlog) {
-        // Add _method: PUT for update requests
         submitData.append("_method", "PUT");
         await postData(`blogs/${editingBlog.id}`, submitData, {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         });
         toast.success("تم تحديث المقال بنجاح!");
-        // Reset form and refetch data before closing dialog
         resetForm();
         await fetchData();
         setIsEditDialogOpen(false);
@@ -422,7 +409,6 @@ function BlogTable() {
           "Content-Type": "multipart/form-data",
         });
         toast.success("تم إنشاء المقال بنجاح!");
-        // Reset form and refetch data before closing dialog
         resetForm();
         await fetchData();
         setIsCreateDialogOpen(false);
@@ -463,24 +449,62 @@ function BlogTable() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteData(`blogs/${id}`, {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      });
-      toast.success("تم حذف المقال بنجاح!");
-      await fetchData(); // Wait for data to be fetched
-      setIsDeleteDialogOpen(false);
-    } catch (error) {
-      toast.error("فشل في حذف المقال");
-    }
-  };
+const handleDelete = async (id: number) => {
+  try {
+    await deleteData(`blogs/${id}`, {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    });
+    toast.success("تم حذف المقال بنجاح!");
 
+    // ✅ Convert id to string when using as key
+    setRowSelection((prev) => {
+      const newSelection = { ...prev };
+      delete newSelection[id.toString()]; // 👈 Convert to string
+      return newSelection;
+    });
+
+    await fetchData();
+  } catch (error) {
+    toast.error("فشل في حذف المقال");
+  } finally {
+    setIsDeleteDialogOpen(false);
+  }
+};
   const openDeleteDialog = (blog: Blog) => {
     setBlogToDelete(blog);
     setIsDeleteDialogOpen(true);
   };
+
+  // ✅ NEW: Bulk delete handlers
+  const openBulkDeleteDialog = () => {
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+  try {
+    await Promise.all(
+      Array.from(selectedRows).map((id) =>
+        deleteData(`blogs/${id}`, {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        })
+      )
+    );
+    toast.success(`تم حذف ${selectedRows.size} مقال(ات) بنجاح!`);
+    
+    // ✅ Reset selection after delete
+    setRowSelection({}); // 👈 This clears all checkboxes
+    setSelectedRows(new Set()); // Optional: also reset local Set if used elsewhere
+
+    // Refetch data to ensure UI is in sync
+    await fetchData();
+  } catch (error) {
+    toast.error("فشل في حذف بعض المقالات");
+  } finally {
+    setIsBulkDeleteDialogOpen(false);
+  }
+};
 
   const truncateText = (text: string, maxLength: number) => {
     return text.length > maxLength
@@ -488,7 +512,44 @@ function BlogTable() {
       : text;
   };
 
+  // ✅ NEW: Add selection column
   const columns: ColumnDef<Blog>[] = [
+    {
+      id: "select",
+      header: ({ table }) => {
+        const isAllSelected = table.getIsAllPageRowsSelected();
+        const isSomeSelected = table.getIsSomePageRowsSelected();
+        const [ref, setRef] = useState<HTMLInputElement | null>(null);
+
+        useEffect(() => {
+          if (ref) {
+            ref.indeterminate = isSomeSelected && !isAllSelected;
+          }
+        }, [ref, isSomeSelected, isAllSelected]);
+
+        return (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              ref={setRef}
+              checked={isAllSelected}
+              onChange={() => table.toggleAllPageRowsSelected()}
+              className="h-4 w-4 text-blue-600 rounded border-gray-300"
+            />
+          </div>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={() => row.toggleSelected()}
+            className="h-4 w-4 text-blue-600 rounded border-gray-300"
+          />
+        </div>
+      ),
+    },
     {
       accessorKey: "image",
       header: "الصورة",
@@ -601,7 +662,6 @@ function BlogTable() {
               <Icon icon="heroicons:pencil" className="w-4 h-4 mr-1" />
               تعديل
             </Button>
-
             <button
               onClick={() => openDeleteDialog(blog)}
               className="hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-3 py-1 border rounded-lg"
@@ -614,28 +674,37 @@ function BlogTable() {
     },
   ];
 
+const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: {
-      globalFilter,
-      sorting,
-      pagination: {
-        pageIndex: 0,
-        pageSize,
-      },
+  data,
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  state: {
+    globalFilter,
+    sorting,
+    pagination: {
+      pageIndex: 0,
+      pageSize,
     },
-    onGlobalFilterChange: setGlobalFilter,
-    onSortingChange: setSorting,
-    globalFilterFn: (row, columnId, value) => {
-      const content = row.getValue(columnId);
-      return String(content).toLowerCase().includes(value.toLowerCase());
-    },
-  });
+    rowSelection, // 👈 Add this
+  },
+  onGlobalFilterChange: setGlobalFilter,
+  onSortingChange: setSorting,
+  onRowSelectionChange: setRowSelection, // 👈 Sync selection
+  getRowId: (row) => String(row.id), // 👈 Critical
+  enableRowSelection: true,
+  globalFilterFn: (row, columnId, value) => {
+    const content = row.getValue(columnId);
+    return String(content).toLowerCase().includes(value.toLowerCase());
+  },
+});
+  useEffect(() => {
+    const selectedIds = new Set(Object.keys(rowSelection).map(Number));
+    setSelectedRows(selectedIds);
+  }, [rowSelection]);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -651,7 +720,6 @@ function BlogTable() {
 
   const fetchData = useCallback(async () => {
     if (!token) return;
-
     setLoading(true);
     try {
       const response = await getData(
@@ -707,12 +775,22 @@ function BlogTable() {
             </div>
           </div>
 
-          <button
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
-          >
-            + إضافة مقال جديد
-          </button>
+          {/* Conditional: Show Delete Selected or Add New */}
+          {selectedRows.size > 0 ? (
+            <button
+              onClick={openBulkDeleteDialog}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
+            >
+              حذف المحدد ({selectedRows.size})
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
+            >
+              + إضافة مقال جديد
+            </button>
+          )}
         </div>
 
         {/* Table */}
@@ -744,9 +822,7 @@ function BlogTable() {
                     colSpan={columns.length}
                     className="text-center py-8 dark:text-gray-200"
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      جاري التحميل...
-                    </div>
+                    جاري التحميل...
                   </td>
                 </tr>
               ) : table.getRowModel().rows?.length ? (
@@ -794,7 +870,6 @@ function BlogTable() {
               مقال
             </span>
           </div>
-
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
@@ -803,7 +878,6 @@ function BlogTable() {
             >
               السابق
             </button>
-
             <div className="flex items-center gap-1">
               {Array.from({ length: totalPages }, (_, i) => (
                 <button
@@ -822,7 +896,6 @@ function BlogTable() {
                 Math.min(totalPages, currentPage + 2)
               )}
             </div>
-
             <button
               onClick={() =>
                 setCurrentPage((prev) => Math.min(totalPages, prev + 1))
@@ -914,7 +987,7 @@ function BlogTable() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog (Single) */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
@@ -943,12 +1016,48 @@ function BlogTable() {
                 onClick={() => {
                   if (blogToDelete) {
                     handleDelete(blogToDelete.id);
-                    setIsDeleteDialogOpen(false);
                   }
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 حذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {isBulkDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold dark:text-white">
+                تأكيد الحذف الجماعي
+              </h2>
+              <button
+                onClick={() => setIsBulkDeleteDialogOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              هل أنت متأكد من حذف <strong>{selectedRows.size}</strong> مقال(ات)؟
+              لا يمكن التراجع عن هذا الإجراء.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsBulkDeleteDialogOpen(false)}
+                className="px-4 py-2 border dark:border-gray-600 rounded-lg dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={confirmBulkDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                حذف المحدد
               </button>
             </div>
           </div>

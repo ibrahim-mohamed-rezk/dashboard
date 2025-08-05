@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -18,7 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,12 +26,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Copy, Printer, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
-
+import { Copy, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
-import axios, { AxiosHeaders } from "axios";
-import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
+import axios from "axios";
 import toast from "react-hot-toast";
 import { Label } from "@/components/ui/label";
 import {
@@ -51,7 +47,7 @@ interface PaginationLink {
 }
 
 interface Coupon {
-  id: number;
+  id: number; // ✅ Real backend ID
   code: number;
   status: string;
   discount: number;
@@ -75,9 +71,10 @@ function BasicDataTable() {
   const [data, setData] = useState<Coupon[]>([]);
   const [token, setToken] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     code: "",
     status: "percentage",
@@ -96,6 +93,12 @@ function BasicDataTable() {
     to: 10,
     links: [] as PaginationLink[],
   });
+
+  // Track selected rows by real `coupon.id`
+  const [rowSelection, setRowSelection] = useState({});
+
+  // ✅ CRITICAL: Use real database ID for row identification
+  const getRowId = (row: Coupon) => row.id.toString();
 
   const copyToClipboard = (code: number) => {
     navigator.clipboard.writeText(code.toString());
@@ -147,7 +150,6 @@ function BasicDataTable() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       let payload: CouponPayload = {
         code: parseInt(formData.code),
@@ -156,7 +158,6 @@ function BasicDataTable() {
         start_time: formData.start_time,
         end_time: formData.end_time,
       };
-
       if (selectedCoupon) {
         payload = {
           ...payload,
@@ -172,7 +173,6 @@ function BasicDataTable() {
         });
         toast.success("تم إنشاء الكوبون بنجاح");
       }
-
       setIsDialogOpen(false);
       resetForm();
       refetchCoupons();
@@ -186,7 +186,6 @@ function BasicDataTable() {
 
   const handleDelete = async () => {
     if (!selectedCoupon) return;
-
     setIsLoading(true);
     try {
       await postData(
@@ -202,6 +201,36 @@ function BasicDataTable() {
     } catch (error) {
       console.error("Error deleting coupon:", error);
       toast.error("حدث خطأ أثناء حذف الكوبون");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ FIXED: Bulk delete now uses real database IDs
+  const handleBulkDelete = async () => {
+    const selectedIds = Object.keys(rowSelection).map(Number); // ✅ Now these are real database IDs
+
+    if (selectedIds.length === 0) return;
+
+    setIsLoading(true);
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          postData(
+            `cobons/${id}`,
+            { _method: "DELETE" },
+            {
+              Authorization: `Bearer ${token}`,
+            }
+          )
+        )
+      );
+      toast.success(`تم حذف ${selectedIds.length} كوبون`);
+      setRowSelection({});
+      setIsBulkDeleteConfirmOpen(false);
+      refetchCoupons();
+    } catch (error) {
+      toast.error("حدث خطأ أثناء الحذف الجماعي");
     } finally {
       setIsLoading(false);
     }
@@ -240,7 +269,9 @@ function BasicDataTable() {
 
   // fetch coupons from api
   useEffect(() => {
-    refetchCoupons();
+    if (token) {
+      refetchCoupons();
+    }
   }, [pagination.pageIndex, pagination.pageSize, token]);
 
   // get token from next api
@@ -253,12 +284,52 @@ function BasicDataTable() {
         throw error;
       }
     };
-
     feachData();
-  }, [token]);
+  }, []);
+
+  // Update useEffect to set form data when editing coupon changes
+  useEffect(() => {
+    if (selectedCoupon) {
+      setFormData({
+        code: selectedCoupon.code.toString(),
+        status: selectedCoupon.status,
+        discount: selectedCoupon.discount.toString(),
+        start_time: selectedCoupon.start_time.split("T")[0],
+        end_time: selectedCoupon.end_time.split("T")[0],
+      });
+    }
+  }, [selectedCoupon]);
+
+  // Selection column
+  const selectionColumn: ColumnDef<Coupon> = {
+    id: "select",
+    header: ({ table }) => (
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          checked={table.getIsAllRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+          className="w-4 h-4 rounded border-gray-300"
+        />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={() => row.toggleSelected()}
+          className="w-4 h-4 rounded border-gray-300"
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  };
 
   // columns of table
   const columns: ColumnDef<Coupon>[] = [
+    selectionColumn, // Add first
     {
       accessorKey: "code",
       header: "الكود",
@@ -350,7 +421,7 @@ function BasicDataTable() {
               setSelectedCoupon(row.original);
               setIsDeleteDialogOpen(true);
             }}
-            className="h-8 w-8 text-destructive"
+            className="h-8 w-8 text-outline"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -359,7 +430,7 @@ function BasicDataTable() {
     },
   ];
 
-  // table
+  // ✅ FIXED: Table config with real ID-based row selection
   const table = useReactTable({
     data,
     columns,
@@ -369,11 +440,19 @@ function BasicDataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: true,
     pageCount: pagination.lastPage,
+    
+    // ✅ CRITICAL: Use real database ID for row identification
+    getRowId, // This ensures selection uses real IDs, not table indices
+    
+    // Enable row selection
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
     state: {
       pagination: {
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
       },
+      rowSelection, // Now contains real IDs as keys
     },
     onPaginationChange: (updater) => {
       if (typeof updater === "function") {
@@ -389,6 +468,9 @@ function BasicDataTable() {
     },
   });
 
+  // Get selected count
+  const selectedCount = Object.keys(rowSelection).length;
+
   return (
     <>
       <div className="flex items-center justify-between gap-2 px-4 mb-4">
@@ -403,7 +485,21 @@ function BasicDataTable() {
             className="max-w-sm min-w-[200px] h-10"
           />
         </div>
+
         <div className="flex items-center gap-2">
+          {/* Show bulk delete button only if items selected */}
+          {selectedCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBulkDeleteConfirmOpen(true)}
+              className="h-10"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              حذف {selectedCount} عنصر
+            </Button>
+          )}
+
           <Button
             onClick={() => handleOpenDialog()}
             variant="outline"
@@ -456,7 +552,7 @@ function BasicDataTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-center">
-                  No results found.
+                  لا توجد نتائج.
                 </TableCell>
               </TableRow>
             )}
@@ -476,15 +572,11 @@ function BasicDataTable() {
           >
             السابق
           </Button>
-
-          {/* Page Numbers */}
           <div className="flex items-center gap-2">
             {(() => {
               const currentPage = pagination.currentPage;
               const lastPage = pagination.lastPage;
               const pages = [];
-
-              // Always show first page
               pages.push(
                 <Button
                   key="1"
@@ -498,12 +590,8 @@ function BasicDataTable() {
                   1
                 </Button>
               );
-
-              // Calculate start and end of page range
               let start = Math.max(2, currentPage - 1);
               let end = Math.min(lastPage - 1, currentPage + 1);
-
-              // Add ellipsis after first page if needed
               if (start > 2) {
                 pages.push(
                   <span key="ellipsis1" className="px-2">
@@ -511,8 +599,6 @@ function BasicDataTable() {
                   </span>
                 );
               }
-
-              // Add middle pages
               for (let i = start; i <= end; i++) {
                 pages.push(
                   <Button
@@ -528,8 +614,6 @@ function BasicDataTable() {
                   </Button>
                 );
               }
-
-              // Add ellipsis before last page if needed
               if (end < lastPage - 1) {
                 pages.push(
                   <span key="ellipsis2" className="px-2">
@@ -537,8 +621,6 @@ function BasicDataTable() {
                   </span>
                 );
               }
-
-              // Always show last page if there is more than one page
               if (lastPage > 1) {
                 pages.push(
                   <Button
@@ -554,11 +636,9 @@ function BasicDataTable() {
                   </Button>
                 );
               }
-
               return pages;
             })()}
           </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -612,7 +692,6 @@ function BasicDataTable() {
                 </select>
               </div>
             </div>
-
             <div className="space-y-2">
               <label htmlFor="discount" className="block text-sm font-medium">
                 قيمة الخصم
@@ -639,7 +718,6 @@ function BasicDataTable() {
                   : "أدخل القيمة الثابتة للخصم"}
               </p>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label
@@ -678,7 +756,6 @@ function BasicDataTable() {
                 />
               </div>
             </div>
-
             <DialogFooter className="mt-6">
               <Button
                 type="button"
@@ -700,7 +777,7 @@ function BasicDataTable() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Single Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -722,6 +799,37 @@ function BasicDataTable() {
               onClick={handleDelete}
               disabled={isLoading}
               className="bg-red-500 text-white hover:bg-red-600"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              حذف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={isBulkDeleteConfirmOpen} onOpenChange={setIsBulkDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد الحذف الجماعي</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>
+              هل أنت متأكد من حذف <strong>{selectedCount}</strong> كوبون؟ لا يمكن التراجع.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDeleteConfirmOpen(false)}
+              disabled={isLoading}
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBulkDelete}
+              disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               حذف

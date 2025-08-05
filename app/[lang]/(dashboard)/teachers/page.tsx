@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,10 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-
 import {
   Dialog,
   DialogContent,
@@ -31,7 +28,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -122,7 +118,6 @@ function BasicDataTable() {
     password: "",
     avatar: "",
   });
-
   const [filters, setFilters] = useState({
     subject_id: "",
     to_date: "",
@@ -137,6 +132,10 @@ function BasicDataTable() {
     activeUsers: 0,
     growthRate: 0,
   });
+
+  // ✅ Multi-select state
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
   // Reset form data
   const resetFormData = () => {
@@ -165,7 +164,6 @@ function BasicDataTable() {
       setTotalPages(response.meta.last_page);
       setCurrentPage(response.meta.current_page);
       setTotalUsers(response.meta.total);
-
       // Update stats
       setStats((prev) => ({
         ...prev,
@@ -187,7 +185,6 @@ function BasicDataTable() {
         throw error;
       }
     };
-
     feachData();
   }, []);
 
@@ -220,12 +217,10 @@ function BasicDataTable() {
     password: z.string().min(8, "Password must be at least 8 characters"),
     subject_id: z.string().optional(),
   });
-
   const { register, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
     mode: "all",
   });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -233,7 +228,6 @@ function BasicDataTable() {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
-
       reset();
       resetFormData();
       refetchUsers();
@@ -259,13 +253,11 @@ function BasicDataTable() {
   const updateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
-
     try {
       await postData(`teachers/${editingUser.user.id}`, formData, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
-
       reset();
       resetFormData();
       setEditingUser(null);
@@ -295,7 +287,6 @@ function BasicDataTable() {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
-
       reset();
       setEditingUser(null);
       refetchUsers();
@@ -315,6 +306,40 @@ function BasicDataTable() {
       throw error;
     }
   };
+
+  // ✅ Bulk delete handler
+  // ✅ Fixed bulk delete handler - gets real user IDs instead of table indices
+const handleBulkDelete = async () => {
+  // Get the actual user IDs from selected rows
+  const selectedUserIds = Object.keys(rowSelection)
+    .map(rowId => {
+      // Find the user data by row ID
+      const user = data.find(user => String(user.id) === rowId);
+      return user ? user.user.id : null; // Return the actual user.id, not the table row id
+    })
+    .filter(Boolean); // Remove any null values
+  
+  console.log('Selected user IDs:', selectedUserIds); // Debug log
+  
+  try {
+    await Promise.all(
+      selectedUserIds.map((userId) =>
+        deleteData(`teachers/${userId}`, {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        })
+      )
+    );
+    toast.success(`تم حذف ${selectedUserIds.length} مستخدم(ين) بنجاح!`);
+    setRowSelection({}); // Clear selection
+    refetchUsers();
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    toast.error("فشل في حذف بعض المستخدمين");
+  } finally {
+    setIsBulkDeleteDialogOpen(false);
+  }
+};
 
   // Handle edit user click
   const handleEditUser = (user: User) => {
@@ -372,7 +397,6 @@ function BasicDataTable() {
         console.log(error);
       }
     };
-
     feachData();
   }, [token]);
 
@@ -389,6 +413,43 @@ function BasicDataTable() {
 
   // columns of table
   const columns: ColumnDef<User>[] = [
+    // ✅ Select Column
+    {
+      id: "select",
+      header: ({ table }) => {
+        const isAllSelected = table.getIsAllPageRowsSelected();
+        const isSomeSelected = table.getIsSomePageRowsSelected();
+        const ref = useRef<HTMLButtonElement>(null);
+
+        return (
+          <div className="flex items-center">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={() => table.toggleAllPageRowsSelected()}
+                className="w-4 h-4 text-blue-600 rounded border-gray-300"
+              />
+              {isSomeSelected && !isAllSelected && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-3 h-0.5 bg-white rounded"></div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={() => row.toggleSelected()}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+          />
+        </div>
+      ),
+    },
     {
       accessorKey: "full_name",
       header: "الاسم الكامل",
@@ -437,7 +498,6 @@ function BasicDataTable() {
       accessorKey: "online_courses_count",
       header: "عدد الدورات أونلاين",
       cell: ({ row }) => {
-        // Try to get from row.original.online_courses_count, fallback to row.original.user.online_courses_count, fallback to 0
         const count =
           typeof row.original.online_courses_count === "number"
             ? row.original.online_courses_count
@@ -451,7 +511,6 @@ function BasicDataTable() {
       accessorKey: "has_offline_courses",
       header: "دورات أوفلاين؟",
       cell: ({ row }) => {
-        // Try to get from row.original.has_offline_courses, fallback to row.original.user.has_offline_courses, fallback to false
         const hasOffline =
           typeof row.original.has_offline_courses === "boolean"
             ? row.original.has_offline_courses
@@ -500,7 +559,7 @@ function BasicDataTable() {
     },
   ];
 
-  // table
+  // ✅ Table with row selection
   const table = useReactTable({
     data,
     columns,
@@ -508,7 +567,16 @@ function BasicDataTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      rowSelection,
+    },
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
+    getRowId: (row) => String(row.id),
   });
+
+  // ✅ Get selected count
+  const selectedCount = Object.keys(rowSelection).length;
 
   return (
     <>
@@ -529,7 +597,6 @@ function BasicDataTable() {
             </div>
           </div>
         </div>
-
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
@@ -545,7 +612,6 @@ function BasicDataTable() {
             </div>
           </div>
         </div>
-
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-l-4 border-purple-500">
           <div className="flex items-center justify-between">
             <div>
@@ -561,7 +627,6 @@ function BasicDataTable() {
             </div>
           </div>
         </div>
-
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-l-4 border-orange-500">
           <div className="flex items-center justify-between">
             <div>
@@ -624,180 +689,190 @@ function BasicDataTable() {
           className="p-2 border rounded"
         />
 
-        {/* add user Dialog */}
-        <div className="ms-auto">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline">اضافه مستخدم</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>اضافه مستخدم</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div className="space-y-2 flex items-center justify-center flex-col w-full">
-                    <label
-                      htmlFor="cover"
-                      className="block text-sm font-medium"
-                    >
-                      صورة المستخدم
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <Input
-                          {...register("cover")}
-                          id="cover"
-                          type="file"
-                          accept="image/*"
-                          name="cover"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setFormData((prev) => ({
-                                ...prev,
-                                cover: file,
-                                avatar: file,
-                              }));
-                            }
-                          }}
-                        />
-                        {(!formData.cover ||
-                          formData.cover === "https://safezone-co.top/" ||
-                          formData.cover ===
-                            "https://via.placeholder.com/150x150") && (
-                          <label
-                            htmlFor="cover"
-                            className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
-                          >
-                            <Upload className="w-5 h-5 text-gray-600" />
-                          </label>
-                        )}
-                      </div>
-                      {formData.cover &&
-                        formData.cover !== "https://safezone-co.top/" &&
-                        formData.cover !==
-                          "https://via.placeholder.com/150x150" && (
-                          <div className="relative w-20 h-20">
-                            <img
-                              src={
-                                typeof formData.cover === "string"
-                                  ? formData.cover !==
-                                      "https://safezone-co.top/" &&
-                                    formData.cover !==
-                                      "https://via.placeholder.com/150x150"
-                                    ? formData.cover
-                                    : DEFAULT_IMAGE
-                                  : formData.cover instanceof File
-                                  ? URL.createObjectURL(formData.cover)
-                                  : DEFAULT_IMAGE
-                              }
-                              alt="Preview"
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
+        {/* Conditional Button */}
+        {selectedCount > 0 ? (
+          <Button
+            variant="outline"
+            onClick={() => setIsBulkDeleteDialogOpen(true)}
+            className="ms-auto h-10"
+          >
+            حذف المحدد ({selectedCount})
+          </Button>
+        ) : (
+          <div className="ms-auto">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">اضافه مستخدم</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>اضافه مستخدم</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit}>
+                  <div className="space-y-4">
+                    <div className="space-y-2 flex items-center justify-center flex-col w-full">
+                      <label
+                        htmlFor="cover"
+                        className="block text-sm font-medium"
+                      >
+                        صورة المستخدم
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <Input
+                            {...register("cover")}
+                            id="cover"
+                            type="file"
+                            accept="image/*"
+                            name="cover"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
                                 setFormData((prev) => ({
                                   ...prev,
-                                  cover: null,
-                                }))
+                                  cover: file,
+                                  avatar: file,
+                                }));
                               }
-                              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                            }}
+                          />
+                          {(!formData.cover ||
+                            formData.cover === "https://safezone-co.top/" ||
+                            formData.cover ===
+                              "https://via.placeholder.com/150x150") && (
+                            <label
+                              htmlFor="cover"
+                              className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
                             >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
+                              <Upload className="w-5 h-5 text-gray-600" />
+                            </label>
+                          )}
+                        </div>
+                        {formData.cover &&
+                          formData.cover !== "https://safezone-co.top/" &&
+                          formData.cover !==
+                            "https://via.placeholder.com/150x150" && (
+                            <div className="relative w-20 h-20">
+                              <img
+                                src={
+                                  typeof formData.cover === "string"
+                                    ? formData.cover !==
+                                        "https://safezone-co.top/" &&
+                                      formData.cover !==
+                                        "https://via.placeholder.com/150x150"
+                                      ? formData.cover
+                                      : DEFAULT_IMAGE
+                                    : formData.cover instanceof File
+                                    ? URL.createObjectURL(formData.cover)
+                                    : DEFAULT_IMAGE
+                                }
+                                alt="Preview"
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    cover: null,
+                                  }))
+                                }
+                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="full_name">اسم المستخدم</label>
+                      <Input
+                        {...register("full_name")}
+                        id="full_name"
+                        placeholder="Enter full name"
+                        name="full_name"
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="email">الايميل</label>
+                      <Input
+                        {...register("email")}
+                        id="email"
+                        type="email"
+                        placeholder="Enter email"
+                        name="email"
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="phone">رقم الهاتف</label>
+                      <Input
+                        {...register("phone")}
+                        id="phone"
+                        placeholder="Enter phone number"
+                        name="phone"
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="password">كلمة المرور</label>
+                      <Input
+                        {...register("password")}
+                        id="password"
+                        type="password"
+                        placeholder="Enter password"
+                        name="password"
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="subject_id">Subject</label>
+                      <select
+                        {...register("subject_id")}
+                        id="subject_id"
+                        className="w-full p-2 border rounded"
+                        name="subject_id"
+                        onChange={handleSelectChange}
+                      >
+                        <option value="">Select subject</option>
+                        {subjects?.map((subject) => (
+                          <option key={subject?.id} value={subject?.id}>
+                            {subject?.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="full_name">اسم المستخدم</label>
-                    <Input
-                      {...register("full_name")}
-                      id="full_name"
-                      placeholder="Enter full name"
-                      name="full_name"
-                      onChange={handleInputChange}
-                    />
+                    {error && (
+                      <p
+                        className="text-red-500"
+                        dangerouslySetInnerHTML={{ __html: error }}
+                      />
+                    )}
                   </div>
-                  <div>
-                    <label htmlFor="email">الايميل</label>
-                    <Input
-                      {...register("email")}
-                      id="email"
-                      type="email"
-                      placeholder="Enter email"
-                      name="email"
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="phone">رقم الهاتف</label>
-                    <Input
-                      {...register("phone")}
-                      id="phone"
-                      placeholder="Enter phone number"
-                      name="phone"
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="password">كلمة المرور</label>
-                    <Input
-                      {...register("password")}
-                      id="password"
-                      type="password"
-                      placeholder="Enter password"
-                      name="password"
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="subject_id">Subject</label>
-                    <select
-                      {...register("subject_id")}
-                      id="subject_id"
-                      className="w-full p-2 border rounded"
-                      name="subject_id"
-                      onChange={handleSelectChange}
-                    >
-                      <option value="">Select subject</option>
-                      {subjects?.map((subject) => (
-                        <option key={subject?.id} value={subject?.id}>
-                          {subject?.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  {error && (
-                    <p
-                      className="text-red-500"
-                      dangerouslySetInnerHTML={{ __html: error }}
-                    />
-                  )}
-                </div>
-                <div className="mt-6 space-y-2">
-                  <Button type="submit" className="w-full">
-                    Submit
-                  </Button>
-                  <DialogClose asChild>
-                    <Button
-                      ref={dialogCloseRef}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      Cancel
+                  <div className="mt-6 space-y-2">
+                    <Button type="submit" className="w-full">
+                      Submit
                     </Button>
-                  </DialogClose>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                    <DialogClose asChild>
+                      <Button
+                        ref={dialogCloseRef}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       {/* Native Edit Modal */}
@@ -816,7 +891,6 @@ function BasicDataTable() {
                   <X className="w-6 h-6" />
                 </button>
               </div>
-
               <form onSubmit={updateUser}>
                 <div className="space-y-4">
                   {/* Image Upload */}
@@ -892,7 +966,6 @@ function BasicDataTable() {
                         )}
                     </div>
                   </div>
-
                   {/* Full Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -907,7 +980,6 @@ function BasicDataTable() {
                       placeholder="Enter full name"
                     />
                   </div>
-
                   {/* Email */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -922,7 +994,6 @@ function BasicDataTable() {
                       placeholder="Enter email"
                     />
                   </div>
-
                   {/* Phone */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -937,7 +1008,6 @@ function BasicDataTable() {
                       placeholder="Enter phone number"
                     />
                   </div>
-
                   {/* Password */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -952,7 +1022,6 @@ function BasicDataTable() {
                       placeholder="Enter new password (leave empty to keep current)"
                     />
                   </div>
-
                   {/* Subject */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -999,6 +1068,7 @@ function BasicDataTable() {
           </div>
         </div>
       )}
+
       {/* users table */}
       <div className="overflow-x-auto">
         <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
@@ -1054,8 +1124,6 @@ function BasicDataTable() {
             >
               السابق
             </Button>
-
-            {/* Page Numbers */}
             <div className="flex items-center gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                 (pageNumber) => (
@@ -1065,9 +1133,7 @@ function BasicDataTable() {
                     size="sm"
                     onClick={() => refetchUsers(pageNumber)}
                     className={`w-9 h-9 font-medium transition-all duration-200 ${
-                      pageNumber === currentPage
-                        ? "scale-110"
-                        : "hover:scale-105"
+                      pageNumber === currentPage ? "scale-110" : "hover:scale-105"
                     }`}
                   >
                     {pageNumber}
@@ -1075,7 +1141,6 @@ function BasicDataTable() {
                 )
               )}
             </div>
-
             <Button
               variant="outline"
               size="sm"
@@ -1088,6 +1153,35 @@ function BasicDataTable() {
           </div>
         </div>
       </div>
+
+      {/* ✅ Bulk Delete Confirmation Dialog */}
+      {isBulkDeleteDialogOpen && (
+        <Dialog
+          open={isBulkDeleteDialogOpen}
+          onOpenChange={setIsBulkDeleteDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>تأكيد الحذف الجماعي</DialogTitle>
+            </DialogHeader>
+            <p>
+              هل أنت متأكد من حذف <strong>{selectedCount}</strong> مستخدم(ين)؟
+              لا يمكن التراجع عن هذا الإجراء.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkDeleteDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button variant="outline" onClick={handleBulkDelete}>
+                حذف المحدد
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

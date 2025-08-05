@@ -27,8 +27,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { Copy, Printer, Loader2 } from "lucide-react";
+import { Copy, Printer, Loader2, Trash2, Pencil } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
@@ -78,9 +79,71 @@ function BasicDataTable() {
 
   const [isUsedFilter, setIsUsedFilter] = useState<string>("");
 
+  // ✅ NEW: Multi-select delete states
+  const [rowSelection, setRowSelection] = useState({});
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+  const [selectedCode, setSelectedCode] = useState<SubscriptionCodeTypes | null>(null);
+
+  // ✅ CRITICAL: Use real database ID for row identification
+  const getRowId = (row: SubscriptionCodeTypes) => row.id.toString();
+
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("تم نسخ الكود بنجاح");
+  };
+
+  // ✅ NEW: Single delete function
+  const handleDelete = async () => {
+    if (!selectedCode) return;
+    setIsLoading(true);
+    try {
+      await postData(
+        `subscription_codes/${selectedCode.id}`,
+        { _method: "DELETE" },
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      toast.success("تم حذف الكود بنجاح");
+      setIsDeleteDialogOpen(false);
+      refetchUsers();
+    } catch (error) {
+      console.error("Error deleting code:", error);
+      toast.error("حدث خطأ أثناء حذف الكود");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ NEW: Bulk delete function using real database IDs
+  const handleBulkDelete = async () => {
+    const selectedIds = Object.keys(rowSelection).map(Number); // Real database IDs
+
+    if (selectedIds.length === 0) return;
+
+    setIsLoading(true);
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          postData(
+            `subscription_codes/${id}`,
+            { _method: "DELETE" },
+            {
+              Authorization: `Bearer ${token}`,
+            }
+          )
+        )
+      );
+      toast.success(`تم حذف ${selectedIds.length} كود`);
+      setRowSelection({});
+      setIsBulkDeleteConfirmOpen(false);
+      refetchUsers();
+    } catch (error) {
+      toast.error("حدث خطأ أثناء الحذف الجماعي");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Fetch teachers for admin
@@ -308,8 +371,36 @@ function BasicDataTable() {
     printWindow.document.close();
   };
 
-  // columns of table
+  // ✅ NEW: Selection column
+  const selectionColumn: ColumnDef<SubscriptionCodeTypes> = {
+    id: "select",
+    header: ({ table }) => (
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          checked={table.getIsAllRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+          className="w-4 h-4 rounded border-gray-300"
+        />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={() => row.toggleSelected()}
+          className="w-4 h-4 rounded border-gray-300"
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  };
+
+  // ✅ UPDATED: columns of table with selection column and actions
   const columns: ColumnDef<SubscriptionCodeTypes>[] = [
+    selectionColumn, // Add selection column first
     {
       accessorKey: "code",
       header: "الكود",
@@ -399,13 +490,32 @@ function BasicDataTable() {
       accessorKey: "teacher_name",
       header: "اسم المعلم",
       cell: ({ row }) => {
-        
         return row.original.teacher_name;
       },
     },
+    // ✅ NEW: Actions column
+    {
+      id: "actions",
+      header: "الإجراءات",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setSelectedCode(row.original);
+              setIsDeleteDialogOpen(true);
+            }}
+            className="h-8 w-8 text-outline"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
-  // table
+  // ✅ UPDATED: table configuration with row selection
   const table = useReactTable({
     data,
     columns,
@@ -415,11 +525,19 @@ function BasicDataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: true,
     pageCount: pagination.lastPage,
+    
+    // ✅ CRITICAL: Use real database ID for row identification
+    getRowId, // This ensures selection uses real IDs, not table indices
+    
+    // Enable row selection
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
     state: {
       pagination: {
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
       },
+      rowSelection, // Now contains real IDs as keys
     },
     onPaginationChange: (updater) => {
       if (typeof updater === "function") {
@@ -434,6 +552,9 @@ function BasicDataTable() {
       }
     },
   });
+
+  // ✅ NEW: Get selected count
+  const selectedCount = Object.keys(rowSelection).length;
 
   return (
     <>
@@ -482,6 +603,19 @@ function BasicDataTable() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* ✅ NEW: Show bulk delete button only if items selected */}
+          {selectedCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBulkDeleteConfirmOpen(true)}
+              className="h-10"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              حذف {selectedCount} عنصر
+            </Button>
+          )}
+          
           <Button
             onClick={generateStudentCode}
             variant="outline"
@@ -623,6 +757,67 @@ function BasicDataTable() {
               إنشاء الأكواد
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ NEW: Delete Single Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد الحذف</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>هل أنت متأكد من حذف هذا الكود؟</p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isLoading}
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              disabled={isLoading}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              حذف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ NEW: Bulk Delete Confirmation Dialog */}
+      <Dialog open={isBulkDeleteConfirmOpen} onOpenChange={setIsBulkDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد الحذف الجماعي</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>
+              هل أنت متأكد من حذف <strong>{selectedCount}</strong> كود؟ لا يمكن التراجع.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDeleteConfirmOpen(false)}
+              disabled={isLoading}
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBulkDelete}
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              حذف
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

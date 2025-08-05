@@ -1,5 +1,4 @@
 "use client";
-
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,7 +11,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import {
   MoreHorizontal,
   X,
@@ -35,8 +33,9 @@ import {
   ChevronsRight,
   Upload,
   Image as ImageIcon,
+  Trash2,
+  Check,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -168,6 +167,7 @@ function BanksTable() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+
   // Enhanced filters
   const [subjectFilter, setSubjectFilter] = useState("all");
   const [bankTypeFilter, setBankTypeFilter] = useState("all"); // course, teacher, all
@@ -182,6 +182,10 @@ function BanksTable() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
 
+  // === NEW: Multi-select delete states ===
+  const [selectedToDelete, setSelectedToDelete] = useState<number[]>([]);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+
   // get token from next api
   useEffect(() => {
     const fetchData = async () => {
@@ -193,7 +197,6 @@ function BanksTable() {
         throw error;
       }
     };
-
     fetchData();
   }, []);
 
@@ -210,11 +213,11 @@ function BanksTable() {
       if (globalFilter) params.search = globalFilter;
       if (teacherIdFilter !== "all") params.teacher_id = teacherIdFilter;
       if (levelFilter !== "all") params.level_id = levelFilter;
-      // Add price_from, price_to, date_from, date_to to params if set
       if (priceFrom) params.price_from = priceFrom;
       if (priceTo) params.price_to = priceTo;
       if (dateFrom) params.date_from = dateFrom;
       if (dateTo) params.date_to = dateTo;
+
       const response = await getData(`banks`, params, {
         Authorization: `Bearer ${token}`,
       });
@@ -232,7 +235,6 @@ function BanksTable() {
     if (token) {
       fetchData(currentPage);
     }
-    // eslint-disable-next-line
   }, [
     token,
     currentPage,
@@ -347,7 +349,6 @@ function BanksTable() {
         ...prev,
         image: file,
       }));
-
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -380,8 +381,8 @@ function BanksTable() {
     setDateFrom("");
     setDateTo("");
   };
-  // ---
 
+  // ---
   // submit course
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -394,11 +395,9 @@ function BanksTable() {
       formDataToSend.append("level_id", formData.level_id);
       formDataToSend.append("position", formData.position);
       formDataToSend.append("banktable_type", "course");
-
       if (formData.image) {
         formDataToSend.append("image", formData.image);
       }
-
       await postData("banks", formDataToSend, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
@@ -462,6 +461,34 @@ function BanksTable() {
       toast.success("تم حذف البنك بنجاح");
     } catch (error) {
       toast.error("فشل في حذف البنك");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // === NEW: Handle bulk delete ===
+  const handleBulkDelete = async () => {
+    if (!selectedToDelete.length) return;
+    setIsLoading(true);
+    try {
+      await Promise.all(
+        selectedToDelete.map((id) =>
+          deleteData(`banks/${id}`, {
+            Authorization: `Bearer ${token}`,
+          })
+        )
+      );
+      setBulkDeleteModalOpen(false);
+      setSelectedToDelete([]);
+      table.resetRowSelection();
+      await fetchData(currentPage);
+      toast.success(
+        selectedToDelete.length === 1
+          ? "تم حذف البنك بنجاح"
+          : `تم حذف ${selectedToDelete.length} بنوك بنجاح`
+      );
+    } catch (error) {
+      toast.error("فشل في حذف بعض البنوك.");
     } finally {
       setIsLoading(false);
     }
@@ -545,7 +572,40 @@ function BanksTable() {
     }
   };
 
+  // === NEW: Add selection column ===
   const columns: ColumnDef<Bank>[] = [
+    {
+  id: "select",
+  header: ({ table }) => (
+    <div className="flex items-center justify-center">
+      <div className="relative">
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={() => table.toggleAllPageRowsSelected()}
+          ref={(input) => {
+            if (input) {
+              input.indeterminate = !table.getIsAllPageRowsSelected() && table.getIsSomePageRowsSelected();
+            }
+          }}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+      </div>
+    </div>
+  ),
+  cell: ({ row }) => (
+    <div className="flex items-center justify-center">
+      <input
+        type="checkbox"
+        checked={row.getIsSelected()}
+        onChange={() => row.toggleSelected()}
+        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+      />
+    </div>
+  ),
+  enableSorting: false,
+  enableHiding: false,
+},
     {
       accessorKey: "image",
       header: "الصورة",
@@ -561,7 +621,7 @@ function BanksTable() {
                   className="object-cover w-full h-full"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder-bank.png"; // Fallback image
+                    target.src = "/placeholder-bank.png";
                   }}
                 />
               </div>
@@ -742,8 +802,9 @@ function BanksTable() {
     },
   ];
 
+  // === NEW: Enable row selection in table ===
   const table = useReactTable({
-    data: data, // Use data directly
+    data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -756,7 +817,21 @@ function BanksTable() {
       sorting,
       columnFilters,
       columnVisibility,
+      rowSelection: selectedToDelete.reduce((acc, id) => {
+        const index = data.findIndex((d) => d.id === id);
+        if (index !== -1) acc[index] = true;
+        return acc;
+      }, {} as Record<number, boolean>),
     },
+    onRowSelectionChange: (updater) => {
+      const selection = updater instanceof Function ? updater(table.getState().rowSelection) : updater;
+      const selectedIds = Object.keys(selection)
+        .filter((key) => selection[parseInt(key)])
+        .map((key) => data[parseInt(key)]?.id)
+        .filter(Boolean) as number[];
+      setSelectedToDelete(selectedIds);
+    },
+    enableRowSelection: true,
   });
 
   const updateBank = async (id: number) => {
@@ -771,11 +846,9 @@ function BanksTable() {
       formDataToSend.append("position", formData.position);
       formDataToSend.append("level_id", formData.level_id);
       formDataToSend.append("_method", "PUT");
-
       if (formData.image) {
         formDataToSend.append("image", formData.image);
       }
-
       await postData(`banks/${id}`, formDataToSend, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
@@ -816,7 +889,6 @@ function BanksTable() {
               className="pl-10"
             />
           </div>
-
           {/* Subject Filter */}
           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
             <SelectTrigger className="w-[120px]">
@@ -831,7 +903,6 @@ function BanksTable() {
               ))}
             </SelectContent>
           </Select>
-
           {/* Price Filter */}
           <Select value={priceFilter} onValueChange={setPriceFilter}>
             <SelectTrigger className="w-[120px]">
@@ -843,7 +914,6 @@ function BanksTable() {
               <SelectItem value="paid">مدفوع</SelectItem>
             </SelectContent>
           </Select>
-
           {/* Price From/To Filter */}
           <div className="flex gap-1 items-center">
             <Input
@@ -868,7 +938,6 @@ function BanksTable() {
               style={{ direction: "rtl" }}
             />
           </div>
-
           {/* Date From/To Filter */}
           <div className="flex gap-1 items-center">
             <Input
@@ -889,7 +958,6 @@ function BanksTable() {
               style={{ direction: "rtl" }}
             />
           </div>
-
           {/* Position Filter */}
           <Select value={positionFilter} onValueChange={setPositionFilter}>
             <SelectTrigger className="w-[120px]">
@@ -901,7 +969,6 @@ function BanksTable() {
               <SelectItem value="offline">أوفلاين</SelectItem>
             </SelectContent>
           </Select>
-
           {/* Level Filter */}
           <Select value={levelFilter} onValueChange={setLevelFilter}>
             <SelectTrigger className="w-[120px]">
@@ -916,7 +983,6 @@ function BanksTable() {
               ))}
             </SelectContent>
           </Select>
-
           {/* Teacher Filter */}
           <Select value={teacherIdFilter} onValueChange={setTeacherIdFilter}>
             <SelectTrigger className="w-[140px]">
@@ -931,7 +997,6 @@ function BanksTable() {
               ))}
             </SelectContent>
           </Select>
-
           <Button
             className="flex items-center gap-2"
             variant="outline"
@@ -943,7 +1008,6 @@ function BanksTable() {
             إعادة تعيين الفلاتر
           </Button>
         </div>
-
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
@@ -957,7 +1021,6 @@ function BanksTable() {
             />
             تحديث
           </Button>
-
           <Button
             className="flex items-center gap-2"
             variant="outline"
@@ -967,7 +1030,6 @@ function BanksTable() {
             <Download className="h-4 w-4 mr-2" />
             تصدير CSV
           </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -1003,6 +1065,20 @@ function BanksTable() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* === NEW: Delete Button (only when selected) === */}
+          {selectedToDelete.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkDeleteModalOpen(true)}
+              className="flex items-center gap-1"
+            >
+              <Trash2 className="w-4 h-4" />
+              حذف ({selectedToDelete.length})
+            </Button>
+          )}
+
+          {/* Add Bank Button */}
           <Dialog open={addBank} onOpenChange={setAddBank}>
             {user?.role === "admin" && (
               <DialogTrigger asChild>
@@ -1055,7 +1131,6 @@ function BanksTable() {
                         required
                       />
                     </div>
-
                     <div className="space-y-2">
                       <label htmlFor="price" className="text-sm font-medium">
                         السعر
@@ -1071,7 +1146,6 @@ function BanksTable() {
                         onChange={handleInputChange}
                       />
                     </div>
-
                     <div className="space-y-2">
                       <label htmlFor="image" className="text-sm font-medium">
                         صورة البنك
@@ -1123,7 +1197,6 @@ function BanksTable() {
                         )}
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <label
                         htmlFor="banktable_type"
@@ -1209,7 +1282,6 @@ function BanksTable() {
                             ))}
                       </select>
                     </div>
-
                     <div className="space-y-2">
                       <label htmlFor="position" className="text-sm font-medium">
                         الموقع
@@ -1241,14 +1313,12 @@ function BanksTable() {
                       </select>
                     </div>
                   </div>
-
                   {editError && (
                     <Alert variant="soft">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>{editError}</AlertDescription>
                     </Alert>
                   )}
-
                   <div className="flex gap-3 pt-4">
                     <Button
                       type="submit"
@@ -1415,7 +1485,6 @@ function BanksTable() {
                       required
                     />
                   </div>
-
                   <div className="space-y-2">
                     <label htmlFor="edit-price" className="text-sm font-medium">
                       السعر
@@ -1431,7 +1500,6 @@ function BanksTable() {
                       onChange={handleInputChange}
                     />
                   </div>
-
                   <div className="space-y-2">
                     <label htmlFor="edit-image" className="text-sm font-medium">
                       صورة البنك
@@ -1480,7 +1548,6 @@ function BanksTable() {
                       )}
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <label htmlFor="edit-price" className="text-sm font-medium">
                       المستوي
@@ -1509,7 +1576,6 @@ function BanksTable() {
                       ))}
                     </select>
                   </div>
-
                   <div className="space-y-2">
                     <label
                       htmlFor="banktable_id"
@@ -1564,7 +1630,6 @@ function BanksTable() {
                           ))}
                     </select>
                   </div>
-
                   <div className="space-y-2">
                     <label
                       htmlFor="edit-position"
@@ -1599,14 +1664,12 @@ function BanksTable() {
                     </select>
                   </div>
                 </div>
-
                 {editError && (
                   <Alert variant="soft">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>{editError}</AlertDescription>
                   </Alert>
                 )}
-
                 <div className="flex gap-3 pt-4">
                   <Button type="submit" disabled={isLoading} className="flex-1">
                     {isLoading ? (
@@ -1633,7 +1696,7 @@ function BanksTable() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog (Single) */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1667,6 +1730,48 @@ function BanksTable() {
                 إلغاء
               </Button>
             </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* === NEW: Bulk Delete Confirmation Modal === */}
+      <Dialog open={bulkDeleteModalOpen} onOpenChange={setBulkDeleteModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تأكيد الحذف</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد أنك تريد حذف{" "}
+              <strong>{selectedToDelete.length}</strong>{" "}
+              {selectedToDelete.length === 1 ? "بنك" : "بنوك"}؟ لا يمكن التراجع عن
+              هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={handleBulkDelete}
+              disabled={isLoading}
+              className="flex-1"
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  جاري الحذف...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  حذف
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteModalOpen(false)}
+              disabled={isLoading}
+            >
+              إلغاء
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1738,7 +1843,6 @@ function BanksTable() {
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
-
             <div className="flex items-center space-x-1">
               {Array.from(
                 { length: Math.min(5, paginationMeta.last_page) },
@@ -1753,7 +1857,6 @@ function BanksTable() {
                   } else {
                     pageNumber = currentPage - 2 + i;
                   }
-
                   return (
                     <Button
                       key={pageNumber}
@@ -1768,7 +1871,6 @@ function BanksTable() {
                 }
               )}
             </div>
-
             <Button
               variant="outline"
               size="sm"
