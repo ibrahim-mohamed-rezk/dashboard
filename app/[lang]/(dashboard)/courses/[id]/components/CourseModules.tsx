@@ -48,6 +48,8 @@ const CourseModules = ({
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const [isEditingVideoQuiz, setIsEditingVideoQuiz] = useState(false);
   const [videos, setVideos] = useState<VideoTypes[]>([]);
@@ -255,22 +257,16 @@ const CourseModules = ({
 
   // Enhanced delete function with confirmation
   const handleDelete = async (moduleId: number, type: string) => {
-    if (
-      !confirm("هل أنت متأكد من حذف هذا الدرس؟ لا يمكن التراجع عن هذا الإجراء.")
-    ) {
-      return;
-    }
-
     try {
       const endpoint = type === "video" ? "videos" : "exams";
       await deleteData(`${endpoint}/${moduleId}`, {
         Authorization: `Bearer ${token}`,
       });
-      await fetchCourse();
+      fetchCourse();
       fetchVideos();
-      toast.success("تم حذف الدرس بنجاح");
+      toast.success("تم الحذف بنجاح");
     } catch (error) {
-      toast.error("حدث خطأ أثناء حذف الدرس");
+      toast.error("فشل الحذف");
     }
   };
 
@@ -838,13 +834,106 @@ const CourseModules = ({
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold dark:text-white">محتوى الدورة</h2>
-          <Button
-            onClick={() => setIsAdding(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            إضافة درس جديدة
-          </Button>
+
+          {selectedModuleIds.length === 0 ? (
+            <Button
+              onClick={() => setIsAdding(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 ml-2" />
+              إضافة درس جديدة
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                تم اختيار {selectedModuleIds.length} عنصر
+              </span>
+
+              {/* Delete Selected Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async (e) => {
+                  e.preventDefault();
+
+                  const toastId = toast(
+                    <div className="text-right space-y-2">
+                      <p className="font-bold text-red-600 dark:text-red-400">
+                        تأكيد الحذف
+                      </p>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        هل أنت متأكد من حذف{" "}
+                        <strong>{selectedModuleIds.length}</strong> عنصر؟
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        لا يمكن التراجع عن هذا الإجراء.
+                      </p>
+                      <div className="flex justify-end gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            toast.dismiss(toastId);
+                            toast.success("تم إلغاء الحذف"); // ✅ Show cancel feedback
+                          }}
+                        >
+                          إلغاء
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            toast.dismiss(toastId); // Close confirmation
+                            try {
+                              // Loop and delete each selected module
+                              for (const id of selectedModuleIds) {
+                                const module = modules.find(
+                                  (m) => m.details?.id === id
+                                );
+                                if (module) {
+                                  await handleDelete(id, module.type);
+                                }
+                              }
+                              toast.success(
+                                `تم حذف ${selectedModuleIds.length} عنصر بنجاح`
+                              );
+                            } catch (err) {
+                              toast.error("حدث خطأ أثناء الحذف");
+                            } finally {
+                              setSelectedModuleIds([]); // Clear selection
+                            }
+                          }}
+                        >
+                          <Trash className="h-4 w-4 ml-1" />
+                          نعم، احذف
+                        </Button>
+                      </div>
+                    </div>,
+                    {
+                      duration: 12000,
+                      style: {
+                        minWidth: "320px",
+                        direction: "rtl",
+                      },
+                    }
+                  );
+                }}
+              >
+                <Trash className="h-4 w-4 ml-2" />
+                حذف المحدد
+              </Button>
+
+              {/* Cancel Selection */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedModuleIds([])}
+                className="text-gray-600 hover:text-gray-800 dark:text-gray-400"
+              >
+                إلغاء التحديد
+              </Button>
+            </div>
+          )}
         </div>
 
         {!modules || modules.length === 0 ? (
@@ -865,6 +954,30 @@ const CourseModules = ({
                   <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
                     #
                   </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200 w-12">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedModuleIds.length > 0 &&
+                        modules.every((m) =>
+                          selectedModuleIds.includes(m.details?.id)
+                        )
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedModuleIds(
+                            modules
+                              .map((m) => m.details?.id)
+                              .filter(Boolean) as number[]
+                          );
+                        } else {
+                          setSelectedModuleIds([]);
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    />
+                  </th>
+
                   <th className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
                     العنوان
                   </th>
@@ -893,6 +1006,26 @@ const CourseModules = ({
                     onClick={() => handleModuleClick(module)}
                   >
                     <td className="px-4 py-3 font-medium">{index + 1}</td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedModuleIds.includes(module.details?.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedModuleIds((prev) => [
+                              ...prev,
+                              module.details?.id,
+                            ]);
+                          } else {
+                            setSelectedModuleIds((prev) =>
+                              prev.filter((id) => id !== module.details?.id)
+                            );
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()} // Prevent opening edit modal
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-4 py-3 flex items-center gap-2 min-w-[180px]">
                       {module?.type === "video" &&
                       module?.details?.thumbnail ? (
