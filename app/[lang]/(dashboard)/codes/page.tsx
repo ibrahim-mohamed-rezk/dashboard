@@ -79,13 +79,13 @@ function BasicDataTable() {
 
   const [isUsedFilter, setIsUsedFilter] = useState<string>("");
 
-  // ✅ NEW: Multi-select delete states
+  // Multi-select delete states
   const [rowSelection, setRowSelection] = useState({});
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [selectedCode, setSelectedCode] = useState<SubscriptionCodeTypes | null>(null);
 
-  // ✅ CRITICAL: Use real database ID for row identification
+  // Use real database ID for row identification
   const getRowId = (row: SubscriptionCodeTypes) => row.id.toString();
 
   const copyToClipboard = (code: string) => {
@@ -93,7 +93,7 @@ function BasicDataTable() {
     toast.success("تم نسخ الكود بنجاح");
   };
 
-  // ✅ NEW: Single delete function
+  // Single delete function
   const handleDelete = async () => {
     if (!selectedCode) return;
     setIsLoading(true);
@@ -116,7 +116,7 @@ function BasicDataTable() {
     }
   };
 
-  // ✅ NEW: Bulk delete function using real database IDs
+  // Bulk delete function using real database IDs
   const handleBulkDelete = async () => {
     const selectedIds = Object.keys(rowSelection).map(Number); // Real database IDs
 
@@ -310,49 +310,100 @@ function BasicDataTable() {
     }
   };
 
+  // UPDATED: New print format with grid layout - each cell is 52.5mm x 29.7mm
   const printCodes = () => {
     if (!generatedCode) return;
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
+    // Calculate grid layout (4 columns per row to fit A4 page)
+    const codesPerRow = 4;
+    const rows = [];
+    
+    // Split codes into rows of 4
+    for (let i = 0; i < generatedCode.length; i += codesPerRow) {
+      const row = generatedCode.slice(i, i + codesPerRow);
+      rows.push(row);
+    }
+
     printWindow.document.write(`
       <html dir="rtl">
         <head>
           <title>Student Codes</title>
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
             body {
               font-family: Arial, sans-serif;
-              padding: 20px;
-              text-align: center;
+              padding: 5mm;
+              background: white;
             }
-            .codes-container {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 20px;
-              max-width: 800px;
+            
+            .header-section {
+              text-align: center;
+              margin-bottom: 5mm;
+            }
+            
+            .header-section h1 {
+              font-size: 18px;
+              margin-bottom: 3mm;
+            }
+            
+            .codes-grid {
+              border-collapse: collapse;
               margin: 0 auto;
             }
-            .code {
-              font-size: 24px;
-              padding: 15px;
-              border: 1px solid #ccc;
-              border-radius: 4px;
-              background-color: #f9f9f9;
+            
+            .codes-grid td {
+              width: 52.5mm;
+              height: 29.7mm;
+              border: 1px solid #000;
+              text-align: center;
+              vertical-align: middle;
+              font-size: 12px;
+              font-weight: bold;
+              padding: 2mm;
+              position: relative;
             }
+            
+            .code-text {
+              font-size: 14px;
+              letter-spacing: 1px;
+            }
+            
             @media print {
+              body {
+                padding: 3mm;
+              }
+              
               .no-print {
                 display: none;
               }
+              
               @page {
-                margin: 1cm;
+                size: A4;
+                margin: 5mm;
+              }
+              
+              .codes-grid td {
+                font-size: 11px;
+              }
+              
+              .code-text {
+                font-size: 13px;
               }
             }
           </style>
         </head>
         <body>
-          <h1>أكواد الطلاب</h1>
-          <div class="codes-container">
+          <div class="header-section">
+            <h1>أكواد الطلاب</h1>
+            <div class="codes-container">
             ${generatedCode
               .map(
                 (code) => `
@@ -361,9 +412,27 @@ function BasicDataTable() {
               )
               .join("")}
           </div>
-          <div class="no-print">
-            <button style="margin-top: 20px;" onclick="window.print()">Print</button>
+            <div class="no-print">
+              <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; margin-bottom: 10px;">طباعة</button>
+            </div>
           </div>
+          
+          <table class="codes-grid">
+            ${rows.map(row => `
+              <tr>
+                ${row.map(code => `
+                  <td>
+                    <div class="code-text">${code.code}</div>
+                  </td>
+                `).join('')}
+                ${row.length < codesPerRow ? 
+                  Array(codesPerRow - row.length).fill(0).map(() => `
+                    <td>&nbsp;</td>
+                  `).join('') : ''
+                }
+              </tr>
+            `).join('')}
+          </table>
         </body>
       </html>
     `);
@@ -371,7 +440,7 @@ function BasicDataTable() {
     printWindow.document.close();
   };
 
-  // ✅ NEW: Selection column
+  // Selection column
   const selectionColumn: ColumnDef<SubscriptionCodeTypes> = {
     id: "select",
     header: ({ table }) => (
@@ -398,7 +467,7 @@ function BasicDataTable() {
     enableHiding: false,
   };
 
-  // ✅ UPDATED: columns of table with selection column and actions
+  // Table columns with selection column and actions
   const columns: ColumnDef<SubscriptionCodeTypes>[] = [
     selectionColumn, // Add selection column first
     {
@@ -493,7 +562,7 @@ function BasicDataTable() {
         return row.original.teacher_name;
       },
     },
-    // ✅ NEW: Actions column
+    // Actions column
     {
       id: "actions",
       header: "الإجراءات",
@@ -515,7 +584,7 @@ function BasicDataTable() {
     },
   ];
 
-  // ✅ UPDATED: table configuration with row selection
+  // Table configuration with row selection
   const table = useReactTable({
     data,
     columns,
@@ -526,7 +595,7 @@ function BasicDataTable() {
     manualPagination: true,
     pageCount: pagination.lastPage,
     
-    // ✅ CRITICAL: Use real database ID for row identification
+    // Use real database ID for row identification
     getRowId, // This ensures selection uses real IDs, not table indices
     
     // Enable row selection
@@ -553,7 +622,7 @@ function BasicDataTable() {
     },
   });
 
-  // ✅ NEW: Get selected count
+  // Get selected count
   const selectedCount = Object.keys(rowSelection).length;
 
   return (
@@ -603,7 +672,7 @@ function BasicDataTable() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* ✅ NEW: Show bulk delete button only if items selected */}
+          {/* Show bulk delete button only if items selected */}
           {selectedCount > 0 && (
             <Button
               variant="outline"
@@ -760,7 +829,7 @@ function BasicDataTable() {
         </DialogContent>
       </Dialog>
 
-      {/* ✅ NEW: Delete Single Confirmation Dialog */}
+      {/* Delete Single Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -790,7 +859,7 @@ function BasicDataTable() {
         </DialogContent>
       </Dialog>
 
-      {/* ✅ NEW: Bulk Delete Confirmation Dialog */}
+      {/* Bulk Delete Confirmation Dialog */}
       <Dialog open={isBulkDeleteConfirmOpen} onOpenChange={setIsBulkDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>
@@ -821,7 +890,7 @@ function BasicDataTable() {
         </DialogContent>
       </Dialog>
 
-      {/* users table */}
+      {/* Subscription codes table */}
       <div className="overflow-x-auto relative">
         {isLoading && (
           <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -870,7 +939,7 @@ function BasicDataTable() {
         </Table>
       </div>
 
-      {/* Pagination Controls */}
+   {/* Pagination Controls */}
       <div className="flex items-center justify-center py-6">
         <div className="flex items-center gap-3">
           <Button

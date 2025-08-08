@@ -73,11 +73,13 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import { Teacher } from "@/lib/type";
 import { user } from "@/app/api/user/data";
+
 function generateSlug(title: string): string {
   const baseSlug = title.toLowerCase().replace(/\s+/g, "-");
   const randomStr = Math.random().toString(36).substring(2, 8);
   return `${baseSlug}-${randomStr}`;
 }
+
 interface Course {
   id: number;
   title: string;
@@ -102,10 +104,12 @@ interface Course {
   is_favorite?: boolean;
   modules?: any[];
 }
+
 interface Level {
   id: number;
   name: string;
 }
+
 interface FormData {
   teacher_id: number;
   subject_id: number;
@@ -121,6 +125,7 @@ interface FormData {
   price: string;
   cover?: File;
 }
+
 interface PaginationMeta {
   total: number;
   count: number;
@@ -133,7 +138,9 @@ interface PaginationMeta {
   from: number;
   to: number;
 }
+
 const DEFAULT_IMAGE = "https://via.placeholder.com/150";
+
 function CoursesTable() {
   const [data, setData] = useState<Course[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -150,6 +157,7 @@ function CoursesTable() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [priceFrom, setPriceFrom] = useState<string>("");
   const [priceTo, setPriceTo] = useState<string>("");
+  const [showExistingImage, setShowExistingImage] = useState<boolean>(true);
   const [formData, setFormData] = useState<FormData>({
     teacher_id: 0,
     subject_id: 0,
@@ -183,7 +191,7 @@ function CoursesTable() {
   const [statistics, setStatistics] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ NEW: Multi-select state
+  // ✅ Multi-select state
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [deleteSelectedDialogOpen, setDeleteSelectedDialogOpen] = useState<boolean>(false);
 
@@ -198,14 +206,17 @@ function CoursesTable() {
       [name]: value,
     }));
   };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFormData((prev) => ({
         ...prev,
         cover: e.target.files![0],
       }));
+      setShowExistingImage(false); // Hide existing image when new file is selected
     }
   };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -259,6 +270,7 @@ function CoursesTable() {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
     const fetchToken = async () => {
       try {
@@ -272,6 +284,7 @@ function CoursesTable() {
     };
     fetchToken();
   }, []);
+
   // Add teachers fetching for admin
   const fetchTeachers = async () => {
     if (!token || userRole !== "admin") return;
@@ -288,6 +301,7 @@ function CoursesTable() {
       toast.error("Failed to fetch teachers");
     }
   };
+
   // get subjects from api
   const fetchSubjects = async () => {
     if (!token) return;
@@ -304,12 +318,14 @@ function CoursesTable() {
       toast.error("Failed to fetch subjects");
     }
   };
+
   useEffect(() => {
     if (userRole === "admin") {
       fetchTeachers();
     }
     fetchSubjects();
   }, [userRole, token]);
+
   // Update form data when user role changes
   useEffect(() => {
     if (userRole === "teacher") {
@@ -319,6 +335,7 @@ function CoursesTable() {
       }));
     }
   }, [userRole, userId]);
+
   // fetch courses form api
   const fetchData = async (page: number = 1) => {
     if (!token) return;
@@ -351,6 +368,7 @@ function CoursesTable() {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
     if (token) {
       fetchData();
@@ -368,6 +386,7 @@ function CoursesTable() {
     priceFrom,
     priceTo,
   ]);
+
   // fetch levels form api
   const fetchLevels = async () => {
     if (!token) return;
@@ -385,14 +404,17 @@ function CoursesTable() {
       console.error("Error fetching levels:", error);
     }
   };
+
   useEffect(() => {
     if (token) {
       fetchLevels();
     }
   }, [token]);
+
   // edit course
   const handleEdit = (course: Course) => {
     setEditingCourse(course);
+    setShowExistingImage(true); // Show existing image by default
     const courseData: FormData = {
       teacher_id: course.teacher_id || 0,
       subject_id: course.subject_id || 0,
@@ -420,11 +442,13 @@ function CoursesTable() {
     });
     setEditCourse(true);
   };
+
   // open delete dialog
   const handleDeleteClick = (course: Course) => {
     setCourseToDelete(course);
     setDeleteDialogOpen(true);
   };
+
   // delete course
   const handleDeleteConfirm = async () => {
     if (!courseToDelete) return;
@@ -444,7 +468,7 @@ function CoursesTable() {
     }
   };
 
-  // ✅ NEW: Multi-delete handler
+  // Multi-delete handler
   const handleDeleteSelectedConfirm = async () => {
     if (selectedRows.size === 0) return;
     setIsLoading(true);
@@ -495,6 +519,7 @@ function CoursesTable() {
         return <Badge>غير محدد</Badge>;
     }
   };
+
   const getTypeBadge = (type?: string) => {
     switch (type) {
       case "paid":
@@ -505,43 +530,66 @@ function CoursesTable() {
         return <Badge variant="outline">غير محدد</Badge>;
     }
   };
-  const exportToCSV = () => {
-  const headers = [
-    "العنوان",
-    "رقم الكورس",
-    "المستوى",
-    "الموضوع",
-    "النوع",
-    "السعر",
-    "الموقع",
-    "الحالة",
-  ];
-  const csvData = data.map((course) => [
-    course.title,
-    course.cour_no,
-    course.level,
-    course.subject,
-    course.type || "",
-    course.price || "",
-    course.position || "",
-    course.status || "",
-  ]);
-  // ✅ Use \n for newline
-  const csvContent = [headers, ...csvData]
-    .map((row) => row.map((cell) => `"${cell}"`).join(","))
-    .join("\n");
-  // Add UTF-8 BOM for proper Arabic display
-  const BOM = "\uFEFF";
-  const blob = new Blob([BOM + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "courses.csv";
-  link.click();
-};
 
-  // ✅ NEW: Multi-select column (insert as first column)
+  const exportToCSV = () => {
+    const headers = [
+      "العنوان",
+      "رقم الكورس",
+      "المستوى",
+      "الموضوع",
+      "النوع",
+      "السعر",
+      "الموقع",
+      "الحالة",
+    ];
+    const csvData = data.map((course) => [
+      course.title,
+      course.cour_no,
+      course.level,
+      course.subject,
+      course.type || "",
+      course.price || "",
+      course.position || "",
+      course.status || "",
+    ]);
+    // ✅ Use \n for newline
+    const csvContent = [headers, ...csvData]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+    // Add UTF-8 BOM for proper Arabic display
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "courses.csv";
+    link.click();
+  };
+
+  // Handle dialog close for edit
+  const handleCloseEditDialog = () => {
+    setEditCourse(false);
+    setEditingCourse(null);
+    setShowExistingImage(true);
+    setFormData({
+      teacher_id: 0,
+      subject_id: 0,
+      level_id: 0,
+      title: "",
+      slug: "",
+      description: "",
+      type: "free",
+      position: "online",
+      meta_description: "",
+      meta_keywords: "",
+      status: "active",
+      price: "0",
+      cover: undefined,
+    });
+  };
+
+  // Multi-select column
   const columns: ColumnDef<Course>[] = [
     {
       id: "select",
@@ -695,6 +743,11 @@ function CoursesTable() {
       },
     },
     {
+      accessorKey: "status",
+      header: "الحالة",
+      cell: ({ row }) => getStatusBadge(row.getValue("status")),
+    },
+    {
       accessorKey: "created_at",
       header: "تاريخ الإنشاء",
       cell: ({ row }) => {
@@ -755,6 +808,7 @@ function CoursesTable() {
       columnVisibility,
     },
   });
+
   useEffect(() => {
     table.setPageSize(data.length || 15);
   }, [data.length]);
@@ -765,6 +819,7 @@ function CoursesTable() {
         <label className="text-sm font-medium">صورة الغلاف</label>
         <div className="flex flex-col items-center gap-4">
           <div className="relative w-full max-w-[300px] aspect-video rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary/50 dark:hover:border-primary/50 transition-colors">
+            {/* Show new uploaded image */}
             {formData.cover ? (
               <>
                 <img
@@ -774,32 +829,56 @@ function CoursesTable() {
                 />
                 <button
                   type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({ ...prev, cover: undefined }))
-                  }
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, cover: undefined }));
+                    setShowExistingImage(editingCourse?.cover ? true : false);
+                  }}
                   className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </>
-            ) : editingCourse && editingCourse.cover ? (
+            ) : 
+            /* Show existing image when editing and no new image is selected */
+            editingCourse && editingCourse.cover && showExistingImage ? (
               <>
                 <img
                   src={editingCourse.cover}
-                  alt="Cover preview"
+                  alt="Current cover"
                   className="w-full h-full object-cover rounded-lg"
                 />
                 <button
                   type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({ ...prev, cover: undefined }))
-                  }
+                  onClick={() => {
+                    setShowExistingImage(false);
+                  }}
                   className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
+                <div className="absolute bottom-2 left-2">
+                  <label className="cursor-pointer">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      تغيير الصورة
+                    </Button>
+                  </label>
+                </div>
               </>
             ) : (
+              /* Show upload area when no image */
               <div className="flex flex-col items-center justify-center h-full p-6 text-center">
                 <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
                   <Upload className="w-6 h-6 text-gray-500 dark:text-gray-400" />
@@ -1084,6 +1163,7 @@ function CoursesTable() {
       </div>
     </div>
   );
+
   const updateCourse = async (id: number) => {
     setIsLoading(true);
     try {
@@ -1112,6 +1192,7 @@ function CoursesTable() {
       });
       toast.success("تم تحديث الكورس بنجاح");
       setEditCourse(false);
+      handleCloseEditDialog();
       setEditingCourse(null);
       setFormData({
         teacher_id: 0,
@@ -1320,7 +1401,7 @@ function CoursesTable() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* ✅ NEW: Delete Selected Button (only when items are selected) */}
+          {/* Delete Selected Button */}
           {selectedRows.size > 0 && (
             <Button
               variant="outline"
@@ -1341,6 +1422,7 @@ function CoursesTable() {
                   onClick={() => {
                     setAddCourse(true);
                     setEditingCourse(null);
+                    setShowExistingImage(true);
                     setFormData({
                       teacher_id: 0,
                       subject_id: 0,
@@ -1426,7 +1508,7 @@ function CoursesTable() {
                 إجمالي الكورسات
               </p>
               <p className="text-2xl font-bold text-blue-900 dark:text-blue-200">
-                {statistics?.totalCount}
+                {statistics?.totalCount || 0}
               </p>
             </div>
             <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
@@ -1441,7 +1523,7 @@ function CoursesTable() {
                 الكورسات المدفوعة
               </p>
               <p className="text-2xl font-bold text-purple-900 dark:text-purple-200">
-                {statistics?.paidCount}
+                {statistics?.paidCount || 0}
               </p>
             </div>
             <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
@@ -1456,11 +1538,26 @@ function CoursesTable() {
                 الكورسات المجانية
               </p>
               <p className="text-2xl font-bold text-green-900 dark:text-green-200">
-                {statistics?.freeCount}
+                {statistics?.freeCount || 0}
               </p>
             </div>
             <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
               <Eye className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-orange-50 dark:bg-orange-950/50 p-4 rounded-lg border dark:border-orange-900/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-600 dark:text-orange-400">
+                الكورسات النشطة
+              </p>
+              <p className="text-2xl font-bold text-orange-900 dark:text-orange-200">
+                {statistics?.activeCount || 0}
+              </p>
+            </div>
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>
@@ -1469,7 +1566,7 @@ function CoursesTable() {
       {/* Results Summary */}
       <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
         <div>
-          عرض {data.length} من {paginationMeta?.total} كورس
+          عرض {data.length} من {paginationMeta?.total || 0} كورس
           {(typeFilter !== "all" ||
             positionFilter !== "all" ||
             globalFilter ||
@@ -1486,7 +1583,7 @@ function CoursesTable() {
       </div>
 
       {/* Edit Course Dialog */}
-      <Dialog open={editCourse} onOpenChange={setEditCourse}>
+      <Dialog open={editCourse} onOpenChange={handleCloseEditDialog}>
         <DialogContent
           className="!w-full !max-w-7xl md:!max-w-7xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
           onPointerDownOutside={(e) => e.preventDefault()}
@@ -1544,7 +1641,7 @@ function CoursesTable() {
                     )}
                   </Button>
                   <DialogClose asChild>
-                    <Button variant="outline" disabled={isLoading}>
+                    <Button variant="outline" disabled={isLoading} onClick={handleCloseEditDialog}>
                       إلغاء
                     </Button>
                   </DialogClose>
@@ -1595,7 +1692,7 @@ function CoursesTable() {
         </DialogContent>
       </Dialog>
 
-      {/* ✅ NEW: Multi-Delete Confirmation Dialog */}
+      {/* Multi-Delete Confirmation Dialog */}
       <Dialog open={deleteSelectedDialogOpen} onOpenChange={setDeleteSelectedDialogOpen}>
         <DialogContent className="w-full max-w-7xl dark:bg-gray-900 dark:border-gray-700">
           <DialogHeader>
@@ -1714,29 +1811,49 @@ function CoursesTable() {
                 fetchData(paginationMeta.current_page - 1);
               }
             }}
-            disabled={!paginationMeta?.prev_page_url}
+            disabled={!paginationMeta?.prev_page_url || isLoading}
           >
             السابق
           </Button>
           <div className="flex items-center gap-1">
             {paginationMeta &&
               Array.from({
-                length: paginationMeta.last_page || 1,
+                length: Math.min(paginationMeta.last_page || 1, 10),
               }).map((_, idx) => {
                 const page = idx + 1;
-                return (
-                  <Button
-                    key={page}
-                    variant={
-                      paginationMeta.current_page === page ? "soft" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => fetchData(page)}
-                    disabled={paginationMeta.current_page === page}
-                  >
-                    {page}
-                  </Button>
-                );
+                const currentPage = paginationMeta.current_page;
+                const lastPage = paginationMeta.last_page;
+                
+                // Show first page, last page, current page and surrounding pages
+                if (
+                  page === 1 ||
+                  page === lastPage ||
+                  (page >= currentPage - 2 && page <= currentPage + 2)
+                ) {
+                  return (
+                    <Button
+                      key={page}
+                      variant={
+                        paginationMeta.current_page === page ? "soft" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => fetchData(page)}
+                      disabled={paginationMeta.current_page === page || isLoading}
+                    >
+                      {page}
+                    </Button>
+                  );
+                } else if (
+                  page === currentPage - 3 ||
+                  page === currentPage + 3
+                ) {
+                  return (
+                    <span key={page} className="px-2">
+                      ...
+                    </span>
+                  );
+                }
+                return null;
               })}
           </div>
           <Button
@@ -1750,13 +1867,21 @@ function CoursesTable() {
                 fetchData(paginationMeta.current_page + 1);
               }
             }}
-            disabled={!paginationMeta?.next_page_url}
+            disabled={!paginationMeta?.next_page_url || isLoading}
           >
             التالي
           </Button>
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {paginationMeta && (
+            <span>
+              عرض {paginationMeta.from || 0} إلى {paginationMeta.to || 0} من {paginationMeta.total || 0} نتيجة
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
 export default CoursesTable;
