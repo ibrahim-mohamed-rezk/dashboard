@@ -181,37 +181,51 @@ function BasicDataTable() {
 
   // refetch users
   const refetchUsers = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getData(
-        "subscription_codes",
-        {
-          page: pagination.pageIndex + 1,
-          per_page: pagination.pageSize,
-          teacher_id: selectedTeacherId || undefined,
-          is_used: isUsedFilter !== "" ? isUsedFilter : undefined,
-        },
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
-      setData(response.data);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.data.total,
-        lastPage: response.data.last_page,
-        currentPage: response.data.current_page,
-        from: response.data.from,
-        to: response.data.to,
-        links: response.data.links,
-      }));
-    } catch (error) {
-      setData([]);
-      console.log(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  setIsLoading(true);
+  try {
+    const response = await getData(
+      "subscription_codes",
+      {
+        page: pagination.pageIndex + 1,
+        per_page: pagination.pageSize,
+        teacher_id: selectedTeacherId || undefined,
+        is_used: isUsedFilter !== "" ? isUsedFilter : undefined,
+      },
+      {
+        Authorization: `Bearer ${token}`,
+      }
+    );
+
+    // Extract codes and paginate from the new response structure
+    const { codes, paginate } = response.data;
+
+    setData(codes); // Set the actual codes array
+
+    setPagination((prev) => ({
+      ...prev,
+      total: paginate.total,
+      lastPage: paginate.last_page,
+      currentPage: paginate.current_page,
+      from: paginate.from,
+      to: paginate.to,
+      links: paginate.links || [], // if links exist
+    }));
+  } catch (error) {
+    console.error("Error fetching subscription codes:", error);
+    setData([]);
+    setPagination((prev) => ({
+      ...prev,
+      total: 0,
+      lastPage: 1,
+      currentPage: 1,
+      from: 0,
+      to: 0,
+      links: [],
+    }));
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // feach users from api
   useEffect(() => {

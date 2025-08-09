@@ -191,6 +191,7 @@ export interface AdminTypes {
 }
 
 export interface SubscriptionCodeTypes {
+  month: string;
   id: number;
   student_id: number | null;
   teacher_id: string;
