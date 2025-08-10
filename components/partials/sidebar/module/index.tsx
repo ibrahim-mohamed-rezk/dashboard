@@ -24,6 +24,7 @@ import {
   Briefcase,
   Building2,
   Book,
+  ClipboardListIcon
 } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -448,6 +449,19 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                     />
                   </li>
                 )}
+                <li className="mb-1.5 last:mb-0">
+                  <MenuItem
+                    childItem={{
+                      href: "/exams",
+                      title: "الامتحانات",
+                      icon: ClipboardListIcon,
+                    }}
+                    toggleNested={toggleNested}
+                    index={1}
+                    nestedIndex={nestedIndex}
+                    locationName={locationName}
+                  />
+                </li>
               </ul>
             </div>
           </ScrollArea>
