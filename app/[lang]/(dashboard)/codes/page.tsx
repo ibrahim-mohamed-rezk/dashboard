@@ -83,7 +83,8 @@ function BasicDataTable() {
   const [rowSelection, setRowSelection] = useState({});
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
-  const [selectedCode, setSelectedCode] = useState<SubscriptionCodeTypes | null>(null);
+  const [selectedCode, setSelectedCode] =
+    useState<SubscriptionCodeTypes | null>(null);
 
   // Use real database ID for row identification
   const getRowId = (row: SubscriptionCodeTypes) => row.id.toString();
@@ -181,51 +182,51 @@ function BasicDataTable() {
 
   // refetch users
   const refetchUsers = async () => {
-  setIsLoading(true);
-  try {
-    const response = await getData(
-      "subscription_codes",
-      {
-        page: pagination.pageIndex + 1,
-        per_page: pagination.pageSize,
-        teacher_id: selectedTeacherId || undefined,
-        is_used: isUsedFilter !== "" ? isUsedFilter : undefined,
-      },
-      {
-        Authorization: `Bearer ${token}`,
-      }
-    );
+    setIsLoading(true);
+    try {
+      const response = await getData(
+        "subscription_codes",
+        {
+          page: pagination.pageIndex + 1,
+          per_page: pagination.pageSize,
+          teacher_id: selectedTeacherId || undefined,
+          is_used: isUsedFilter !== "" ? isUsedFilter : undefined,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
 
-    // Extract codes and paginate from the new response structure
-    const { codes, paginate } = response.data;
+      // Extract codes and paginate from the new response structure
+      const { codes, paginate } = response.data;
 
-    setData(codes); // Set the actual codes array
+      setData(codes); // Set the actual codes array
 
-    setPagination((prev) => ({
-      ...prev,
-      total: paginate.total,
-      lastPage: paginate.last_page,
-      currentPage: paginate.current_page,
-      from: paginate.from,
-      to: paginate.to,
-      links: paginate.links || [], // if links exist
-    }));
-  } catch (error) {
-    console.error("Error fetching subscription codes:", error);
-    setData([]);
-    setPagination((prev) => ({
-      ...prev,
-      total: 0,
-      lastPage: 1,
-      currentPage: 1,
-      from: 0,
-      to: 0,
-      links: [],
-    }));
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setPagination((prev) => ({
+        ...prev,
+        total: paginate.total,
+        lastPage: paginate.last_page,
+        currentPage: paginate.current_page,
+        from: paginate.from,
+        to: paginate.to,
+        links: paginate.links || [], // if links exist
+      }));
+    } catch (error) {
+      console.error("Error fetching subscription codes:", error);
+      setData([]);
+      setPagination((prev) => ({
+        ...prev,
+        total: 0,
+        lastPage: 1,
+        currentPage: 1,
+        from: 0,
+        to: 0,
+        links: [],
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // feach users from api
   useEffect(() => {
@@ -334,7 +335,7 @@ function BasicDataTable() {
     // Calculate grid layout (4 columns per row to fit A4 page)
     const codesPerRow = 4;
     const rows = [];
-    
+
     // Split codes into rows of 4
     for (let i = 0; i < generatedCode.length; i += codesPerRow) {
       const row = generatedCode.slice(i, i + codesPerRow);
@@ -342,114 +343,114 @@ function BasicDataTable() {
     }
 
     printWindow.document.write(`
-      <html dir="rtl">
-        <head>
-          <title>Student Codes</title>
-          <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            
+    <html dir="rtl">
+      <head>
+        <title>Student Codes</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: Arial, sans-serif;
+            padding: 5mm;
+            background: white;
+          }
+          
+          .header-section {
+            text-align: center;
+            margin-bottom: 5mm;
+          }
+          
+          .header-section h1 {
+            font-size: 18px;
+            margin-bottom: 3mm;
+          }
+          
+          .codes-grid {
+            border-collapse: collapse;
+            margin: 0 auto;
+          }
+          
+          .codes-grid td {
+            width: 52.5mm;
+            height: 29.7mm;
+            border: 1px solid #000;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2mm;
+            position: relative;
+          }
+          
+          .code-text {
+            font-size: 14px;
+            letter-spacing: 1px;
+          }
+          
+          @media print {
             body {
-              font-family: Arial, sans-serif;
-              padding: 5mm;
-              background: white;
+              padding: 3mm;
             }
             
-            .header-section {
-              text-align: center;
-              margin-bottom: 5mm;
+            .no-print {
+              display: none !important;
             }
             
-            .header-section h1 {
-              font-size: 18px;
-              margin-bottom: 3mm;
-            }
-            
-            .codes-grid {
-              border-collapse: collapse;
-              margin: 0 auto;
+            @page {
+              size: A4;
+              margin: 5mm;
             }
             
             .codes-grid td {
-              width: 52.5mm;
-              height: 29.7mm;
-              border: 1px solid #000;
-              text-align: center;
-              vertical-align: middle;
-              font-size: 12px;
-              font-weight: bold;
-              padding: 2mm;
-              position: relative;
+              font-size: 11px;
             }
             
             .code-text {
-              font-size: 14px;
-              letter-spacing: 1px;
+              font-size: 13px;
             }
-            
-            @media print {
-              body {
-                padding: 3mm;
+          }
+        </style>
+      </head>
+      <body>
+        <button onclick="window.print()" class="no-print" style="padding: 10px 20px; font-size: 14px; margin-bottom: 10px;">طباعة</button>
+        <table class="codes-grid">
+          ${rows
+            .map(
+              (row) => `
+            <tr>
+              ${row
+                .map(
+                  (code) => `
+                <td>
+                  <div class="code-text">${code.code}</div>
+                </td>
+              `
+                )
+                .join("")}
+              ${
+                row.length < codesPerRow
+                  ? Array(codesPerRow - row.length)
+                      .fill(0)
+                      .map(
+                        () => `
+                  <td>&nbsp;</td>
+                `
+                      )
+                      .join("")
+                  : ""
               }
-              
-              .no-print {
-                display: none;
-              }
-              
-              @page {
-                size: A4;
-                margin: 5mm;
-              }
-              
-              .codes-grid td {
-                font-size: 11px;
-              }
-              
-              .code-text {
-                font-size: 13px;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header-section">
-            <h1>أكواد الطلاب</h1>
-            <div class="codes-container">
-            ${generatedCode
-              .map(
-                (code) => `
-              <div class="code">${code.code}</div>
-            `
-              )
-              .join("")}
-          </div>
-            <div class="no-print">
-              <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; margin-bottom: 10px;">طباعة</button>
-            </div>
-          </div>
-          
-          <table class="codes-grid">
-            ${rows.map(row => `
-              <tr>
-                ${row.map(code => `
-                  <td>
-                    <div class="code-text">${code.code}</div>
-                  </td>
-                `).join('')}
-                ${row.length < codesPerRow ? 
-                  Array(codesPerRow - row.length).fill(0).map(() => `
-                    <td>&nbsp;</td>
-                  `).join('') : ''
-                }
-              </tr>
-            `).join('')}
-          </table>
-        </body>
-      </html>
-    `);
+            </tr>
+          `
+            )
+            .join("")}
+        </table>
+      </body>
+    </html>
+  `);
 
     printWindow.document.close();
   };
@@ -608,10 +609,10 @@ function BasicDataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: true,
     pageCount: pagination.lastPage,
-    
+
     // Use real database ID for row identification
     getRowId, // This ensures selection uses real IDs, not table indices
-    
+
     // Enable row selection
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
@@ -698,7 +699,7 @@ function BasicDataTable() {
               حذف {selectedCount} عنصر
             </Button>
           )}
-          
+
           <Button
             onClick={generateStudentCode}
             variant="outline"
@@ -874,14 +875,18 @@ function BasicDataTable() {
       </Dialog>
 
       {/* Bulk Delete Confirmation Dialog */}
-      <Dialog open={isBulkDeleteConfirmOpen} onOpenChange={setIsBulkDeleteConfirmOpen}>
+      <Dialog
+        open={isBulkDeleteConfirmOpen}
+        onOpenChange={setIsBulkDeleteConfirmOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>تأكيد الحذف الجماعي</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p>
-              هل أنت متأكد من حذف <strong>{selectedCount}</strong> كود؟ لا يمكن التراجع.
+              هل أنت متأكد من حذف <strong>{selectedCount}</strong> كود؟ لا يمكن
+              التراجع.
             </p>
           </div>
           <DialogFooter>
@@ -953,7 +958,7 @@ function BasicDataTable() {
         </Table>
       </div>
 
-   {/* Pagination Controls */}
+      {/* Pagination Controls */}
       <div className="flex items-center justify-center py-6">
         <div className="flex items-center gap-3">
           <Button

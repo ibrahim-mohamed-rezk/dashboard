@@ -85,6 +85,14 @@ export interface SubjectsData {
   name: string;
   description: string;
 }
+export type QuestionType = {
+  id?: number;
+  question: string; 
+  question_image?: File | string;
+  question_type: "text" | "image";
+  options: { id?: number; answer: string; is_correct: boolean }[];
+  degree: number;
+};
 
 export interface CoursModules {
   id: number;

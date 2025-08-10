@@ -55,6 +55,7 @@ interface BankQuestion {
 }
 
 interface BankSection {
+  date?: string;
   id: number;
   name: string;
   type: "questions" | "file";
@@ -125,7 +126,7 @@ const BankModulesComponent = ({
   const [sectionType, setSectionType] = useState<"questions" | "file">(
     "questions"
   );
-
+  const [sectionDate, setSectionDate] = useState<string>("");
   // Multiple questions form state
   const [multipleQuestions, setMultipleQuestions] = useState<
     MultipleQuestionForm[]
@@ -218,6 +219,11 @@ const BankModulesComponent = ({
   // Handle Edit Section
   const handleEdit = (section: BankSection) => {
     setSelectedSection(section);
+    setSectionTitle(section?.name);
+    setSectionType(section?.type);
+    setSectionDate(section?.date || ""); // Assume backend includes `date` field
+
+    setSelectedSection(section);
     if (section.questions && section.questions.length > 0) {
       setEditQuestionsForm(
         section.questions.map((q) => ({
@@ -259,6 +265,7 @@ const BankModulesComponent = ({
     setIsViewing(false);
     setIsAdding(false);
     setSelectedSection(null);
+    setSectionDate(""); // Reset date
     setSectionTitle("");
     setSectionType("questions");
     setFileToUpload(null);
@@ -275,6 +282,9 @@ const BankModulesComponent = ({
         formData.append("name", selectedSection.name);
         formData.append("bank_id", bankId.toString());
         formData.append("type", "file");
+        if (sectionDate) {
+          formData.append("date", sectionDate);
+        }
         formData.append("_method", "PUT");
 
         // If user uploaded a new file, add it
@@ -302,6 +312,9 @@ const BankModulesComponent = ({
       formData.append("name", selectedSection.name);
       formData.append("bank_id", bankId.toString());
       formData.append("type", "questions");
+      if (sectionDate) {
+        formData.append("date", sectionDate);
+      }
       formData.append("_method", "PUT");
 
       // Use editQuestionsForm for all questions
@@ -766,8 +779,12 @@ const BankModulesComponent = ({
                   <th className="px-4 py-3 text-right font-bold">#</th>
                   <th className="px-4 py-3 text-right font-bold">اسم القسم</th>
                   <th className="px-4 py-3 text-right font-bold">النوع</th>
-                  <th className="px-4 py-3 text-right font-bold">عدد الأسئلة</th>
-                  <th className="px-4 py-3 text-right font-bold">تاريخ الإنشاء</th>
+                  <th className="px-4 py-3 text-right font-bold">
+                    عدد الأسئلة
+                  </th>
+                  <th className="px-4 py-3 text-right font-bold">
+                    تاريخ الإنشاء
+                  </th>
                   <th className="px-4 py-3 text-right font-bold">ملف</th>
                   <th className="px-4 py-3 text-right font-bold">إجراءات</th>
                 </tr>
@@ -775,7 +792,10 @@ const BankModulesComponent = ({
               <tbody>
                 {isLoading && !sections.length ? (
                   <tr>
-                    <td colSpan={isBulkMode ? 8 : 7} className="text-center py-8">
+                    <td
+                      colSpan={isBulkMode ? 8 : 7}
+                      className="text-center py-8"
+                    >
                       <p className="text-gray-500 dark:text-gray-300 text-lg">
                         جاري التحميل...
                       </p>
@@ -783,7 +803,10 @@ const BankModulesComponent = ({
                   </tr>
                 ) : filteredSections.length === 0 ? (
                   <tr>
-                    <td colSpan={isBulkMode ? 8 : 7} className="text-center py-8">
+                    <td
+                      colSpan={isBulkMode ? 8 : 7}
+                      className="text-center py-8"
+                    >
                       <p className="text-gray-500 dark:text-gray-300 text-lg">
                         {searchTerm || filterType !== "all"
                           ? "لا توجد أقسام تطابق البحث"
@@ -844,7 +867,9 @@ const BankModulesComponent = ({
                       </td>
                       <td className="px-4 py-3 text-right">
                         {section.created_at
-                          ? new Date(section.created_at).toLocaleDateString("ar")
+                          ? new Date(section.created_at).toLocaleDateString(
+                              "ar"
+                            )
                           : "-"}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -945,6 +970,17 @@ const BankModulesComponent = ({
                             name: e.target.value,
                           });
                         }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        تاريخ القسم (اختياري)
+                      </label>
+                      <input
+                        type="date"
+                        value={sectionDate}
+                        onChange={(e) => setSectionDate(e.target.value)}
+                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
                       />
                     </div>
 
@@ -1160,6 +1196,16 @@ const BankModulesComponent = ({
                         {selectedSection.name}
                       </p>
                     </div>
+                    {selectedSection.date && (
+                      <div>
+                        <h4 className="font-medium mb-2">التاريخ</h4>
+                        <p className="text-gray-700">
+                          {new Date(selectedSection.date).toLocaleDateString(
+                            "ar"
+                          )}
+                        </p>
+                      </div>
+                    )}
 
                     <div>
                       <h4 className="font-medium mb-2">النوع</h4>
@@ -1296,6 +1342,17 @@ const BankModulesComponent = ({
                   <option value="questions">أسئلة</option>
                   <option value="file">ملف</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  تاريخ القسم (اختياري)
+                </label>
+                <input
+                  type="date"
+                  value={sectionDate}
+                  onChange={(e) => setSectionDate(e.target.value)}
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                />
               </div>
             </div>
 
