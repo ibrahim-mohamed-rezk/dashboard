@@ -1,5 +1,5 @@
 "use client";
-import { CoursModules, VideoTypes } from "@/lib/type";
+import { QuestionType, CoursModules, VideoTypes } from "@/lib/type";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,7 @@ const CourseModules = ({
     null
   );
   const [isEditing, setIsEditing] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -63,13 +64,8 @@ const CourseModules = ({
     duration: 0,
     passing_score: 0,
     exam_image: null as File | null,
-    questions: [] as {
-      id?: number;
-      question: string;
-      options: { id?: number; answer: string; is_correct: boolean }[];
-      correct_answer?: number;
-      degree: number;
-    }[],
+    questions: [] as QuestionType[],
+
     created_at: "",
   });
 
@@ -83,18 +79,16 @@ const CourseModules = ({
     duration: 0,
     passing_score: 0,
     exam_image: null as File | null,
-    questions: [] as {
-      question: string;
-      options: { answer: string; is_correct: boolean }[];
-      degree: number;
-    }[],
+    questions: [] as QuestionType[],
+
     exam_belongs_to: "course" as "course" | "video",
     exam_video_id: "",
     created_at: "",
   });
 
-  const [currentQuestion, setCurrentQuestion] = useState({
+  const [currentQuestion, setCurrentQuestion] = useState<QuestionType>({
     question: "",
+    questionType: "text" as "text" | "image", // <-- New field
     type: "msq" as "msq" | "tf" | "written",
     options: [
       { answer: "", is_correct: false },
@@ -103,8 +97,14 @@ const CourseModules = ({
       { answer: "", is_correct: false },
     ],
     written_answer: "",
-    degree: 1, // Default degree is 1
+    degree: 1,
   });
+
+  const isValidImageUrl = (url: string): boolean => {
+    if (!url) return false;
+    const imageExtensions = /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i;
+    return imageExtensions.test(url);
+  };
 
   // For editing existing questions
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<
@@ -215,12 +215,15 @@ const CourseModules = ({
         questions?.map((q: any) => ({
           id: q.id,
           question: q.question,
+          questionType: q.questionType || "text", // ✅ أضف هذا الحقل
+          type: q.type || "msq", // إذا كان لديك نوع السؤال
           options: q.options.map((opt: any, index: number) => ({
             id: opt.id,
             answer: opt.answer,
             is_correct: q.correct_answer === index + 1,
           })),
           correct_answer: q.correct_answer,
+          degree: q.degree || 1,
         })) || [];
 
       setEditForm({
@@ -413,31 +416,31 @@ const CourseModules = ({
 
   // Handle editing video quiz
   const handleEditVideoQuiz = () => {
-    if (!selectedModule?.details?.quiz?.[0]) return;
+  if (!selectedModule?.details?.quiz?.[0]) return;
+  const quizData = selectedModule.details.quiz[0];
+  const transformedQuestions =
+    quizData.questions?.map((q: any) => ({
+      id: q.id,
+      question: q.question,
+      questionType: q.questionType || ("text" as const), // ✅ تم الإصلاح
+      options: q.options.map((opt: any, index: number) => ({
+        id: opt.id,
+        answer: opt.answer,
+        is_correct: q.correct_answer === index + 1,
+      })),
+      correct_answer: q.correct_answer,
+      degree: q.degree,
+    })) || [];
 
-    const quizData = selectedModule.details.quiz[0];
-    const transformedQuestions =
-      quizData.questions?.map((q: any) => ({
-        id: q.id,
-        question: q.question,
-        options: q.options.map((opt: any, index: number) => ({
-          id: opt.id,
-          answer: opt.answer,
-          is_correct: q.correct_answer === index + 1,
-        })),
-        correct_answer: q.correct_answer,
-        degree: q.degree,
-      })) || [];
-
-    setEditForm((prev) => ({
-      ...prev,
-      questions_count: (quizData as any)?.questions_count ?? 0,
-      duration: (quizData as any)?.duration ?? 0,
-      passing_score: (quizData as any)?.passing_score ?? 0,
-      questions: transformedQuestions,
-    }));
-    setIsEditingVideoQuiz(true);
-  };
+  setEditForm((prev) => ({
+    ...prev,
+    questions_count: (quizData as any)?.questions_count ?? 0,
+    duration: (quizData as any)?.duration ?? 0,
+    passing_score: (quizData as any)?.passing_score ?? 0,
+    questions: transformedQuestions,
+  }));
+  setIsEditingVideoQuiz(true);
+};
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -497,16 +500,28 @@ const CourseModules = ({
         );
         newModuleForm.questions.forEach((question, index) => {
           const questionNumber = index + 1;
+
+          // Append the question text or image URL
           formData.append(
             `questions[${questionNumber}][question]`,
             question.question
           );
+
+          // Append the question type: 'text' or 'image'
+          formData.append(
+            `questions[${questionNumber}][questionType]`,
+            question.questionType
+          );
+
+          // Append options
           question.options.forEach((option, optIndex) => {
             formData.append(
               `questions[${questionNumber}][${optIndex + 1}]`,
               option.answer
             );
           });
+
+          // Append correct answer index
           const correctAnswerIndex = question.options.findIndex(
             (opt) => opt.is_correct
           );
@@ -514,6 +529,8 @@ const CourseModules = ({
             `questions[${questionNumber}][answer]`,
             (correctAnswerIndex + 1).toString()
           );
+
+          // Append degree (score)
           formData.append(
             `questions[${questionNumber}][degree]`,
             question.degree.toString()
@@ -604,47 +621,42 @@ const CourseModules = ({
       toast.error("يرجى إدخال السؤال");
       return;
     }
+    if (currentQuestion.questionType === "image") {
+      if (!isValidImageUrl(currentQuestion.question)) {
+        toast.error("يرجى إدخال رابط صورة صالح");
+        return;
+      }
+    }
 
     if (currentQuestion.type === "msq") {
       if (currentQuestion.options.some((opt) => opt.answer.trim() === "")) {
         toast.error("يرجى إدخال جميع الخيارات");
         return;
       }
-
       if (!currentQuestion.options.some((opt) => opt.is_correct)) {
         toast.error("يرجى تحديد الإجابة الصحيحة");
         return;
       }
     }
 
-    // Add to edit form for existing modules
+    const newQuestion = { ...currentQuestion }; // Includes questionType
+
     if (isEditing) {
       setEditForm({
         ...editForm,
-        questions: [
-          ...editForm.questions,
-          {
-            question: currentQuestion.question,
-            options: currentQuestion.options,
-            degree: currentQuestion.degree,
-          },
-        ],
+        questions: [...editForm.questions, newQuestion],
       });
     } else {
-      // Add to new module form
-      // setNewModuleForm({
-      //   ...newModuleForm,
-      //   questions: [
-      //     ...newModuleForm.questions, currentQuestion],
-      // });
       setNewModuleForm({
         ...newModuleForm,
-        questions: [...newModuleForm.questions, { ...currentQuestion }],
+        questions: [...newModuleForm.questions, newQuestion],
       });
     }
 
+    // Reset current question
     setCurrentQuestion({
       question: "",
+      questionType: "text",
       type: "msq",
       options: [
         { answer: "", is_correct: false },
@@ -682,6 +694,14 @@ const CourseModules = ({
         is_correct: opt.is_correct,
       })),
     });
+    // Also set currentQuestion to preserve type
+    setCurrentQuestion((prev) => ({
+      ...prev,
+      question: question.question,
+      questionType: question.questionType || "text", // default to text
+      options: question.options,
+      degree: question.degree || 1,
+    }));
   };
 
   const saveEditedQuestion = () => {
@@ -741,7 +761,6 @@ const CourseModules = ({
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = evt.target?.result;
@@ -751,16 +770,22 @@ const CourseModules = ({
       const worksheet = workbook.Sheets[sheetName];
       const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      // Assume first row is header: ["Question", "Option 1", "Option 2", "Option 3", "Option 4", "Correct Option"]
+      // Assume first row is header:
+      // ["Question", "Option 1", "Option 2", "Option 3", "Option 4", "Correct Option", "Type"]
       const questions = json.slice(1).map((row) => {
-        const [question, opt1, opt2, opt3, opt4, correct] = row;
+        const [question, opt1, opt2, opt3, opt4, correct, type] = row;
         const options = [
           { answer: opt1, is_correct: correct == 1 },
           { answer: opt2, is_correct: correct == 2 },
           { answer: opt3, is_correct: correct == 3 },
           { answer: opt4, is_correct: correct == 4 },
         ];
-        return { question, options, degree: 1 };
+        return {
+          question,
+          options,
+          degree: 1,
+          questionType: (type?.trim().toLowerCase() === "image" ? "image" : "text") as "text" | "image",
+        };
       });
 
       setNewModuleForm((prev) => ({
@@ -768,6 +793,8 @@ const CourseModules = ({
         questions: [...prev.questions, ...questions],
         questions_count: prev.questions_count || questions.length,
       }));
+
+      toast.success(`تم استيراد ${questions.length} سؤال من Excel`);
     };
     reader.readAsBinaryString(file);
   };
@@ -1499,9 +1526,28 @@ const CourseModules = ({
                               // View mode
                               <div>
                                 <div className="flex justify-between items-start mb-2">
-                                  <p className="font-medium dark:text-white">
-                                    {index + 1}. {question.question}
-                                  </p>
+                                  <div className="font-medium dark:text-white">
+                                    <span>{index + 1}.</span>
+                                    {question.questionType === "image" ? (
+                                      <div className="mt-2">
+                                        <img
+                                          src={question.question}
+                                          alt={`سؤال ${index + 1}`}
+                                          className="max-h-48 rounded border bg-white p-1"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).src =
+                                              "https://via.placeholder.com/300x150?text=فشل+التحميل";
+                                            (e.target as HTMLImageElement).alt =
+                                              "فشل تحميل الصورة";
+                                          }}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <p className="mt-1">
+                                        {question.question}
+                                      </p>
+                                    )}
+                                  </div>
                                   <div className="flex gap-1">
                                     <Button
                                       variant="ghost"
@@ -2088,9 +2134,33 @@ const CourseModules = ({
                         key={question.id || index}
                         className="mb-6 bg-white dark:bg-gray-700 rounded-lg p-4"
                       >
-                        <p className="font-medium mb-3 dark:text-white">
-                          {index + 1}. {question.question}
-                        </p>
+                        <div className="font-medium mb-3 dark:text-white">
+                          <span>{index + 1}. </span>
+                          {(() => {
+                            // Try to detect if question is an image URL
+                            const isImageUrl = isValidImageUrl(
+                              question.question
+                            );
+                            if (isImageUrl) {
+                              return (
+                                <div className="mt-2">
+                                  <img
+                                    src={question.question}
+                                    alt={`سؤال ${index + 1}`}
+                                    className="max-h-48 rounded border bg-white p-1 mx-auto"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src =
+                                        "https://via.placeholder.com/300x150?text=فشل+التحميل";
+                                      (e.target as HTMLImageElement).alt =
+                                        "فشل تحميل الصورة";
+                                    }}
+                                  />
+                                </div>
+                              );
+                            }
+                            return <span>{question.question}</span>;
+                          })()}
+                        </div>
                         <div className="space-y-2">
                           {question.options.map(
                             (option: any, optIdx: number) => (
@@ -2500,7 +2570,24 @@ const CourseModules = ({
                           >
                             <div className="flex justify-between items-start mb-2">
                               <p className="font-medium text-sm">
-                                {index + 1}. {q.question}
+                                {index + 1}.{" "}
+                                {q.questionType === "image" ? (
+                                  <div className="mt-2">
+                                    <img
+                                      src={q.question}
+                                      alt={`سؤال ${index + 1}`}
+                                      className="max-h-32 rounded border bg-white p-1"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src =
+                                          "https://via.placeholder.com/150x100?text=فشل+التحميل";
+                                        (e.target as HTMLImageElement).alt =
+                                          "فشل تحميل الصورة";
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  q.question
+                                )}
                               </p>
                               <span className="text-xs text-blue-600 dark:text-blue-300 mr-2">
                                 الدرجة: {q.degree}
@@ -2542,23 +2629,101 @@ const CourseModules = ({
                     <h4 className="font-medium mb-4 text-blue-900 dark:text-blue-100">
                       إضافة سؤال جديد
                     </h4>
-
                     <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          السؤال
-                        </label>
-                        <Textarea
-                          value={currentQuestion.question}
-                          onChange={(e) =>
-                            setCurrentQuestion({
-                              ...currentQuestion,
-                              question: e.target.value,
-                            })
-                          }
-                          placeholder="أدخل السؤال هنا"
-                          rows={2}
-                        />
+                      {/* Question Type Selection */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            نوع السؤال
+                          </label>
+                          <Select
+                            value={currentQuestion.questionType}
+                            onValueChange={(value) =>
+                              setCurrentQuestion((prev) => ({
+                                ...prev,
+                                questionType: value as "text" | "image", // <-- The type is set here
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر نوع السؤال" />
+                            </SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              <SelectItem value="text">نص</SelectItem>
+                              <SelectItem value="image">صورة</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {currentQuestion.questionType === "text" ? (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              نص السؤال
+                            </label>
+                            <Textarea
+                              value={currentQuestion.question}
+                              onChange={(e) =>
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  question: e.target.value,
+                                })
+                              }
+                              placeholder="أدخل نص السؤال"
+                              rows={2}
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            {/* <p className="text-xs text-red-500 mb-1">
+                              ملاحظة: يجب أن يكون الرابط مباشر للصورة (ينتهي بـ
+                              .jpg أو .png أو .webp)
+                            </p> */}
+                            <label className="block text-sm font-medium mb-2">
+                              رابط صورة السؤال
+                            </label>
+                            <Input
+                              value={currentQuestion.question}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  question: value,
+                                });
+
+                                // تحقق من الرابط فقط إذا كان نوع السؤال "صورة"
+                                if (currentQuestion.questionType === "image") {
+                                  if (value && !isValidImageUrl(value)) {
+                                    setImageError(
+                                      "يجب أن يكون الرابط ينتهي بامتداد صورة (مثل: .jpg, .png, .webp)"
+                                    );
+                                  } else {
+                                    setImageError(null); // لا يوجد خطأ
+                                  }
+                                }
+                              }}
+                              placeholder="https://example.com/image.jpg"
+                            />
+                            {imageError && (
+                              <p className="text-sm text-red-500 mt-1">
+                                {imageError}
+                              </p>
+                            )}
+                            {/* Optional: Preview Image */}
+                            {currentQuestion.question && (
+                              <div className="mt-2">
+                                <img
+                                  src={currentQuestion.question}
+                                  alt="Preview"
+                                  className="max-h-40 rounded border"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).alt =
+                                      "فشل تحميل الصورة";
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-2">

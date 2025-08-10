@@ -87,11 +87,14 @@ export interface SubjectsData {
 }
 export type QuestionType = {
   id?: number;
-  question: string; 
-  question_image?: File | string;
-  question_type: "text" | "image";
+  question: string;
+  questionType: "text" | "image"; 
+  type?: "msq" | "tf" | "written";
   options: { id?: number; answer: string; is_correct: boolean }[];
   degree: number;
+    correct_answer?: number;
+  written_answer?: string;
+  // إزالة السطر القديم: question_type
 };
 
 export interface CoursModules {
