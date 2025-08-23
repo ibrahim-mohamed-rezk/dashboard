@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import TeacherGroupsDataTable from "@/app/[lang]/(dashboard)/teachers/teacher-groups/[teacherId]/page";
+
 import {
   Dialog,
   DialogContent,
@@ -108,6 +110,9 @@ function BasicDataTable() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "teachers" | "groups" | "dashboard"
+  >("teachers");
   const dialogCloseRef = useRef<HTMLButtonElement>(null);
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
@@ -309,37 +314,37 @@ function BasicDataTable() {
 
   // ✅ Bulk delete handler
   // ✅ Fixed bulk delete handler - gets real user IDs instead of table indices
-const handleBulkDelete = async () => {
-  // Get the actual user IDs from selected rows
-  const selectedUserIds = Object.keys(rowSelection)
-    .map(rowId => {
-      // Find the user data by row ID
-      const user = data.find(user => String(user.id) === rowId);
-      return user ? user.user.id : null; // Return the actual user.id, not the table row id
-    })
-    .filter(Boolean); // Remove any null values
-  
-  console.log('Selected user IDs:', selectedUserIds); // Debug log
-  
-  try {
-    await Promise.all(
-      selectedUserIds.map((userId) =>
-        deleteData(`teachers/${userId}`, {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        })
-      )
-    );
-    toast.success(`تم حذف ${selectedUserIds.length} مستخدم(ين) بنجاح!`);
-    setRowSelection({}); // Clear selection
-    refetchUsers();
-  } catch (error) {
-    console.error('Bulk delete error:', error);
-    toast.error("فشل في حذف بعض المستخدمين");
-  } finally {
-    setIsBulkDeleteDialogOpen(false);
-  }
-};
+  const handleBulkDelete = async () => {
+    // Get the actual user IDs from selected rows
+    const selectedUserIds = Object.keys(rowSelection)
+      .map((rowId) => {
+        // Find the user data by row ID
+        const user = data.find((user) => String(user.id) === rowId);
+        return user ? user.user.id : null; // Return the actual user.id, not the table row id
+      })
+      .filter(Boolean); // Remove any null values
+
+    console.log("Selected user IDs:", selectedUserIds); // Debug log
+
+    try {
+      await Promise.all(
+        selectedUserIds.map((userId) =>
+          deleteData(`teachers/${userId}`, {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          })
+        )
+      );
+      toast.success(`تم حذف ${selectedUserIds.length} مستخدم(ين) بنجاح!`);
+      setRowSelection({}); // Clear selection
+      refetchUsers();
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      toast.error("فشل في حذف بعض المستخدمين");
+    } finally {
+      setIsBulkDeleteDialogOpen(false);
+    }
+  };
 
   // Handle edit user click
   const handleEditUser = (user: User) => {
@@ -548,7 +553,11 @@ const handleBulkDelete = async () => {
           >
             حذف
           </Button>
-          <Link href={`/teachers/teacher-groups/${row.original.id}`} passHref legacyBehavior>
+          <Link
+            href={`/teachers/teacher-groups/${row.original.id}`}
+            passHref
+            legacyBehavior
+          >
             <Button variant="outline" className="flex items-center gap-1">
               <Users2 className="w-4 h-4" />
               المجموعات
@@ -644,6 +653,40 @@ const handleBulkDelete = async () => {
         </div>
       </div>
 
+      <div className="flex space-x-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1 mb-4">
+        <button
+          onClick={() => setActiveTab("teachers")}
+          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
+            activeTab === "teachers"
+              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          }`}
+        >
+          معلمين
+        </button>
+        <button
+          onClick={() => setActiveTab("groups")}
+          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
+            activeTab === "groups"
+              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          }`}
+        >
+          مجموعات
+        </button>
+        <button
+          onClick={() => setActiveTab("dashboard")}
+          className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
+            activeTab === "dashboard"
+              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          }`}
+        >
+          لوحة التحكم
+        </button>
+      </div>
+
+      {activeTab === "teachers" ? (
       <div className="flex flex-wrap items-center gap-2 px-4 mb-4">
         {/* Filter: Search */}
         <Input
@@ -874,6 +917,7 @@ const handleBulkDelete = async () => {
           </div>
         )}
       </div>
+      ):null}
 
       {/* Native Edit Modal */}
       {showEditModal && (
@@ -1070,89 +1114,106 @@ const handleBulkDelete = async () => {
       )}
 
       {/* users table */}
-      <div className="overflow-x-auto">
-        <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
+      {activeTab === "teachers" && (
+        <div className="overflow-x-auto">
+          <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="text-center">
-                  No results found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-center py-6">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchUsers(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="h-9 px-4 font-medium"
-            >
-              السابق
-            </Button>
-            <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (pageNumber) => (
-                  <Button
-                    key={pageNumber}
-                    variant={pageNumber === currentPage ? "soft" : "outline"}
-                    size="sm"
-                    onClick={() => refetchUsers(pageNumber)}
-                    className={`w-9 h-9 font-medium transition-all duration-200 ${
-                      pageNumber === currentPage ? "scale-110" : "hover:scale-105"
-                    }`}
-                  >
-                    {pageNumber}
-                  </Button>
-                )
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="text-center">
+                    No results found.
+                  </TableCell>
+                </TableRow>
               )}
+            </TableBody>
+          </Table>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-center py-6">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchUsers(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="h-9 px-4 font-medium"
+              >
+                السابق
+              </Button>
+              <div className="flex items-center gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      variant={pageNumber === currentPage ? "soft" : "outline"}
+                      size="sm"
+                      onClick={() => refetchUsers(pageNumber)}
+                      className={`w-9 h-9 font-medium transition-all duration-200 ${
+                        pageNumber === currentPage
+                          ? "scale-110"
+                          : "hover:scale-105"
+                      }`}
+                    >
+                      {pageNumber}
+                    </Button>
+                  )
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchUsers(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="h-9 px-4 font-medium"
+              >
+                التالي
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchUsers(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="h-9 px-4 font-medium"
-            >
-              التالي
-            </Button>
           </div>
         </div>
-      </div>
+      )}
+      {activeTab === "groups" && (
+      <div className="container mx-auto py-8 px-4">
+      <TeacherGroupsDataTable tab={true}  />
+
+    </div>
+      )}
+
+      {activeTab === "dashboard" && (
+        <div className="text-center py-10">
+          <h2 className="text-xl font-semibold">لوحة التحكم</h2>
+          <p className="text-gray-500 mt-2">محتوى لوحة التحكم قيد الإعداد.</p>
+        </div>
+      )}
 
       {/* ✅ Bulk Delete Confirmation Dialog */}
       {isBulkDeleteDialogOpen && (

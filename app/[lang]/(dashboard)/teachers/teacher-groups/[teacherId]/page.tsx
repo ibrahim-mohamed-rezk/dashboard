@@ -64,7 +64,7 @@ type FormData = {
   level_id: string;
 };
 
-function TeacherGroupsDataTable() {
+function TeacherGroupsDataTable({ tab }: { tab: boolean }) {
   const [data, setData] = useState<TeacherGroup[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -74,6 +74,7 @@ function TeacherGroupsDataTable() {
   const [editingGroup, setEditingGroup] = useState<TeacherGroup | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const dialogCloseRef = useRef<HTMLButtonElement>(null);
   const editDialogCloseRef = useRef<HTMLButtonElement>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -90,28 +91,66 @@ function TeacherGroupsDataTable() {
   // refetch teacher groups
   const refetchGroups = async (page: number = 1) => {
     try {
+      let endpoint = "teacher-groups";
+
+      // Priority 1: If !tab → use URL teacherId (specific teacher profile)
+      // Priority 2: If tab && selectedTeacherId → filter by selected teacher
+      // Priority 3: If tab && no selection → show all
+      if (!tab) {
+        endpoint = `teacher-groups/${teacherId}`;
+      } else if (selectedTeacherId) {
+        endpoint = `teacher-groups/${selectedTeacherId}`;
+      } else {
+        endpoint = `teacher-groups`;
+      }
+
+      // ✅ Pass 'page' as query parameter
       const response = await getData(
-        `teacher-groups/${teacherId}`,
-        {},
+        endpoint,
+        { page }, // ← This is critical for pagination
         {
           Authorization: `Bearer ${token}`,
         }
       );
 
-      // Handle both array response and paginated response
-      if (Array.isArray(response)) {
-        setData(response);
+      let groups = [];
+      let meta = null;
+
+      if (response.status === true && response.data?.groups) {
+        groups = response.data.groups;
+        const pagination = response.data.pagination;
+        meta = {
+          current_page: pagination.current_page,
+          last_page: pagination.last_page,
+          per_page: pagination.per_page,
+          total: pagination.total,
+          from: pagination.from,
+          to: pagination.to,
+          has_more_pages: pagination.has_more_pages,
+          next_page_url: pagination.next_page_url,
+          prev_page_url: pagination.prev_page_url,
+        };
+      } else if (Array.isArray(response)) {
+        groups = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        groups = response.data;
+        meta = response.meta || null;
+      } else {
+        groups = [];
+        console.warn("Unexpected response structure:", response);
+      }
+
+      setData(groups);
+
+      if (meta) {
+        setTotalPages(meta.last_page || 1);
+        setCurrentPage(meta.current_page || 1);
+      } else {
         setTotalPages(1);
         setCurrentPage(1);
-      } else {
-        setData(response.data || response);
-        if (response.meta) {
-          setTotalPages(response.meta.last_page || 1);
-          setCurrentPage(response.meta.current_page || 1);
-        }
       }
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching teacher groups:", error);
       toast.error("فشل في جلب البيانات");
     }
   };
@@ -122,7 +161,7 @@ function TeacherGroupsDataTable() {
       // Fetch teachers
       const teachersResponse = await getData(
         "teachers",
-        {},
+        { page: 1 },
         {
           Authorization: `Bearer ${token}`,
         }
@@ -158,7 +197,9 @@ function TeacherGroupsDataTable() {
   }, []);
 
   // handle input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prevFormData) => ({
       ...prevFormData,
@@ -290,7 +331,13 @@ function TeacherGroupsDataTable() {
       refetchGroups(currentPage);
       fetchTeachersAndLevels();
     }
-  }, [token, currentPage]);
+  }, [token, currentPage, selectedTeacherId]); // ← Added selectedTeacherId
+
+  useEffect(() => {
+    if (!tab) {
+      setSelectedTeacherId(""); // Clear filter when viewing specific teacher
+    }
+  }, [tab]);
 
   // Update form data when editing group changes
   useEffect(() => {
@@ -388,19 +435,23 @@ function TeacherGroupsDataTable() {
           >
             حذف
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              // Use teacherId from URL and groupId from row
-              if (teacherId && row.original.id) {
-                router.push(`/teachers/teacher-groups/${teacherId}/${row.original.id}`);
-              }
-            }}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            تفاصيل
-          </Button>
+          {!tab ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                // Use teacherId from URL and groupId from row
+                if (teacherId && row.original.id) {
+                  router.push(
+                    `/teachers/teacher-groups/${teacherId}/${row.original.id}`
+                  );
+                }
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              تفاصيل
+            </Button>
+          ) : null}
         </div>
       ),
     },
@@ -420,6 +471,7 @@ function TeacherGroupsDataTable() {
     <>
       <div className="flex items-center gap-2 px-4 mb-4">
         {/* search input */}
+
         <Input
           placeholder="بحث بالمجموعة..."
           value={(table.getColumn("group")?.getFilterValue() as string) || ""}
@@ -428,6 +480,31 @@ function TeacherGroupsDataTable() {
           }
           className="max-w-sm min-w-[200px] h-10"
         />
+        {tab && (
+          <div className="relative">
+            <select
+              value={selectedTeacherId}
+              onChange={(e) => {
+                setSelectedTeacherId(e.target.value);
+                setCurrentPage(1); // Reset page
+              }}
+              disabled={!teachers.length}
+              className="min-w-[180px] p-2 border rounded bg-white dark:bg-gray-700"
+            >
+              <option value="">كل المعلمين</option>
+              {teachers.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.id}
+                </option>
+              ))}
+            </select>
+            {!teachers.length && (
+              <p className="text-sm text-gray-500 mt-1">
+                جاري تحميل المعلمين...
+              </p>
+            )}
+          </div>
+        )}
 
         {/* add group Dialog */}
         <Dialog onOpenChange={(open) => !open && handleAddDialogClose()}>
@@ -686,7 +763,6 @@ function TeacherGroupsDataTable() {
                 size="sm"
                 onClick={() => refetchGroups(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="h-9 px-4 font-medium"
               >
                 السابق
               </Button>
@@ -697,14 +773,10 @@ function TeacherGroupsDataTable() {
                   (pageNumber) => (
                     <Button
                       key={pageNumber}
-                      variant={"outline"}
+                      variant={pageNumber === currentPage ? "soft" : "outline"}
                       size="sm"
                       onClick={() => refetchGroups(pageNumber)}
-                      className={`w-9 h-9 font-medium transition-all duration-200 ${
-                        pageNumber === currentPage
-                          ? "scale-110"
-                          : "hover:scale-105"
-                      }`}
+                      className="w-9 h-9"
                     >
                       {pageNumber}
                     </Button>
@@ -717,7 +789,6 @@ function TeacherGroupsDataTable() {
                 size="sm"
                 onClick={() => refetchGroups(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="h-9 px-4 font-medium"
               >
                 التالي
               </Button>
