@@ -8,7 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -63,8 +63,10 @@ type FormData = {
   teacher_id: string;
   level_id: string;
 };
+// add defult value to tab
+function TeacherGroupsDataTable() {
+    const searchParams = useSearchParams();
 
-function TeacherGroupsDataTable({ tab }: { tab: boolean }) {
   const [data, setData] = useState<TeacherGroup[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -87,6 +89,7 @@ function TeacherGroupsDataTable({ tab }: { tab: boolean }) {
   const params = useParams();
   // teacherId from URL
   const teacherId = params?.teacherId?.toString() || "";
+  const tab = searchParams.get('tab') === 'true'; // Convert string "true" to boolean true
 
   // refetch teacher groups
   const refetchGroups = async (page: number = 1) => {

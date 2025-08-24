@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import TeacherGroupsDataTable from "@/app/[lang]/(dashboard)/teachers/teacher-groups/[teacherId]/page";
-
+import TeacherGroupsDataTable from "./teacher-groups/[teacherId]/page";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -100,6 +100,8 @@ type FormData = {
 const DEFAULT_IMAGE = "https://via.placeholder.com/150x150";
 
 function BasicDataTable() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<User[]>([]);
   const [subjects, setSubjects] = useState<SubjectsData[]>([]);
   const [token, setToken] = useState("");
@@ -109,8 +111,10 @@ function BasicDataTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [rawData, setRawData] = useState<User[]>([]); 
+  const [rawData, setRawData] = useState<User[]>([]);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [tab, setTab] = useState<boolean | null>(null);
+  const [tabReady, setTabReady] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "teachers" | "groups" | "dashboard"
   >("teachers");
@@ -156,41 +160,46 @@ function BasicDataTable() {
       avatar: "",
     });
   };
-// Apply client-side filtering
-useEffect(() => {
-  let filtered = [...rawData];
+  // Apply client-side filtering
+  useEffect(() => {
+    let filtered = [...rawData];
 
-  const { course_type, search } = filters;
+    const { course_type, search } = filters;
 
-  // Text search filter
-  if (search) {
-    filtered = filtered.filter((user) =>
-      user.user.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      user.user.email?.toLowerCase().includes(search.toLowerCase())
-    );
-  }
-
-  // Course type filter
-  if (course_type) {
-    if (course_type === "online") {
-      filtered = filtered.filter(
-        (user) => (user.online_courses_count ?? 0) > 0
-      );
-    } else if (course_type === "offline") {
-      filtered = filtered.filter(
-        (user) => user.has_offline_courses === true
-      );
-    } else if (course_type === "both") {
+    // Text search filter
+    if (search) {
       filtered = filtered.filter(
         (user) =>
-          (user.online_courses_count ?? 0) > 0 && user.has_offline_courses === true
+          user.user.full_name.toLowerCase().includes(search.toLowerCase()) ||
+          user.user.email?.toLowerCase().includes(search.toLowerCase())
       );
     }
-  }
 
-  setData(filtered);
-}, [rawData, filters.course_type, filters.search]);
+    // Course type filter
+    if (course_type) {
+      if (course_type === "online") {
+        filtered = filtered.filter(
+          (user) => (user.online_courses_count ?? 0) > 0
+        );
+      } else if (course_type === "offline") {
+        filtered = filtered.filter((user) => user.has_offline_courses === true);
+      } else if (course_type === "both") {
+        filtered = filtered.filter(
+          (user) =>
+            (user.online_courses_count ?? 0) > 0 &&
+            user.has_offline_courses === true
+        );
+      }
+    }
+
+    setData(filtered);
+  }, [rawData, filters.course_type, filters.search]);
   // refetch users
+  useEffect(() => {
+    const initialTab = searchParams.get("tab") === "true";
+    setTab(initialTab);
+    setTabReady(true); // Mark that tab is now ready
+  }, [searchParams]);
   const refetchUsers = async (page: number = 1) => {
     try {
       const response = await getData(
@@ -700,7 +709,16 @@ useEffect(() => {
           معلمين
         </button>
         <button
-          onClick={() => setActiveTab("groups")}
+          onClick={() => {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.set("tab", "true");
+            router.push(`${window.location.pathname}?${newParams.toString()}`);
+
+            // Wait 5 seconds before setting active tab
+            setTimeout(() => {
+              setActiveTab("groups");
+            }, 1000);
+          }}
           className={`flex-1 rounded-md py-2 px-3 text-sm font-medium transition-colors ${
             activeTab === "groups"
               ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
@@ -964,7 +982,6 @@ useEffect(() => {
             </div>
           )}
         </div>
-        
       ) : null}
 
       {/* Native Edit Modal */}
@@ -1251,7 +1268,7 @@ useEffect(() => {
       )}
       {activeTab === "groups" && (
         <div className="container mx-auto py-8 px-4">
-          <TeacherGroupsDataTable tab={true} />
+          <TeacherGroupsDataTable />
         </div>
       )}
 
