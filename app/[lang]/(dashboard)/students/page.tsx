@@ -21,7 +21,15 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, GraduationCap, Phone, School, Edit, X, Trash2 } from "lucide-react";
+import {
+  Users,
+  GraduationCap,
+  Phone,
+  School,
+  Edit,
+  X,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
@@ -36,9 +44,13 @@ import { Toaster, toast } from "react-hot-toast";
 function isImageUrl(url: string | undefined | null): boolean {
   if (!url) return false;
   // Accept http(s) and starts with / (for local images)
-  return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(url) ||
-    /^https?:\/\/.+\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)(\?.*)?$/i.test(url) ||
-    /^\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(url);
+  return (
+    /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(url) ||
+    /^https?:\/\/.+\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)(\?.*)?$/i.test(
+      url
+    ) ||
+    /^\/.+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(url)
+  );
 }
 
 // Statistics Card Component
@@ -136,7 +148,9 @@ const StudentUpdateModal = ({
       });
       setAvatarFile(null);
       // If user image is a valid image URL, show it, else null
-      setAvatarPreview(isImageUrl(student.user?.avatar) ? student.user?.avatar ?? null : null);
+      setAvatarPreview(
+        isImageUrl(student.user?.avatar) ? student.user?.avatar ?? null : null
+      );
     }
   }, [student]);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -168,14 +182,10 @@ const StudentUpdateModal = ({
       }
       // Laravel expects _method: PUT for update
       form.append("_method", "PUT");
-      await postData(
-        `students/${student.user?.id}`,
-        form,
-        {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        }
-      );
+      await postData(`students/${student.user?.id}`, form, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      });
       onUpdate();
       onClose();
       // === NEW ===
@@ -472,7 +482,10 @@ const DeleteConfirmationModal = ({
         isOpen ? "opacity-100 visible" : "opacity-0 invisible"
       } transition-opacity`}
     >
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <div
+        className="absolute inset-0 bg-black bg-opacity-50"
+        onClick={onClose}
+      ></div>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 z-10">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           تأكيد الحذف
@@ -538,7 +551,7 @@ function BasicDataTable() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Calculate statistics
-  const calculateStatistics = (studentsData: StudentTypes[]) => {
+  const calculateStatistics = (studentsData: StudentTypes[], paginate: any) => {
     const activeStudents = studentsData.filter(
       (student) => student.status === "active"
     ).length;
@@ -549,7 +562,7 @@ function BasicDataTable() {
       (student) => student.user?.phone
     ).length;
     setStatistics({
-      totalStudents: pagination.total,
+      totalStudents: paginate.total,
       activeStudents,
       totalSchools: uniqueSchools,
       studentsWithPhone,
@@ -653,14 +666,18 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
+
+      const studentsData = response.data.students;
+      const paginate = response.data.paginate;
+
+      setData(studentsData);
       setPagination((prev) => ({
         ...prev,
-        total: response?.meta?.total,
-        lastPage: response?.meta?.last_page,
+          total: paginate.total,
+      lastPage: paginate.last_page,
       }));
-      // Calculate statistics with the fetched data
-      calculateStatistics(response.data);
+
+      calculateStatistics(studentsData, paginate);
     } catch (error) {
       console.log(error);
     }
@@ -856,27 +873,35 @@ function BasicDataTable() {
 
   // table
   const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    manualPagination: true,
-    pageCount: pagination.lastPage,
-    state: {
-      pagination: {
-        pageIndex: pagination.pageIndex,
-        pageSize: pagination.pageSize,
-      },
-      rowSelection: selectedToDelete.reduce((acc, id) => {
-        const index = data.findIndex((d) => d.user?.id === Number(id));
-        if (index !== -1) acc[index] = true;
-        return acc;
-      }, {} as Record<number, boolean>),
+  data,
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  manualPagination: true,
+  pageCount: pagination.lastPage,
+  state: {
+    pagination: {
+      pageIndex: pagination.pageIndex,
+      pageSize: pagination.pageSize,
     },
-    onRowSelectionChange: (updater) => {
-  const selection = updater instanceof Function ? updater(table.getState().rowSelection) : updater;
+    rowSelection: selectedToDelete.reduce((acc, id) => {
+      const index = data.findIndex((d) => d.user?.id === Number(id));
+      if (index !== -1) acc[index] = true;
+      return acc;
+    }, {} as Record<number, boolean>),
+  },
+  onPaginationChange: (updater) => {
+    const newPagination = updater instanceof Function ? updater(pagination) : updater;
+    setPagination((prev) => ({
+      ...prev,
+      pageIndex: newPagination.pageIndex,
+      pageSize: newPagination.pageSize,
+    }));
+  },
+  onRowSelectionChange: (updater) => {
+    const selection = updater instanceof Function ? updater(table.getState().rowSelection) : updater;
   const selectedIds = Object.keys(selection)
     .filter((key) => selection[parseInt(key)])
     .map((key) => {
@@ -886,9 +911,9 @@ function BasicDataTable() {
     .filter((id): id is string => id !== undefined);
 
   setSelectedToDelete(selectedIds);
-},
-    enableRowSelection: true,
-  });
+  },
+  enableRowSelection: true,
+});
 
   return (
     <>

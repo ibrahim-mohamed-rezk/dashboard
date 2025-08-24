@@ -109,6 +109,7 @@ function BasicDataTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [rawData, setRawData] = useState<User[]>([]); 
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "teachers" | "groups" | "dashboard"
@@ -128,6 +129,7 @@ function BasicDataTable() {
     to_date: "",
     from_date: "",
     search: "",
+    course_type: "",
   });
 
   // Statistics data
@@ -154,7 +156,40 @@ function BasicDataTable() {
       avatar: "",
     });
   };
+// Apply client-side filtering
+useEffect(() => {
+  let filtered = [...rawData];
 
+  const { course_type, search } = filters;
+
+  // Text search filter
+  if (search) {
+    filtered = filtered.filter((user) =>
+      user.user.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      user.user.email?.toLowerCase().includes(search.toLowerCase())
+    );
+  }
+
+  // Course type filter
+  if (course_type) {
+    if (course_type === "online") {
+      filtered = filtered.filter(
+        (user) => (user.online_courses_count ?? 0) > 0
+      );
+    } else if (course_type === "offline") {
+      filtered = filtered.filter(
+        (user) => user.has_offline_courses === true
+      );
+    } else if (course_type === "both") {
+      filtered = filtered.filter(
+        (user) =>
+          (user.online_courses_count ?? 0) > 0 && user.has_offline_courses === true
+      );
+    }
+  }
+
+  setData(filtered);
+}, [rawData, filters.course_type, filters.search]);
   // refetch users
   const refetchUsers = async (page: number = 1) => {
     try {
@@ -687,237 +722,249 @@ function BasicDataTable() {
       </div>
 
       {activeTab === "teachers" ? (
-      <div className="flex flex-wrap items-center gap-2 px-4 mb-4">
-        {/* Filter: Search */}
-        <Input
-          removeWrapper={true}
-          placeholder="بحث بالاسم أو البريد..."
-          value={filters.search}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, search: e.target.value }))
-          }
-          className="!max-w-sm min-w-[200px] h-10"
-        />
-        {/* Filter: Subject */}
-        <select
-          value={filters.subject_id}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, subject_id: e.target.value }))
-          }
-          className="min-w-[150px] p-2 border rounded"
-        >
-          <option value="">كل المواد</option>
-          {subjects?.map((subject) => (
-            <option key={subject?.id} value={subject?.id}>
-              {subject?.name}
-            </option>
-          ))}
-        </select>
-        {/* Filter: From Date */}
-        <input
-          type="date"
-          value={filters.from_date}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, from_date: e.target.value }))
-          }
-          className="p-2 border rounded"
-        />
-        {/* Filter: To Date */}
-        <input
-          type="date"
-          value={filters.to_date}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, to_date: e.target.value }))
-          }
-          className="p-2 border rounded"
-        />
-
-        {/* Conditional Button */}
-        {selectedCount > 0 ? (
-          <Button
-            variant="outline"
-            onClick={() => setIsBulkDeleteDialogOpen(true)}
-            className="ms-auto h-10"
+        <div className="flex flex-wrap items-center gap-2 px-4 mb-4">
+          {/* Filter: Search */}
+          <Input
+            removeWrapper={true}
+            placeholder="بحث بالاسم أو البريد..."
+            value={filters.search}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, search: e.target.value }))
+            }
+            className="!max-w-sm min-w-[200px] h-10"
+          />
+          {/* Filter: Subject */}
+          <select
+            value={filters.subject_id}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, subject_id: e.target.value }))
+            }
+            className="min-w-[150px] p-2 border rounded"
           >
-            حذف المحدد ({selectedCount})
-          </Button>
-        ) : (
-          <div className="ms-auto">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline">اضافه مستخدم</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>اضافه مستخدم</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                  <div className="space-y-4">
-                    <div className="space-y-2 flex items-center justify-center flex-col w-full">
-                      <label
-                        htmlFor="cover"
-                        className="block text-sm font-medium"
-                      >
-                        صورة المستخدم
-                      </label>
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <Input
-                            {...register("cover")}
-                            id="cover"
-                            type="file"
-                            accept="image/*"
-                            name="cover"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  cover: file,
-                                  avatar: file,
-                                }));
-                              }
-                            }}
-                          />
-                          {(!formData.cover ||
-                            formData.cover === "https://safezone-co.top/" ||
-                            formData.cover ===
-                              "https://via.placeholder.com/150x150") && (
-                            <label
-                              htmlFor="cover"
-                              className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
-                            >
-                              <Upload className="w-5 h-5 text-gray-600" />
-                            </label>
-                          )}
-                        </div>
-                        {formData.cover &&
-                          formData.cover !== "https://safezone-co.top/" &&
-                          formData.cover !==
-                            "https://via.placeholder.com/150x150" && (
-                            <div className="relative w-20 h-20">
-                              <img
-                                src={
-                                  typeof formData.cover === "string"
-                                    ? formData.cover !==
-                                        "https://safezone-co.top/" &&
-                                      formData.cover !==
-                                        "https://via.placeholder.com/150x150"
-                                      ? formData.cover
-                                      : DEFAULT_IMAGE
-                                    : formData.cover instanceof File
-                                    ? URL.createObjectURL(formData.cover)
-                                    : DEFAULT_IMAGE
-                                }
-                                alt="Preview"
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
+            <option value="">كل المواد</option>
+            {subjects?.map((subject) => (
+              <option key={subject?.id} value={subject?.id}>
+                {subject?.name}
+              </option>
+            ))}
+          </select>
+          {/* Filter: From Date */}
+          <input
+            type="date"
+            value={filters.from_date}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, from_date: e.target.value }))
+            }
+            className="p-2 border rounded"
+          />
+          {/* Filter: To Date */}
+          <input
+            type="date"
+            value={filters.to_date}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, to_date: e.target.value }))
+            }
+            className="p-2 border rounded"
+          />
+          {/* Filter: Course Type */}
+          <select
+            value={filters.course_type}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, course_type: e.target.value }))
+            }
+            className="min-w-[160px] p-2 border rounded"
+          >
+            <option value="">الكل</option>
+            <option value="online">أونلاين</option>
+            <option value="offline">أوفلاين</option>
+            <option value="both">الاثنين معاً</option>
+          </select>
+          {/* Conditional Button */}
+          {selectedCount > 0 ? (
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDeleteDialogOpen(true)}
+              className="ms-auto h-10"
+            >
+              حذف المحدد ({selectedCount})
+            </Button>
+          ) : (
+            <div className="ms-auto">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">اضافه مستخدم</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>اضافه مستخدم</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                      <div className="space-y-2 flex items-center justify-center flex-col w-full">
+                        <label
+                          htmlFor="cover"
+                          className="block text-sm font-medium"
+                        >
+                          صورة المستخدم
+                        </label>
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Input
+                              {...register("cover")}
+                              id="cover"
+                              type="file"
+                              accept="image/*"
+                              name="cover"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
                                   setFormData((prev) => ({
                                     ...prev,
-                                    cover: null,
-                                  }))
+                                    cover: file,
+                                    avatar: file,
+                                  }));
                                 }
-                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                              }}
+                            />
+                            {(!formData.cover ||
+                              formData.cover === "https://safezone-co.top/" ||
+                              formData.cover ===
+                                "https://via.placeholder.com/150x150") && (
+                              <label
+                                htmlFor="cover"
+                                className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
                               >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
+                                <Upload className="w-5 h-5 text-gray-600" />
+                              </label>
+                            )}
+                          </div>
+                          {formData.cover &&
+                            formData.cover !== "https://safezone-co.top/" &&
+                            formData.cover !==
+                              "https://via.placeholder.com/150x150" && (
+                              <div className="relative w-20 h-20">
+                                <img
+                                  src={
+                                    typeof formData.cover === "string"
+                                      ? formData.cover !==
+                                          "https://safezone-co.top/" &&
+                                        formData.cover !==
+                                          "https://via.placeholder.com/150x150"
+                                        ? formData.cover
+                                        : DEFAULT_IMAGE
+                                      : formData.cover instanceof File
+                                      ? URL.createObjectURL(formData.cover)
+                                      : DEFAULT_IMAGE
+                                  }
+                                  alt="Preview"
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      cover: null,
+                                    }))
+                                  }
+                                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="full_name">اسم المستخدم</label>
+                        <Input
+                          {...register("full_name")}
+                          id="full_name"
+                          placeholder="Enter full name"
+                          name="full_name"
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="email">الايميل</label>
+                        <Input
+                          {...register("email")}
+                          id="email"
+                          type="email"
+                          placeholder="Enter email"
+                          name="email"
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="phone">رقم الهاتف</label>
+                        <Input
+                          {...register("phone")}
+                          id="phone"
+                          placeholder="Enter phone number"
+                          name="phone"
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="password">كلمة المرور</label>
+                        <Input
+                          {...register("password")}
+                          id="password"
+                          type="password"
+                          placeholder="Enter password"
+                          name="password"
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="subject_id">Subject</label>
+                        <select
+                          {...register("subject_id")}
+                          id="subject_id"
+                          className="w-full p-2 border rounded"
+                          name="subject_id"
+                          onChange={handleSelectChange}
+                        >
+                          <option value="">Select subject</option>
+                          {subjects?.map((subject) => (
+                            <option key={subject?.id} value={subject?.id}>
+                              {subject?.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="full_name">اسم المستخدم</label>
-                      <Input
-                        {...register("full_name")}
-                        id="full_name"
-                        placeholder="Enter full name"
-                        name="full_name"
-                        onChange={handleInputChange}
-                      />
+                      {error && (
+                        <p
+                          className="text-red-500"
+                          dangerouslySetInnerHTML={{ __html: error }}
+                        />
+                      )}
                     </div>
-                    <div>
-                      <label htmlFor="email">الايميل</label>
-                      <Input
-                        {...register("email")}
-                        id="email"
-                        type="email"
-                        placeholder="Enter email"
-                        name="email"
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="phone">رقم الهاتف</label>
-                      <Input
-                        {...register("phone")}
-                        id="phone"
-                        placeholder="Enter phone number"
-                        name="phone"
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="password">كلمة المرور</label>
-                      <Input
-                        {...register("password")}
-                        id="password"
-                        type="password"
-                        placeholder="Enter password"
-                        name="password"
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="subject_id">Subject</label>
-                      <select
-                        {...register("subject_id")}
-                        id="subject_id"
-                        className="w-full p-2 border rounded"
-                        name="subject_id"
-                        onChange={handleSelectChange}
-                      >
-                        <option value="">Select subject</option>
-                        {subjects?.map((subject) => (
-                          <option key={subject?.id} value={subject?.id}>
-                            {subject?.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    {error && (
-                      <p
-                        className="text-red-500"
-                        dangerouslySetInnerHTML={{ __html: error }}
-                      />
-                    )}
-                  </div>
-                  <div className="mt-6 space-y-2">
-                    <Button type="submit" className="w-full">
-                      Submit
-                    </Button>
-                    <DialogClose asChild>
-                      <Button
-                        ref={dialogCloseRef}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Cancel
+                    <div className="mt-6 space-y-2">
+                      <Button type="submit" className="w-full">
+                        Submit
                       </Button>
-                    </DialogClose>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
-      </div>
-      ):null}
+                      <DialogClose asChild>
+                        <Button
+                          ref={dialogCloseRef}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Native Edit Modal */}
       {showEditModal && (
@@ -1202,10 +1249,9 @@ function BasicDataTable() {
         </div>
       )}
       {activeTab === "groups" && (
-      <div className="container mx-auto py-8 px-4">
-      <TeacherGroupsDataTable tab={true}  />
-
-    </div>
+        <div className="container mx-auto py-8 px-4">
+          <TeacherGroupsDataTable tab={true} />
+        </div>
       )}
 
       {activeTab === "dashboard" && (
