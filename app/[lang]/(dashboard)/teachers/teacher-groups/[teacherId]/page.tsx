@@ -8,6 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import * as XLSX from "xlsx";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +66,7 @@ type FormData = {
 };
 // add defult value to tab
 function TeacherGroupsDataTable() {
-    const searchParams = useSearchParams();
+  const searchParams = useSearchParams();
 
   const [data, setData] = useState<TeacherGroup[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -77,6 +78,8 @@ function TeacherGroupsDataTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
+  const [selectedLevelId, setSelectedLevelId] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const dialogCloseRef = useRef<HTMLButtonElement>(null);
   const editDialogCloseRef = useRef<HTMLButtonElement>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -89,7 +92,7 @@ function TeacherGroupsDataTable() {
   const params = useParams();
   // teacherId from URL
   const teacherId = params?.teacherId?.toString() || "";
-  const tab = searchParams.get('tab') === 'true'; // Convert string "true" to boolean true
+  const tab = searchParams.get("tab") === "true"; // Convert string "true" to boolean true
 
   // refetch teacher groups
   const refetchGroups = async (page: number = 1) => {
@@ -107,14 +110,15 @@ function TeacherGroupsDataTable() {
         endpoint = `teacher-groups`;
       }
 
-      // ✅ Pass 'page' as query parameter
-      const response = await getData(
-        endpoint,
-        { page }, // ← This is critical for pagination
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
+      // Build params including filters
+      const params: Record<string, any> = { page };
+      if (tab && selectedTeacherId) params.teacher_id = selectedTeacherId;
+      if (selectedLevelId) params.level_id = selectedLevelId;
+      if (searchTerm) params.search = searchTerm;
+
+      const response = await getData(endpoint, params, {
+        Authorization: `Bearer ${token}`,
+      });
 
       let groups = [];
       let meta = null;
@@ -334,7 +338,7 @@ function TeacherGroupsDataTable() {
       refetchGroups(currentPage);
       fetchTeachersAndLevels();
     }
-  }, [token, currentPage, selectedTeacherId]); // ← Added selectedTeacherId
+  }, [token, currentPage, selectedTeacherId, selectedLevelId, searchTerm]);
 
   useEffect(() => {
     if (!tab) {
@@ -381,6 +385,13 @@ function TeacherGroupsDataTable() {
 
   // columns of table
   const columns: ColumnDef<TeacherGroup>[] = [
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500">{row.original.id}</span>
+      ),
+    },
     {
       accessorKey: "group",
       header: "اسم المجموعة",
@@ -477,10 +488,11 @@ function TeacherGroupsDataTable() {
 
         <Input
           placeholder="بحث بالمجموعة..."
-          value={(table.getColumn("group")?.getFilterValue() as string) || ""}
-          onChange={(event) =>
-            table.getColumn("group")?.setFilterValue(event.target.value)
-          }
+          value={searchTerm}
+          onChange={(event) => {
+            setSearchTerm(event.target.value);
+            setCurrentPage(1);
+          }}
           className="max-w-sm min-w-[200px] h-10"
         />
         {tab && (
@@ -508,6 +520,111 @@ function TeacherGroupsDataTable() {
             )}
           </div>
         )}
+
+        {/* Level filter */}
+        <div className="relative">
+          <select
+            value={selectedLevelId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedLevelId(id);
+              setCurrentPage(1);
+            }}
+            disabled={!levels.length}
+            className="min-w-[180px] p-2 border rounded bg-white dark:bg-gray-700"
+          >
+            <option value="">كل المستويات</option>
+            {levels.map((level) => (
+              <option key={level.id} value={level.id.toString()}>
+                {level.name}
+              </option>
+            ))}
+          </select>
+          {!levels.length && (
+            <p className="text-sm text-gray-500 mt-1">
+              جاري تحميل المستويات...
+            </p>
+          )}
+        </div>
+
+        {/* Export / Import Excel */}
+        <div className="ms-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              try {
+                const worksheetData = data.map((g) => ({
+                  id: g.id,
+                  group: g.group,
+                  teacher: g.teacher,
+                  level: g.level,
+                  created_at: g.created_at,
+                }));
+                const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Groups");
+                XLSX.writeFile(workbook, `teacher_groups_${Date.now()}.xlsx`);
+              } catch (err) {
+                console.error("Export error", err);
+                toast.error("فشل تصدير الملف");
+              }
+            }}
+          >
+            تصدير Excel
+          </Button>
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  const arrayBuffer = await file.arrayBuffer();
+                  const wb = XLSX.read(arrayBuffer, { type: "array" });
+                  const wsName = wb.SheetNames[0];
+                  const ws = wb.Sheets[wsName];
+                  const rows: any[] = XLSX.utils.sheet_to_json(ws);
+                  // Expect columns: group, teacher_id, level_id (or teacher, level names if mapped externally)
+                  const payloads = rows
+                    .map((r) => ({
+                      group: String(r.group || r.Group || "").trim(),
+                      teacher_id: r.teacher_id ? String(r.teacher_id) : "",
+                      level_id: r.level_id ? String(r.level_id) : "",
+                    }))
+                    .filter((p) => p.group && p.teacher_id && p.level_id);
+
+                  if (!payloads.length) {
+                    toast.error("ملف غير صالح أو فارغ");
+                    e.currentTarget.value = "";
+                    return;
+                  }
+
+                  await Promise.all(
+                    payloads.map((p) =>
+                      postData("teacher-groups", p, {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                      })
+                    )
+                  );
+
+                  toast.success("تم استيراد المجموعات بنجاح");
+                  refetchGroups(1);
+                } catch (err) {
+                  console.error("Import error", err);
+                  toast.error("فشل استيراد الملف");
+                } finally {
+                  e.currentTarget.value = "";
+                }
+              }}
+            />
+            <Button asChild variant="outline">
+              <span>استيراد Excel</span>
+            </Button>
+          </label>
+        </div>
 
         {/* add group Dialog */}
         <Dialog onOpenChange={(open) => !open && handleAddDialogClose()}>

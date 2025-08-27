@@ -24,7 +24,8 @@ import {
   Briefcase,
   Building2,
   Book,
-  ClipboardListIcon
+  ClipboardListIcon,
+  BookOpen
 } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -441,6 +442,21 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         href: "/levels",
                         title: "المستوىات الدراسيه",
                         icon: Cart,
+                      }}
+                      toggleNested={toggleNested}
+                      index={1}
+                      nestedIndex={nestedIndex}
+                      locationName={locationName}
+                    />
+                  </li>
+                )}
+                {user.role === "admin" && (
+                  <li className="mb-1.5 last:mb-0">
+                    <MenuItem
+                      childItem={{
+                        href: "/subjects",
+                        title: "المواد الدراسيه",
+                        icon: BookOpen,
                       }}
                       toggleNested={toggleNested}
                       index={1}

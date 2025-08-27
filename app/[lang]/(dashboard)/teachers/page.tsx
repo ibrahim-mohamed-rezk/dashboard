@@ -58,10 +58,14 @@ interface User {
     full_name: string;
     phone: string;
     email: string;
+    levels?: number | string;
+    created_at?: string;
+    type?: "online" | "offline" | "both" | string;
     subject_id?: string;
     online_courses_count?: number;
     has_offline_courses?: boolean;
   };
+  type?: "online" | "offline" | "both" | string;
   online_courses_count?: number;
   has_offline_courses?: boolean;
 }
@@ -86,6 +90,11 @@ interface ApiResponse {
   links: PaginationLinks;
 }
 
+interface LevelOption {
+  id: number;
+  name: string;
+}
+
 type FormData = {
   full_name: string;
   email: string;
@@ -93,6 +102,8 @@ type FormData = {
   role: string;
   password: string;
   subject_id?: string;
+  type: "online" | "offline" | "both" | "";
+  levels: string;
   cover: string | File | null;
   avatar: string | File | null;
 };
@@ -104,6 +115,8 @@ function BasicDataTable() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<User[]>([]);
   const [subjects, setSubjects] = useState<SubjectsData[]>([]);
+  const [levels, setLevels] = useState<LevelOption[]>([]);
+  const [selectedLevelIds, setSelectedLevelIds] = useState<string[]>([]);
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -124,6 +137,8 @@ function BasicDataTable() {
     email: "",
     phone: "",
     role: "teacher",
+    type: "",
+    levels: "",
     cover: "",
     password: "",
     avatar: "",
@@ -155,6 +170,8 @@ function BasicDataTable() {
       email: "",
       phone: "",
       role: "teacher",
+      type: "",
+      levels: "",
       cover: "",
       password: "",
       avatar: "",
@@ -255,12 +272,38 @@ function BasicDataTable() {
     }));
   };
 
+  // handle multi-select levels: update selected ids and join names into formData.levels
+  const handleLevelsMultiChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
+    setSelectedLevelIds(selected);
+    const levelNames = levels
+      .filter((lvl) => selected.includes(lvl.id.toString()))
+      .map((lvl) => lvl.name)
+      .join("-");
+    setFormData((prev) => ({ ...prev, levels: levelNames }));
+  };
+
+  // checkbox toggle handler for levels (for non-Ctrl multi selection UIs)
+  const toggleLevelSelection = (levelId: string, checked: boolean) => {
+    const next = checked
+      ? Array.from(new Set([...selectedLevelIds, levelId]))
+      : selectedLevelIds.filter((id) => id !== levelId);
+    setSelectedLevelIds(next);
+    const levelNames = levels
+      .filter((lvl) => next.includes(lvl.id.toString()))
+      .map((lvl) => lvl.name)
+      .join("-");
+    setFormData((prev) => ({ ...prev, levels: levelNames }));
+  };
+
   // add user
   const schema = z.object({
     full_name: z.string().min(2, "Name is required"),
     email: z.string().email("Invalid email"),
     phone: z.string().min(8, "Phone is required"),
     role: z.enum(["teacher", "student"]),
+    type: z.enum(["online", "offline", "both"]),
+    levels: z.string().min(1, "المستوى مطلوب"),
     cover: z.string().url("Invalid image URL"),
     avatar: z.string().url("Invalid image URL"),
     password: z.string().min(8, "Password must be at least 8 characters"),
@@ -303,7 +346,12 @@ function BasicDataTable() {
     e.preventDefault();
     if (!editingUser) return;
     try {
-      await postData(`teachers/${editingUser.user.id}`, formData, {
+      const payload: any = { ...(formData as any), _method: "PUT" };
+      // Do not send avatar unless it's a File (new upload)
+      if (payload.avatar && !(payload.avatar instanceof File)) {
+        delete payload.avatar;
+      }
+      await postData(`teachers/${editingUser.user.id}`, payload, {
         Authorization: `Bearer ${token}`,
         "Content-Type": "multipart/form-data",
       });
@@ -393,11 +441,32 @@ function BasicDataTable() {
   // Handle edit user click
   const handleEditUser = (user: User) => {
     setEditingUser(user);
+    // derive type from data if not present
+    const derivedType = (() => {
+      const onlineCount =
+        typeof user.online_courses_count === "number"
+          ? user.online_courses_count
+          : typeof user.user.online_courses_count === "number"
+          ? user.user.online_courses_count
+          : 0;
+      const hasOffline =
+        typeof user.has_offline_courses === "boolean"
+          ? user.has_offline_courses
+          : typeof user.user.has_offline_courses === "boolean"
+          ? user.user.has_offline_courses
+          : false;
+      if (onlineCount > 0 && hasOffline) return "both";
+      if (onlineCount > 0) return "online";
+      if (hasOffline) return "offline";
+      return "";
+    })();
     setFormData({
       full_name: user.user.full_name,
       email: user.user.email,
       phone: user.user.phone,
       role: user.user.role,
+      type: (user.user as any)?.type || (user as any)?.type || derivedType,
+      levels: (user.user.levels && String(user.user.levels)) || ("" as string),
       cover: user.user.avatar,
       password: "",
       avatar: user.user.avatar,
@@ -406,6 +475,22 @@ function BasicDataTable() {
     setShowEditModal(true);
     setEditError(null);
   };
+
+  // sync selectedLevelIds from formData.levels (names joined by '-') when levels list is available
+  useEffect(() => {
+    if (!formData.levels) {
+      setSelectedLevelIds([]);
+      return;
+    }
+    const names = formData.levels
+      .split("-")
+      .map((n) => n.trim())
+      .filter(Boolean);
+    const ids = levels
+      .filter((lvl) => names.includes(lvl.name))
+      .map((lvl) => lvl.id.toString());
+    setSelectedLevelIds(ids);
+  }, [levels, formData.levels]);
 
   // Handle close edit modal
   const handleCloseEditModal = () => {
@@ -442,6 +527,15 @@ function BasicDataTable() {
           ...prev,
           totalSubjects: response.data.length,
         }));
+        // fetch levels
+        const levelsResponse = await getData(
+          "levels",
+          {},
+          {
+            Authorization: `Bearer ${token}`,
+          }
+        );
+        setLevels(levelsResponse.data || levelsResponse);
       } catch (error) {
         console.log(error);
       }
@@ -500,6 +594,13 @@ function BasicDataTable() {
       ),
     },
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500">{row.original.user.id}</span>
+      ),
+    },
+    {
       accessorKey: "full_name",
       header: "الاسم الكامل",
       cell: ({ row }) => {
@@ -544,6 +645,19 @@ function BasicDataTable() {
       cell: ({ row }) => <div>{row.original.user.phone ?? "N/A"}</div>,
     },
     {
+      accessorKey: "subject",
+      header: "المادة",
+      cell: ({ row }) => {
+        return (
+          <span className="text-sm">
+            {(row.original as any)?.subject
+              ? (row.original as any)?.subject
+              : "-"}
+          </span>
+        );
+      },
+    },
+    {
       accessorKey: "online_courses_count",
       header: "عدد الدورات أونلاين",
       cell: ({ row }) => {
@@ -576,14 +690,78 @@ function BasicDataTable() {
         );
       },
     },
+    // Level column
     {
-      accessorKey: "role",
-      header: "دور",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="capitalize">
-          {row.original.user.role}
-        </Badge>
-      ),
+      accessorKey: "level",
+      header: "المرحلة",
+      cell: ({ row }) => {
+        const raw =
+          (row.original.user as any)?.levels ??
+          (row.original as any)?.levels ??
+          (row.original.user as any)?.level_id;
+        if (!raw && raw !== 0) return <span>-</span>;
+        // If raw is non-numeric string, assume it's already a name
+        const rawStr = String(raw);
+        const isNumeric = /^\d+$/.test(rawStr);
+        if (!isNumeric) {
+          return <span className="text-sm">{rawStr}</span>;
+        }
+        const levelId = parseInt(rawStr, 10);
+        const level = levels.find((l) => l.id === levelId);
+        return <span className="text-sm">{level ? level.name : rawStr}</span>;
+      },
+    },
+    {
+      accessorKey: "type",
+      header: "الموقع",
+      cell: ({ row }) => {
+        const onlineCount =
+          typeof row.original.online_courses_count === "number"
+            ? row.original.online_courses_count
+            : typeof row.original.user.online_courses_count === "number"
+            ? row.original.user.online_courses_count
+            : 0;
+        const hasOffline =
+          typeof row.original.has_offline_courses === "boolean"
+            ? row.original.has_offline_courses
+            : typeof row.original.user.has_offline_courses === "boolean"
+            ? row.original.user.has_offline_courses
+            : false;
+        const explicitType =
+          (row.original.user as any)?.type || (row.original as any)?.type;
+        const computedType = explicitType
+          ? explicitType
+          : onlineCount > 0 && hasOffline
+          ? "both"
+          : onlineCount > 0
+          ? "online"
+          : hasOffline
+          ? "offline"
+          : "";
+        const label =
+          computedType === "online"
+            ? "أونلاين"
+            : computedType === "offline"
+            ? "أوفلاين"
+            : computedType === "both"
+            ? "الاثنين"
+            : "";
+        return <div>{label}</div>;
+      },
+    },
+    {
+      accessorKey: "created_at",
+      header: "تاريخ الإنشاء",
+      cell: ({ row }) => {
+        const createdAt = (row.original as any)?.created_at;
+        if (!createdAt) return <div>—</div>;
+        try {
+          const date = new Date(createdAt);
+          return <div>{date.toLocaleDateString()}</div>;
+        } catch {
+          return <div>{createdAt}</div>;
+        }
+      },
     },
     {
       accessorKey: "actions",
@@ -953,6 +1131,47 @@ function BasicDataTable() {
                           ))}
                         </select>
                       </div>
+                      <div>
+                        <label htmlFor="levels">المرحلة</label>
+                        <div id="levels" className="mt-2 flex flex-wrap gap-2">
+                          {levels?.map((level) => {
+                            const id = level.id.toString();
+                            const selected = selectedLevelIds.includes(id);
+                            return (
+                              <button
+                                type="button"
+                                key={id}
+                                onClick={() =>
+                                  toggleLevelSelection(id, !selected)
+                                }
+                                className={`px-3 py-1 rounded-full border text-sm transition-colors ${
+                                  selected
+                                    ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                                    : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                                }`}
+                              >
+                                {level.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="type">نوع الدورات</label>
+                        <select
+                          {...register("type")}
+                          id="type"
+                          className="w-full p-2 border rounded"
+                          name="type"
+                          onChange={handleSelectChange}
+                          value={formData.type}
+                        >
+                          <option value="">اختر النوع</option>
+                          <option value="online">أونلاين</option>
+                          <option value="offline">أوفلاين</option>
+                          <option value="both">الاثنين معاً</option>
+                        </select>
+                      </div>
                     </div>
                     <div>
                       {error && (
@@ -1148,6 +1367,49 @@ function BasicDataTable() {
                           {subject?.name}
                         </option>
                       ))}
+                    </select>
+                  </div>
+                  {/* Level */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      المرحلة
+                    </label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {levels?.map((level) => {
+                        const id = level.id.toString();
+                        const selected = selectedLevelIds.includes(id);
+                        return (
+                          <button
+                            type="button"
+                            key={id}
+                            onClick={() => toggleLevelSelection(id, !selected)}
+                            className={`px-3 py-1 rounded-full border text-sm transition-colors ${
+                              selected
+                                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                                : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200"
+                            }`}
+                          >
+                            {level.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      نوع الدورات
+                    </label>
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={handleSelectChange}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                      <option value="">اختر النوع</option>
+                      <option value="online">أونلاين</option>
+                      <option value="offline">أوفلاين</option>
+                      <option value="both">الاثنين معاً</option>
                     </select>
                   </div>
                 </div>
