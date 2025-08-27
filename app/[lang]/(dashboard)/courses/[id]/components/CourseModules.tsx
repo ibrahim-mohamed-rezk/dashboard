@@ -55,6 +55,13 @@ const CourseModules = ({
   const [isEditingVideoQuiz, setIsEditingVideoQuiz] = useState(false);
   const [videos, setVideos] = useState<VideoTypes[]>([]);
 
+  // Server-side filters for modules
+  const [moduleFilters, setModuleFilters] = useState({
+    type: "", // "video" | "exam" | ""
+    questions_from: "",
+    questions_to: "",
+  });
+
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
@@ -127,7 +134,11 @@ const CourseModules = ({
     try {
       const response = await getData(
         `courses/${params.id}`,
-        {},
+        {
+          type: moduleFilters.type,
+          questions_from: moduleFilters.questions_from,
+          questions_to: moduleFilters.questions_to,
+        },
         {
           Authorization: `Bearer ${token}`,
         }
@@ -157,7 +168,12 @@ const CourseModules = ({
   useEffect(() => {
     fetchCourse();
     fetchVideos();
-  }, [token]);
+  }, [
+    token,
+    moduleFilters.type,
+    moduleFilters.questions_from,
+    moduleFilters.questions_to,
+  ]);
 
   const handleThumbnailEditChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -416,31 +432,31 @@ const CourseModules = ({
 
   // Handle editing video quiz
   const handleEditVideoQuiz = () => {
-  if (!selectedModule?.details?.quiz?.[0]) return;
-  const quizData = selectedModule.details.quiz[0];
-  const transformedQuestions =
-    quizData.questions?.map((q: any) => ({
-      id: q.id,
-      question: q.question,
-      questionType: q.questionType || ("text" as const), // ✅ تم الإصلاح
-      options: q.options.map((opt: any, index: number) => ({
-        id: opt.id,
-        answer: opt.answer,
-        is_correct: q.correct_answer === index + 1,
-      })),
-      correct_answer: q.correct_answer,
-      degree: q.degree,
-    })) || [];
+    if (!selectedModule?.details?.quiz?.[0]) return;
+    const quizData = selectedModule.details.quiz[0];
+    const transformedQuestions =
+      quizData.questions?.map((q: any) => ({
+        id: q.id,
+        question: q.question,
+        questionType: q.questionType || ("text" as const), // ✅ تم الإصلاح
+        options: q.options.map((opt: any, index: number) => ({
+          id: opt.id,
+          answer: opt.answer,
+          is_correct: q.correct_answer === index + 1,
+        })),
+        correct_answer: q.correct_answer,
+        degree: q.degree,
+      })) || [];
 
-  setEditForm((prev) => ({
-    ...prev,
-    questions_count: (quizData as any)?.questions_count ?? 0,
-    duration: (quizData as any)?.duration ?? 0,
-    passing_score: (quizData as any)?.passing_score ?? 0,
-    questions: transformedQuestions,
-  }));
-  setIsEditingVideoQuiz(true);
-};
+    setEditForm((prev) => ({
+      ...prev,
+      questions_count: (quizData as any)?.questions_count ?? 0,
+      duration: (quizData as any)?.duration ?? 0,
+      passing_score: (quizData as any)?.passing_score ?? 0,
+      questions: transformedQuestions,
+    }));
+    setIsEditingVideoQuiz(true);
+  };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -784,13 +800,59 @@ const CourseModules = ({
           question,
           options,
           degree: 1,
-          questionType: (type?.trim().toLowerCase() === "image" ? "image" : "text") as "text" | "image",
+          questionType: (type?.trim().toLowerCase() === "image"
+            ? "image"
+            : "text") as "text" | "image",
         };
       });
 
       setNewModuleForm((prev) => ({
         ...prev,
         questions: [...prev.questions, ...questions],
+        questions_count: prev.questions_count || questions.length,
+      }));
+
+      toast.success(`تم استيراد ${questions.length} سؤال من Excel`);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // Import questions from Excel into edit form (for updating existing exam/quiz)
+  const handleExcelUploadForEdit = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = evt.target?.result;
+      if (!data) return;
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Expected columns: Question, Option1, Option2, Option3, Option4, Correct(1-4), Type(optional: text|image)
+      const questions = json.slice(1).map((row) => {
+        const [question, opt1, opt2, opt3, opt4, correct, type] = row;
+        const options = [
+          { answer: opt1, is_correct: correct == 1 },
+          { answer: opt2, is_correct: correct == 2 },
+          { answer: opt3, is_correct: correct == 3 },
+          { answer: opt4, is_correct: correct == 4 },
+        ];
+        return {
+          question,
+          options,
+          degree: 1,
+          questionType: (typeof type === "string" &&
+          type.trim().toLowerCase() === "image"
+            ? "image"
+            : "text") as "text" | "image",
+        };
+      });
+
+      setEditForm((prev) => ({
+        ...prev,
+        questions,
         questions_count: prev.questions_count || questions.length,
       }));
 
@@ -961,6 +1023,79 @@ const CourseModules = ({
               </Button>
             </div>
           )}
+        </div>
+
+        {/* Filters: type and questions count range - sent as request params */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              نوع المحتوى
+            </label>
+            <Select
+              value={moduleFilters.type}
+              onValueChange={(val) =>
+                setModuleFilters((prev) => ({ ...prev, type: val }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="الكل" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value="video">فيديو</SelectItem>
+                <SelectItem value="exam">اختبار</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              عدد الأسئلة من
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={moduleFilters.questions_from}
+              onChange={(e) =>
+                setModuleFilters((prev) => ({
+                  ...prev,
+                  questions_from: e.target.value,
+                }))
+              }
+              placeholder="0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              عدد الأسئلة إلى
+            </label>
+            <Input
+              type="number"
+              min={0}
+              value={moduleFilters.questions_to}
+              onChange={(e) =>
+                setModuleFilters((prev) => ({
+                  ...prev,
+                  questions_to: e.target.value,
+                }))
+              }
+              placeholder="مثلاً 20"
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                setModuleFilters({
+                  type: "",
+                  questions_from: "",
+                  questions_to: "",
+                })
+              }
+              className="w-full"
+            >
+              إعادة تعيين
+            </Button>
+          </div>
         </div>
 
         {!modules || modules.length === 0 ? (
@@ -1409,6 +1544,24 @@ const CourseModules = ({
                         تم اختيار: {editForm.exam_image.name}
                       </p>
                     )}
+                  </div>
+
+                  {/* Excel upload for updating questions */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2 dark:text-white">
+                      استيراد الأسئلة من Excel
+                    </label>
+                    <Input
+                      type="file"
+                      accept=".xlsx, .xls"
+                      onChange={handleExcelUploadForEdit}
+                      className="cursor-pointer bg-white dark:bg-gray-800 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      يجب أن يحتوي الملف على الأعمدة: السؤال، الخيار 1، الخيار
+                      2، الخيار 3، الخيار 4، رقم الإجابة الصحيحة (1-4)، النوع
+                      (اختياري: text أو image)
+                    </p>
                   </div>
 
                   {/* Display and edit questions */}
