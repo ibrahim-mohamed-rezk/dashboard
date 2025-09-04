@@ -40,12 +40,14 @@ import { useRouter, useParams } from "next/navigation";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
 
 interface TeacherGroup {
   id: number;
   teacher: string | null;
   group: string;
   level: string;
+  subject: string | null;
   created_at: string | null;
 }
 
@@ -59,10 +61,16 @@ interface Level {
   name: string;
 }
 
+interface Subject {
+  id: number;
+  name: string;
+}
+
 type FormData = {
   group: string;
   teacher_id: string;
   level_id: string;
+  subject_id: string;
 };
 // add defult value to tab
 function TeacherGroupsDataTable() {
@@ -71,6 +79,7 @@ function TeacherGroupsDataTable() {
   const [data, setData] = useState<TeacherGroup[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -79,6 +88,7 @@ function TeacherGroupsDataTable() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [selectedLevelId, setSelectedLevelId] = useState<string>("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const dialogCloseRef = useRef<HTMLButtonElement>(null);
   const editDialogCloseRef = useRef<HTMLButtonElement>(null);
@@ -86,6 +96,7 @@ function TeacherGroupsDataTable() {
     group: "",
     teacher_id: "",
     level_id: "",
+    subject_id: "",
   });
 
   const router = useRouter();
@@ -114,6 +125,7 @@ function TeacherGroupsDataTable() {
       const params: Record<string, any> = { page };
       if (tab && selectedTeacherId) params.teacher_id = selectedTeacherId;
       if (selectedLevelId) params.level_id = selectedLevelId;
+      if (selectedSubjectId) params.subject_id = selectedSubjectId;
       if (searchTerm) params.search = searchTerm;
 
       const response = await getData(endpoint, params, {
@@ -162,13 +174,13 @@ function TeacherGroupsDataTable() {
     }
   };
 
-  // fetch teachers and levels for dropdowns
+  // fetch teachers, levels, and subjects for dropdowns
   const fetchTeachersAndLevels = async () => {
     try {
       // Fetch teachers
       const teachersResponse = await getData(
         "teachers",
-        { page: 1 },
+        {},
         {
           Authorization: `Bearer ${token}`,
         }
@@ -184,8 +196,18 @@ function TeacherGroupsDataTable() {
         }
       );
       setLevels(levelsResponse.data || levelsResponse);
+
+      // Fetch subjects
+      const subjectsResponse = await getData(
+        "subjects",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setSubjects(subjectsResponse.data || subjectsResponse);
     } catch (error) {
-      console.log("Error fetching teachers or levels:", error);
+      console.log("Error fetching teachers, levels, or subjects:", error);
     }
   };
 
@@ -227,6 +249,7 @@ function TeacherGroupsDataTable() {
     group: z.string().min(1, "اسم المجموعة مطلوب"),
     teacher_id: z.string().min(1, "المعلم مطلوب"),
     level_id: z.string().min(1, "المستوى مطلوب"),
+    subject_id: z.string().min(1, "المادة مطلوبة"),
   });
 
   const { register, reset } = useForm<FormData>({
@@ -250,6 +273,7 @@ function TeacherGroupsDataTable() {
         group: "",
         teacher_id: "",
         level_id: "",
+        subject_id: "",
       });
       refetchGroups();
       toast.success("تم إضافة المجموعة بنجاح");
@@ -338,7 +362,14 @@ function TeacherGroupsDataTable() {
       refetchGroups(currentPage);
       fetchTeachersAndLevels();
     }
-  }, [token, currentPage, selectedTeacherId, selectedLevelId, searchTerm]);
+  }, [
+    token,
+    currentPage,
+    selectedTeacherId,
+    selectedLevelId,
+    selectedSubjectId,
+    searchTerm,
+  ]);
 
   useEffect(() => {
     if (!tab) {
@@ -349,19 +380,21 @@ function TeacherGroupsDataTable() {
   // Update form data when editing group changes
   useEffect(() => {
     if (editingGroup) {
-      // Find the teacher and level IDs based on names
+      // Find the teacher, level, and subject IDs based on names
       const teacher = teachers.find(
         (t) => t.full_name === editingGroup.teacher
       );
       const level = levels.find((l) => l.name === editingGroup.level);
+      const subject = subjects.find((s) => s.name === editingGroup.subject);
 
       setFormData({
         group: editingGroup.group,
         teacher_id: teacher?.id.toString() || "",
         level_id: level?.id.toString() || "",
+        subject_id: subject?.id.toString() || "",
       });
     }
-  }, [editingGroup, teachers, levels]);
+  }, [editingGroup, teachers, levels, subjects]);
 
   // Reset form when dialog closes
   const handleAddDialogClose = () => {
@@ -369,6 +402,7 @@ function TeacherGroupsDataTable() {
       group: "",
       teacher_id: "",
       level_id: "",
+      subject_id: "",
     });
     setError(null);
   };
@@ -379,6 +413,7 @@ function TeacherGroupsDataTable() {
       group: "",
       teacher_id: "",
       level_id: "",
+      subject_id: "",
     });
     setEditError(null);
   };
@@ -415,6 +450,17 @@ function TeacherGroupsDataTable() {
       header: "المستوى",
       cell: ({ row }) => {
         return <span>{row.original.level}</span>;
+      },
+    },
+    {
+      accessorKey: "subject",
+      header: "المادة",
+      cell: ({ row }) => {
+        return (
+          <span className={row.original.subject ? "" : "text-gray-400"}>
+            {row.original.subject || "غير محدد"}
+          </span>
+        );
       },
     },
     {
@@ -465,7 +511,25 @@ function TeacherGroupsDataTable() {
             >
               تفاصيل
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                // Use teacherId from URL and groupId from row
+                if (row.original.teacher && row.original.id) {
+                  router.push(
+                    `/teachers/teacher-groups/${row.original.teacher}/${row.original.id}`
+                  );
+                } else {
+                  toast.error("المعلم غير موجود");
+                }
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              تفاصيل
+            </Button>
+          )}
         </div>
       ),
     },
@@ -547,6 +611,30 @@ function TeacherGroupsDataTable() {
           )}
         </div>
 
+        {/* Subject filter */}
+        <div className="relative">
+          <select
+            value={selectedSubjectId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedSubjectId(id);
+              setCurrentPage(1);
+            }}
+            disabled={!subjects.length}
+            className="min-w-[180px] p-2 border rounded bg-white dark:bg-gray-700"
+          >
+            <option value="">كل المواد</option>
+            {subjects.map((subject) => (
+              <option key={subject.id} value={subject.id.toString()}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+          {!subjects.length && (
+            <p className="text-sm text-gray-500 mt-1">جاري تحميل المواد...</p>
+          )}
+        </div>
+
         {/* Export / Import Excel */}
         <div className="ms-auto flex items-center gap-2">
           <Button
@@ -558,6 +646,7 @@ function TeacherGroupsDataTable() {
                   group: g.group,
                   teacher: g.teacher,
                   level: g.level,
+                  subject: g.subject,
                   created_at: g.created_at,
                 }));
                 const worksheet = XLSX.utils.json_to_sheet(worksheetData);
@@ -586,14 +675,18 @@ function TeacherGroupsDataTable() {
                   const wsName = wb.SheetNames[0];
                   const ws = wb.Sheets[wsName];
                   const rows: any[] = XLSX.utils.sheet_to_json(ws);
-                  // Expect columns: group, teacher_id, level_id (or teacher, level names if mapped externally)
+                  // Expect columns: group, teacher_id, level_id, subject_id (or teacher, level, subject names if mapped externally)
                   const payloads = rows
                     .map((r) => ({
                       group: String(r.group || r.Group || "").trim(),
                       teacher_id: r.teacher_id ? String(r.teacher_id) : "",
                       level_id: r.level_id ? String(r.level_id) : "",
+                      subject_id: r.subject_id ? String(r.subject_id) : "",
                     }))
-                    .filter((p) => p.group && p.teacher_id && p.level_id);
+                    .filter(
+                      (p) =>
+                        p.group && p.teacher_id && p.level_id && p.subject_id
+                    );
 
                   if (!payloads.length) {
                     toast.error("ملف غير صالح أو فارغ");
@@ -693,6 +786,28 @@ function TeacherGroupsDataTable() {
                     {levels.map((level) => (
                       <option key={level.id} value={level.id.toString()}>
                         {level.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="subject_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المادة
+                  </label>
+                  <select
+                    id="subject_id"
+                    name="subject_id"
+                    value={formData.subject_id}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring"
+                  >
+                    <option value="">اختر المادة</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id.toString()}>
+                        {subject.name}
                       </option>
                     ))}
                   </select>
@@ -798,6 +913,28 @@ function TeacherGroupsDataTable() {
                     {levels.map((level) => (
                       <option key={level.id} value={level.id.toString()}>
                         {level.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="edit_subject_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المادة
+                  </label>
+                  <select
+                    id="edit_subject_id"
+                    name="subject_id"
+                    value={formData.subject_id}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring"
+                  >
+                    <option value="">اختر المادة</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id.toString()}>
+                        {subject.name}
                       </option>
                     ))}
                   </select>

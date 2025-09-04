@@ -263,8 +263,60 @@ function BannerTable() {
     total: 0,
     lastPage: 1,
   });
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [teacherFilter, setTeacherFilter] = useState<string>("");
 
   const columns: ColumnDef<Banner>[] = [
+    {
+      id: "select",
+      header: () => {
+        const currentPageIds = data.map((b) => b.id);
+        const allSelected =
+          currentPageIds.length > 0 &&
+          currentPageIds.every((id) => selectedIds.includes(id));
+        const isIndeterminate =
+          !allSelected && currentPageIds.some((id) => selectedIds.includes(id));
+        return (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(input) => {
+              if (input) input.indeterminate = isIndeterminate;
+            }}
+            onChange={(e) => {
+              if (e.target.checked) {
+                const merged = Array.from(
+                  new Set([...selectedIds, ...currentPageIds])
+                );
+                setSelectedIds(merged);
+              } else {
+                const remaining = selectedIds.filter(
+                  (id) => !currentPageIds.includes(id)
+                );
+                setSelectedIds(remaining);
+              }
+            }}
+          />
+        );
+      },
+      cell: ({ row }) => {
+        const id = row.original.id;
+        const checked = selectedIds.includes(id);
+        return (
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedIds((prev) => Array.from(new Set([...prev, id])));
+              } else {
+                setSelectedIds((prev) => prev.filter((x) => x !== id));
+              }
+            }}
+          />
+        );
+      },
+    },
     {
       accessorKey: "image",
       header: "الصورة",
@@ -445,6 +497,7 @@ function BannerTable() {
           {
             page: pagination.pageIndex + 1,
             per_page: pagination.pageSize,
+            ...(teacherFilter ? { teacher_id: teacherFilter } : {}),
           },
           { Authorization: `Bearer ${token}` }
         )
@@ -460,6 +513,8 @@ function BannerTable() {
         total: response.meta?.total || 0,
         lastPage: response.meta?.last_page || 1,
       }));
+      // Clear selection when page/filter changes data set
+      setSelectedIds([]);
     } catch (error) {
       const errorState = handleApiError(error);
       setError(errorState);
@@ -473,7 +528,7 @@ function BannerTable() {
     if (token) {
       fetchBanners();
     }
-  }, [pagination.pageIndex, pagination.pageSize, token]);
+  }, [pagination.pageIndex, pagination.pageSize, token, teacherFilter]);
 
   // FIXED: Enhanced form submission with proper validation
   const onSubmit = async (formData: any) => {
@@ -642,6 +697,37 @@ function BannerTable() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm("هل أنت متأكد من حذف البانرات المحددة؟")) {
+      return;
+    }
+
+    try {
+      setLoading((prev) => ({ ...prev, deleting: -1 }));
+      setError(null);
+
+      await Promise.all(
+        selectedIds.map((id) =>
+          withRetry(() =>
+            deleteData(`banners/${id}`, {
+              Authorization: `Bearer ${token}`,
+            })
+          )
+        )
+      );
+
+      toast.success("تم حذف البانرات المحددة بنجاح!");
+      setSelectedIds([]);
+      await fetchBanners();
+    } catch (error) {
+      const errorState = handleApiError(error);
+      toast.error(errorState.message);
+    } finally {
+      setLoading((prev) => ({ ...prev, deleting: null }));
+    }
+  };
+
   // Retry function for failed operations
   const handleRetry = () => {
     setError(null);
@@ -723,7 +809,40 @@ function BannerTable() {
         </Alert>
       )}
 
-      <div className="flex items-center gap-2 px-4 mb-4">
+      <div className="flex items-center justify-between gap-2 px-4 mb-4">
+        <div className="flex items-center gap-2">
+          {user?.role === "admin" && (
+            <div className="flex items-center gap-2">
+              <select
+                value={teacherFilter}
+                onChange={(e) => {
+                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                  setTeacherFilter(e.target.value);
+                }}
+                className="p-2 border rounded"
+                disabled={loading.submitting || loading.teachers}
+              >
+                <option value="">كل المدرسين</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id.toString()}>
+                    {teacher.user.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            className="bg-red-500 hover:bg-red-600 text-white"
+            onClick={handleBulkDelete}
+            disabled={
+              loading.submitting || selectedIds.length === 0 || loading.banners
+            }
+          >
+            حذف المحدد ({selectedIds.length})
+          </Button>
+        </div>
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogTrigger asChild>
             <Button

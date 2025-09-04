@@ -975,6 +975,22 @@ function BasicDataTable() {
             <option value="offline">أوفلاين</option>
             <option value="both">الاثنين معاً</option>
           </select>
+          {/* Reset Filters Button */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              setFilters({
+                subject_id: "",
+                to_date: "",
+                from_date: "",
+                search: "",
+                course_type: "",
+              });
+            }}
+            className="h-10 px-4"
+          >
+            إعادة تعيين الفلاتر
+          </Button>
           {/* Conditional Button */}
           {selectedCount > 0 ? (
             <Button

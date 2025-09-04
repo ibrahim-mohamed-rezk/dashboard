@@ -50,7 +50,6 @@ const CourseModules = ({
   const [imageError, setImageError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const [isEditingVideoQuiz, setIsEditingVideoQuiz] = useState(false);
   const [videos, setVideos] = useState<VideoTypes[]>([]);
@@ -60,6 +59,8 @@ const CourseModules = ({
     type: "", // "video" | "exam" | ""
     questions_from: "",
     questions_to: "",
+    created_from: "",
+    created_to: "",
   });
 
   const [editForm, setEditForm] = useState({
@@ -138,6 +139,8 @@ const CourseModules = ({
           type: moduleFilters.type,
           questions_from: moduleFilters.questions_from,
           questions_to: moduleFilters.questions_to,
+          created_from: moduleFilters.created_from,
+          created_to: moduleFilters.created_to,
         },
         {
           Authorization: `Bearer ${token}`,
@@ -173,6 +176,8 @@ const CourseModules = ({
     moduleFilters.type,
     moduleFilters.questions_from,
     moduleFilters.questions_to,
+    moduleFilters.created_from,
+    moduleFilters.created_to,
   ]);
 
   const handleThumbnailEditChange = (
@@ -456,6 +461,24 @@ const CourseModules = ({
       questions: transformedQuestions,
     }));
     setIsEditingVideoQuiz(true);
+  };
+
+  // Delete video-attached exam (quiz)
+  const handleDeleteVideoQuiz = async () => {
+    if (!selectedModule?.details?.quiz?.[0]) return;
+    try {
+      const quizId = selectedModule.details.quiz[0].id;
+      await deleteData(`exams/${quizId}`, {
+        Authorization: `Bearer ${token}`,
+      });
+      await fetchCourse();
+      fetchVideos();
+      setIsEditingVideoQuiz(false);
+      setSelectedModule(null);
+      toast.success("تم حذف اختبار الفيديو بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء حذف اختبار الفيديو");
+    }
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1025,8 +1048,8 @@ const CourseModules = ({
           )}
         </div>
 
-        {/* Filters: type and questions count range - sent as request params */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+        {/* Filters: type, questions range, and created date range - sent as request params */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-6">
           <div>
             <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
               نوع المحتوى
@@ -1081,6 +1104,36 @@ const CourseModules = ({
               placeholder="مثلاً 20"
             />
           </div>
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              تاريخ الإنشاء من
+            </label>
+            <Input
+              type="date"
+              value={moduleFilters.created_from}
+              onChange={(e) =>
+                setModuleFilters((prev) => ({
+                  ...prev,
+                  created_from: e.target.value,
+                }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+              تاريخ الإنشاء إلى
+            </label>
+            <Input
+              type="date"
+              value={moduleFilters.created_to}
+              onChange={(e) =>
+                setModuleFilters((prev) => ({
+                  ...prev,
+                  created_to: e.target.value,
+                }))
+              }
+            />
+          </div>
           <div className="flex items-end gap-2">
             <Button
               variant="outline"
@@ -1089,6 +1142,8 @@ const CourseModules = ({
                   type: "",
                   questions_from: "",
                   questions_to: "",
+                  created_from: "",
+                  created_to: "",
                 })
               }
               className="w-full"

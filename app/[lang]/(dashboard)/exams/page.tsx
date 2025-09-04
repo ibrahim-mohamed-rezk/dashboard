@@ -52,7 +52,29 @@ interface Exam {
   thumbnail: string;
   questions_count: number;
   created_at: string;
+  subject_name: string;
+  teacher_name: string;
+  level_name: string;
   questions: Question[];
+}
+
+interface Teacher {
+  id: number;
+  name: string;
+  user: {
+    id: number;
+    full_name: string;
+  };
+}
+
+interface Level {
+  id: number;
+  name: string;
+}
+
+interface Subject {
+  id: number;
+  name: string;
 }
 
 interface PaginationMeta {
@@ -81,6 +103,9 @@ type FormData = {
   title: string;
   type: string;
   thumbnail: string;
+  subject_id: string;
+  teacher_id: string;
+  level_id: string;
 };
 
 function ExamsDataTable() {
@@ -95,10 +120,16 @@ function ExamsDataTable() {
   const dialogCloseRef = useRef<HTMLButtonElement>(null);
   const editDialogCloseRef = useRef<HTMLButtonElement>(null);
   const viewDialogCloseRef = useRef<HTMLButtonElement>(null);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [formData, setFormData] = useState<FormData>({
     title: "",
     type: "exam",
     thumbnail: "",
+    subject_id: "",
+    teacher_id: "",
+    level_id: "",
   });
 
   // Refetch exams
@@ -120,6 +151,43 @@ function ExamsDataTable() {
     }
   };
 
+  // Fetch teachers, levels, and subjects
+  const fetchTeachersAndLevels = async () => {
+    try {
+      // Fetch teachers
+      const teachersResponse = await getData(
+        "teachers",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setTeachers(teachersResponse.data || teachersResponse);
+
+      // Fetch levels
+      const levelsResponse = await getData(
+        "levels",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setLevels(levelsResponse.data || levelsResponse);
+
+      // Fetch subjects
+      const subjectsResponse = await getData(
+        "subjects",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setSubjects(subjectsResponse.data || subjectsResponse);
+    } catch (error) {
+      console.log("Error fetching teachers, levels, or subjects:", error);
+    }
+  };
+
   // Get token from Next.js API
   useEffect(() => {
     const fetchData = async () => {
@@ -135,7 +203,9 @@ function ExamsDataTable() {
 
   // Handle input change
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prevFormData) => ({
@@ -148,7 +218,14 @@ function ExamsDataTable() {
   const schema = z.object({
     title: z.string().min(2, "عنوان الامتحان مطلوب"),
     type: z.string().min(1, "نوع الامتحان مطلوب"),
-    thumbnail: z.string().url("رابط الصورة يجب أن يكون صحيحاً").optional().or(z.literal("")),
+    thumbnail: z
+      .string()
+      .url("رابط الصورة يجب أن يكون صحيحاً")
+      .optional()
+      .or(z.literal("")),
+    subject_id: z.string().min(1, "المادة مطلوبة"),
+    teacher_id: z.string().min(1, "المعلم مطلوب"),
+    level_id: z.string().min(1, "المستوى مطلوب"),
   });
 
   const { register, reset } = useForm<FormData>({
@@ -170,6 +247,9 @@ function ExamsDataTable() {
         title: "",
         type: "exam",
         thumbnail: "",
+        subject_id: "",
+        teacher_id: "",
+        level_id: "",
       });
       refetchExams();
       toast.success("تم إضافة الامتحان بنجاح");
@@ -266,7 +346,9 @@ function ExamsDataTable() {
         });
       } catch (err) {
         const errorMsg = axios.isAxiosError(err)
-          ? Object.values(err.response?.data?.errors || {}).flat().join(" ")
+          ? Object.values(err.response?.data?.errors || {})
+              .flat()
+              .join(" ")
           : "حذف فاشل";
         toast.error(`فشل في حذف الامتحان ${id}: ${errorMsg}`);
       }
@@ -281,19 +363,36 @@ function ExamsDataTable() {
   useEffect(() => {
     if (token) {
       refetchExams(currentPage);
+      fetchTeachersAndLevels();
     }
   }, [token, currentPage]);
 
   // Update form data when editing exam changes
   useEffect(() => {
     if (editingExam) {
+      // Find the IDs based on names
+      const subjectId =
+        subjects
+          .find((s) => s.name === editingExam.subject_name)
+          ?.id?.toString() || "";
+      const teacherId =
+        teachers
+          .find((t) => t.name === editingExam.teacher_name)
+          ?.id?.toString() || "";
+      const levelId =
+        levels.find((l) => l.name === editingExam.level_name)?.id?.toString() ||
+        "";
+
       setFormData({
         title: editingExam.title,
         type: editingExam.type,
         thumbnail: editingExam.thumbnail,
+        subject_id: subjectId,
+        teacher_id: teacherId,
+        level_id: levelId,
       });
     }
-  }, [editingExam]);
+  }, [editingExam, subjects, teachers, levels]);
 
   // Reset form when dialog closes
   const handleAddDialogClose = () => {
@@ -301,6 +400,9 @@ function ExamsDataTable() {
       title: "",
       type: "exam",
       thumbnail: "",
+      subject_id: "",
+      teacher_id: "",
+      level_id: "",
     });
     setError(null);
   };
@@ -311,6 +413,9 @@ function ExamsDataTable() {
       title: "",
       type: "exam",
       thumbnail: "",
+      subject_id: "",
+      teacher_id: "",
+      level_id: "",
     });
     setEditError(null);
   };
@@ -321,7 +426,7 @@ function ExamsDataTable() {
 
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ar-EG');
+    return new Date(dateString).toLocaleDateString("ar-EG");
   };
 
   // Columns with multi-select checkbox
@@ -355,12 +460,12 @@ function ExamsDataTable() {
       cell: ({ row }) => {
         return (
           <div className="flex items-center gap-3">
-            <img 
-              src={row.original.thumbnail} 
+            <img
+              src={row.original.thumbnail}
               alt={row.original.title}
               className="w-12 h-12 object-cover rounded"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                (e.target as HTMLImageElement).src = "/placeholder-image.png";
               }}
             />
             <span className="font-medium">{row.original.title}</span>
@@ -373,6 +478,27 @@ function ExamsDataTable() {
       header: "النوع",
       cell: ({ row }) => {
         return <span className="capitalize">{row.original.type}</span>;
+      },
+    },
+    {
+      accessorKey: "subject_name",
+      header: "المادة",
+      cell: ({ row }) => {
+        return <span className="font-medium">{row.original.subject_name}</span>;
+      },
+    },
+    {
+      accessorKey: "teacher_name",
+      header: "المعلم",
+      cell: ({ row }) => {
+        return <span className="font-medium">{row.original.teacher_name}</span>;
+      },
+    },
+    {
+      accessorKey: "level_name",
+      header: "المستوى",
+      cell: ({ row }) => {
+        return <span className="font-medium">{row.original.level_name}</span>;
       },
     },
     {
@@ -451,11 +577,7 @@ function ExamsDataTable() {
 
         {/* Bulk Delete Button */}
         {table.getFilteredSelectedRowModel().rows.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={deleteSelectedExams}
-          >
+          <Button variant="outline" size="sm" onClick={deleteSelectedExams}>
             حذف المحدد ({table.getFilteredSelectedRowModel().rows.length})
           </Button>
         )}
@@ -522,6 +644,75 @@ function ExamsDataTable() {
                     value={formData.thumbnail}
                     onChange={handleInputChange}
                   />
+                </div>
+                <div>
+                  <label
+                    htmlFor="subject_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المادة
+                  </label>
+                  <select
+                    {...register("subject_id")}
+                    id="subject_id"
+                    name="subject_id"
+                    value={formData.subject_id}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">اختر المادة</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="teacher_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المعلم
+                  </label>
+                  <select
+                    {...register("teacher_id")}
+                    id="teacher_id"
+                    name="teacher_id"
+                    value={formData.teacher_id}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">اختر المعلم</option>
+                    {teachers.map((teacher) => (
+                      <option key={teacher.id} value={teacher.id}>
+                        {teacher.user.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="level_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المستوى
+                  </label>
+                  <select
+                    {...register("level_id")}
+                    id="level_id"
+                    name="level_id"
+                    value={formData.level_id}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">اختر المستوى</option>
+                    {levels.map((level) => (
+                      <option key={level.id} value={level.id}>
+                        {level.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>
@@ -618,6 +809,72 @@ function ExamsDataTable() {
                     onChange={handleInputChange}
                   />
                 </div>
+                <div>
+                  <label
+                    htmlFor="edit_subject_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المادة
+                  </label>
+                  <select
+                    id="edit_subject_id"
+                    name="subject_id"
+                    value={formData.subject_id}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">اختر المادة</option>
+                    {subjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="edit_teacher_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المعلم
+                  </label>
+                  <select
+                    id="edit_teacher_id"
+                    name="teacher_id"
+                    value={formData.teacher_id}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">اختر المعلم</option>
+                    {teachers.map((teacher) => (
+                      <option key={teacher.id} value={teacher.id}>
+                        {teacher.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="edit_level_id"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    المستوى
+                  </label>
+                  <select
+                    id="edit_level_id"
+                    name="level_id"
+                    value={formData.level_id}
+                    onChange={handleInputChange}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">اختر المستوى</option>
+                    {levels.map((level) => (
+                      <option key={level.id} value={level.id}>
+                        {level.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 {editError && (
@@ -659,7 +916,10 @@ function ExamsDataTable() {
           {selectedExam && (
             <div className="space-y-6">
               {selectedExam.questions.map((question, index) => (
-                <div key={question.id} className="border rounded-lg p-4 bg-gray-50">
+                <div
+                  key={question.id}
+                  className="border rounded-lg p-4 bg-gray-50"
+                >
                   <h4 className="font-semibold mb-3 text-right">
                     السؤال {index + 1}: {question.question}
                   </h4>
