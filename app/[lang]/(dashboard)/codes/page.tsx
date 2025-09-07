@@ -23,6 +23,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -45,6 +51,16 @@ interface PaginationLink {
 
 function BasicDataTable() {
   const [data, setData] = useState<SubscriptionCodeTypes[]>([]);
+  const [groups, setGroups] = useState<
+    | {
+        group_key: string;
+        group_label: string;
+        bulk: unknown | null;
+        count: number;
+        items: SubscriptionCodeTypes[];
+      }[]
+    | null
+  >(null);
   const [token, setToken] = useState("");
   const [generatedCode, setGeneratedCode] = useState<
     SubscriptionCodeTypes[] | null
@@ -197,23 +213,37 @@ function BasicDataTable() {
         }
       );
 
-      // Extract codes and paginate from the new response structure
-      const { codes, paginate } = response.data;
-
-      setData(codes); // Set the actual codes array
-
-      setPagination((prev) => ({
-        ...prev,
-        total: paginate.total,
-        lastPage: paginate.last_page,
-        currentPage: paginate.current_page,
-        from: paginate.from,
-        to: paginate.to,
-        links: paginate.links || [], // if links exist
-      }));
+      // Support grouped response or classic paginated list
+      if (response?.data?.groups) {
+        setGroups(response.data.groups);
+        setData([]);
+        setPagination((prev) => ({
+          ...prev,
+          total: response?.data?.total ?? 0,
+          lastPage: 1,
+          currentPage: 1,
+          from: 1,
+          to: response?.data?.total ?? 0,
+          links: [],
+        }));
+      } else {
+        const { codes, paginate } = response.data;
+        setGroups(null);
+        setData(codes);
+        setPagination((prev) => ({
+          ...prev,
+          total: paginate.total,
+          lastPage: paginate.last_page,
+          currentPage: paginate.current_page,
+          from: paginate.from,
+          to: paginate.to,
+          links: paginate.links || [],
+        }));
+      }
     } catch (error) {
       console.error("Error fetching subscription codes:", error);
       setData([]);
+      setGroups(null);
       setPagination((prev) => ({
         ...prev,
         total: 0,
@@ -909,161 +939,297 @@ function BasicDataTable() {
         </DialogContent>
       </Dialog>
 
-      {/* Subscription codes table */}
-      <div className="overflow-x-auto relative">
-        {isLoading && (
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        )}
-        <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
+      {/* Grouped view or default table */}
+      {groups && groups.length > 0 ? (
+        <div className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+          <Accordion type="multiple" className="w-full">
+            {groups.map((group) => (
+              <AccordionItem key={group.group_key} value={group.group_key}>
+                <AccordionTrigger>
+                  <div className="flex w-full items-center justify-between px-4">
+                    <span className="font-medium">{group.group_label}</span>
+                    <Badge variant="outline">{group.count}</Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="overflow-x-auto">
+                    <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead></TableHead>
+                          <TableHead>الكود</TableHead>
+                          <TableHead>السعر</TableHead>
+                          <TableHead>المستوى</TableHead>
+                          <TableHead>تاريخ البداية</TableHead>
+                          <TableHead>تاريخ النهاية</TableHead>
+                          <TableHead>حالة الاستخدام</TableHead>
+                          <TableHead>الحالة</TableHead>
+                          <TableHead>اسم المعلم</TableHead>
+                          <TableHead>تاريخ الإنشاء</TableHead>
+                          <TableHead>الإجراءات</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.items.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(
+                                  (rowSelection as any)[String(item.id)]
+                                )}
+                                onChange={() =>
+                                  setRowSelection((prev: any) => {
+                                    const next: any = { ...prev };
+                                    const key = String(item.id);
+                                    if (next[key]) {
+                                      delete next[key];
+                                    } else {
+                                      next[key] = true;
+                                    }
+                                    return next;
+                                  })
+                                }
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono">{item.code}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => copyToClipboard(item.code)}
+                                  className="h-8 w-8"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {item.price && Number(item.price) > 0
+                                ? `${item.price} ج.م`
+                                : "مجاني"}
+                            </TableCell>
+                            <TableCell>
+                              {levels.find((l) => l.id === item.level_id)
+                                ?.name || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {new Date(item.valid_from).toLocaleDateString(
+                                "en-US"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {new Date(item.valid_to).toLocaleDateString(
+                                "en-US"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={item.is_used ? "soft" : "outline"}
+                              >
+                                {item.is_used ? "مستخدم" : "غير مستخدم"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  item.status === "true" ? "soft" : "outline"
+                                }
+                              >
+                                {item.status === "true" ? "نشط" : "غير نشط"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{item.teacher_name}</TableCell>
+                            <TableCell>
+                              {new Date(item.created_at).toLocaleDateString(
+                                "en-US"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedCode(item as any);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                                className="h-8 w-8 text-outline"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="text-center">
-                  No results found.
-                </TableCell>
-              </TableRow>
+          </Accordion>
+        </div>
+      ) : (
+        <>
+          {/* Subscription codes table */}
+          <div className="overflow-x-auto relative">
+            {isLoading && (
+              <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
             )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-center py-6">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="h-9 px-4 font-medium"
-          >
-            السابق
-          </Button>
-
-          {/* Page Numbers */}
-          <div className="flex items-center gap-2">
-            {(() => {
-              const currentPage = pagination.currentPage;
-              const lastPage = pagination.lastPage;
-              const pages = [];
-
-              // Always show first page
-              pages.push(
-                <Button
-                  key="1"
-                  variant={currentPage === 1 ? "soft" : "outline"}
-                  size="sm"
-                  onClick={() => table.setPageIndex(0)}
-                  className={`w-9 h-9 font-medium transition-all duration-200 ${
-                    currentPage === 1 ? "scale-110" : "hover:scale-105"
-                  }`}
-                >
-                  1
-                </Button>
-              );
-
-              // Calculate start and end of page range
-              let start = Math.max(2, currentPage - 1);
-              let end = Math.min(lastPage - 1, currentPage + 1);
-
-              // Add ellipsis after first page if needed
-              if (start > 2) {
-                pages.push(
-                  <span key="ellipsis1" className="px-2">
-                    ...
-                  </span>
-                );
-              }
-
-              // Add middle pages
-              for (let i = start; i <= end; i++) {
-                pages.push(
-                  <Button
-                    key={i}
-                    variant={currentPage === i ? "soft" : "outline"}
-                    size="sm"
-                    onClick={() => table.setPageIndex(i - 1)}
-                    className={`w-9 h-9 font-medium transition-all duration-200 ${
-                      currentPage === i ? "scale-110" : "hover:scale-105"
-                    }`}
-                  >
-                    {i}
-                  </Button>
-                );
-              }
-
-              // Add ellipsis before last page if needed
-              if (end < lastPage - 1) {
-                pages.push(
-                  <span key="ellipsis2" className="px-2">
-                    ...
-                  </span>
-                );
-              }
-
-              // Always show last page if there is more than one page
-              if (lastPage > 1) {
-                pages.push(
-                  <Button
-                    key={lastPage}
-                    variant={currentPage === lastPage ? "soft" : "outline"}
-                    size="sm"
-                    onClick={() => table.setPageIndex(lastPage - 1)}
-                    className={`w-9 h-9 font-medium transition-all duration-200 ${
-                      currentPage === lastPage ? "scale-110" : "hover:scale-105"
-                    }`}
-                  >
-                    {lastPage}
-                  </Button>
-                );
-              }
-
-              return pages;
-            })()}
+            <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="text-center">
+                      No results found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="h-9 px-4 font-medium"
-          >
-            التالي
-          </Button>
-        </div>
-      </div>
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-center py-6">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="h-9 px-4 font-medium"
+              >
+                السابق
+              </Button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const currentPage = pagination.currentPage;
+                  const lastPage = pagination.lastPage;
+                  const pages = [] as any[];
+
+                  pages.push(
+                    <Button
+                      key="1"
+                      variant={currentPage === 1 ? "soft" : "outline"}
+                      size="sm"
+                      onClick={() => table.setPageIndex(0)}
+                      className={`w-9 h-9 font-medium transition-all duration-200 ${
+                        currentPage === 1 ? "scale-110" : "hover:scale-105"
+                      }`}
+                    >
+                      1
+                    </Button>
+                  );
+
+                  let start = Math.max(2, currentPage - 1);
+                  let end = Math.min(lastPage - 1, currentPage + 1);
+
+                  if (start > 2) {
+                    pages.push(
+                      <span key="ellipsis1" className="px-2">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  for (let i = start; i <= end; i++) {
+                    pages.push(
+                      <Button
+                        key={i}
+                        variant={currentPage === i ? "soft" : "outline"}
+                        size="sm"
+                        onClick={() => table.setPageIndex(i - 1)}
+                        className={`w-9 h-9 font-medium transition-all duration-200 ${
+                          currentPage === i ? "scale-110" : "hover:scale-105"
+                        }`}
+                      >
+                        {i}
+                      </Button>
+                    );
+                  }
+
+                  if (end < lastPage - 1) {
+                    pages.push(
+                      <span key="ellipsis2" className="px-2">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  if (lastPage > 1) {
+                    pages.push(
+                      <Button
+                        key={lastPage}
+                        variant={currentPage === lastPage ? "soft" : "outline"}
+                        size="sm"
+                        onClick={() => table.setPageIndex(lastPage - 1)}
+                        className={`w-9 h-9 font-medium transition-all duration-200 ${
+                          currentPage === lastPage
+                            ? "scale-110"
+                            : "hover:scale-105"
+                        }`}
+                      >
+                        {lastPage}
+                      </Button>
+                    );
+                  }
+
+                  return pages;
+                })()}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="h-9 px-4 font-medium"
+              >
+                التالي
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

@@ -41,6 +41,13 @@ import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TeacherGroup {
   id: number;
@@ -49,6 +56,7 @@ interface TeacherGroup {
   level: string;
   subject: string | null;
   created_at: string | null;
+  teacher_name: string | null;
 }
 
 interface Teacher {
@@ -424,7 +432,7 @@ function TeacherGroupsDataTable() {
       accessorKey: "id",
       header: "ID",
       cell: ({ row }) => (
-        <span className="text-xs text-gray-500">{row.original.id}</span>
+        <span className="text-xs text-gray-500">{row.original.teacher}</span>
       ),
     },
     {
@@ -440,7 +448,7 @@ function TeacherGroupsDataTable() {
       cell: ({ row }) => {
         return (
           <span className={row.original.teacher ? "" : "text-gray-400"}>
-            {row.original.teacher || "غير محدد"}
+            {row.original.teacher_name || "غير محدد"}
           </span>
         );
       },
@@ -560,23 +568,27 @@ function TeacherGroupsDataTable() {
           className="max-w-sm min-w-[200px] h-10"
         />
         {tab && (
-          <div className="relative">
-            <select
+          <div className="relative min-w-[180px]">
+            <Select
               value={selectedTeacherId}
-              onChange={(e) => {
-                setSelectedTeacherId(e.target.value);
-                setCurrentPage(1); // Reset page
+              onValueChange={(val) => {
+                setSelectedTeacherId(val);
+                setCurrentPage(1);
               }}
               disabled={!teachers.length}
-              className="min-w-[180px] p-2 border rounded bg-white dark:bg-gray-700"
             >
-              <option value="">كل المعلمين</option>
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher.id}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="min-w-[180px] h-10">
+                <SelectValue placeholder="كل المعلمين" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                <SelectItem value="">كل المعلمين</SelectItem>
+                {teachers.map((teacher: any) => (
+                  <SelectItem key={teacher.id} value={String(teacher.id)}>
+                    {teacher.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {!teachers.length && (
               <p className="text-sm text-gray-500 mt-1">
                 جاري تحميل المعلمين...
@@ -586,24 +598,27 @@ function TeacherGroupsDataTable() {
         )}
 
         {/* Level filter */}
-        <div className="relative">
-          <select
+        <div className="relative min-w-[180px]">
+          <Select
             value={selectedLevelId}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelectedLevelId(id);
+            onValueChange={(val) => {
+              setSelectedLevelId(val);
               setCurrentPage(1);
             }}
             disabled={!levels.length}
-            className="min-w-[180px] p-2 border rounded bg-white dark:bg-gray-700"
           >
-            <option value="">كل المستويات</option>
-            {levels.map((level) => (
-              <option key={level.id} value={level.id.toString()}>
-                {level.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="min-w-[180px] h-10">
+              <SelectValue placeholder="كل المستويات" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60 overflow-y-auto">
+              <SelectItem value="">كل المستويات</SelectItem>
+              {levels.map((level) => (
+                <SelectItem key={level.id} value={level.id.toString()}>
+                  {level.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {!levels.length && (
             <p className="text-sm text-gray-500 mt-1">
               جاري تحميل المستويات...
@@ -612,24 +627,27 @@ function TeacherGroupsDataTable() {
         </div>
 
         {/* Subject filter */}
-        <div className="relative">
-          <select
+        <div className="relative min-w-[180px]">
+          <Select
             value={selectedSubjectId}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelectedSubjectId(id);
+            onValueChange={(val) => {
+              setSelectedSubjectId(val);
               setCurrentPage(1);
             }}
             disabled={!subjects.length}
-            className="min-w-[180px] p-2 border rounded bg-white dark:bg-gray-700"
           >
-            <option value="">كل المواد</option>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id.toString()}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="min-w-[180px] h-10">
+              <SelectValue placeholder="كل المواد" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60 overflow-y-auto">
+              <SelectItem value="">كل المواد</SelectItem>
+              {subjects.map((subject) => (
+                <SelectItem key={subject.id} value={subject.id.toString()}>
+                  {subject.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {!subjects.length && (
             <p className="text-sm text-gray-500 mt-1">جاري تحميل المواد...</p>
           )}
