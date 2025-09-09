@@ -33,6 +33,9 @@ import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import * as XLSX from "xlsx";
+
+// ... (interfaces and types remain unchanged)
 
 interface Question {
   id: number;
@@ -56,6 +59,18 @@ interface Exam {
   teacher_name: string;
   level_name: string;
   questions: Question[];
+}
+
+interface Event {
+  start_at: string;
+  end_at: string;
+  group_id: string;
+  day: string;
+}
+
+interface Group {
+  id: number;
+  name: string;
 }
 
 interface Teacher {
@@ -108,6 +123,20 @@ type FormData = {
   level_id: string;
 };
 
+// Helper to convert "YYYY-MM-DDTHH:mm" to "YYYY-MM-DD HH:mm:ss"
+function toYMDHIS(datetimeLocal: string): string {
+  if (!datetimeLocal) return "";
+  // Accepts "YYYY-MM-DDTHH:mm" or "YYYY-MM-DDTHH:mm:ss"
+  const [date, time] = datetimeLocal.split("T");
+  if (!date || !time) return datetimeLocal;
+  // If time already has seconds, return as is (with space instead of T)
+  if (time.length === 8) return `${date} ${time}`;
+  // If time is "HH:mm", add ":00"
+  if (time.length === 5) return `${date} ${time}:00`;
+  // Fallback
+  return `${date} ${time}`;
+}
+
 function ExamsDataTable() {
   const [data, setData] = useState<Exam[]>([]);
   const [token, setToken] = useState("");
@@ -123,6 +152,26 @@ function ExamsDataTable() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [groups, setGroups] = useState<any>([]);
+  const [events, setEvents] = useState<Event[]>([{
+    start_at: "",
+    end_at: "",
+    group_id: "",
+    day: ""
+  }]);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState({
+    question: "",
+    questionType: "text",
+    options: [
+      { answer: "", is_correct: false },
+      { answer: "", is_correct: false },
+      { answer: "", is_correct: false },
+      { answer: "", is_correct: false },
+    ],
+    degree: 1
+  });
+  const [examImage, setExamImage] = useState<File | null>(null);
   const [formData, setFormData] = useState<FormData>({
     title: "",
     type: "exam",
@@ -131,6 +180,8 @@ function ExamsDataTable() {
     teacher_id: "",
     level_id: "",
   });
+
+  // ... (refetchExams, fetchTeachersAndLevels, useEffect for token, handleInputChange, schema, useForm, handleExcelUpload remain unchanged)
 
   // Refetch exams
   const refetchExams = async (page: number = 1) => {
@@ -151,7 +202,7 @@ function ExamsDataTable() {
     }
   };
 
-  // Fetch teachers, levels, and subjects
+  // Fetch teachers, levels, subjects, and groups
   const fetchTeachersAndLevels = async () => {
     try {
       // Fetch teachers
@@ -183,8 +234,18 @@ function ExamsDataTable() {
         }
       );
       setSubjects(subjectsResponse.data || subjectsResponse);
+
+      // Fetch groups
+      const groupsResponse = await getData(
+        "teacher-groups",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setGroups(groupsResponse.data || groupsResponse);
     } catch (error) {
-      console.log("Error fetching teachers, levels, or subjects:", error);
+      console.log("Error fetching teachers, levels, subjects, or groups:", error);
     }
   };
 
@@ -233,15 +294,115 @@ function ExamsDataTable() {
     mode: "all",
   });
 
+  // Handle Excel upload for adding exams
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = evt.target?.result;
+      if (!data) return;
+      
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Expected format: Question, Option1, Option2, Option3, Option4, Correct Answer (1-4), Type (optional), Degree (optional)
+      const importedQuestions = json.slice(1).map((row) => {
+        const [question, opt1, opt2, opt3, opt4, correct, type, degree] = row;
+        const options = [
+          { answer: opt1 || "", is_correct: correct == 1 },
+          { answer: opt2 || "", is_correct: correct == 2 },
+          { answer: opt3 || "", is_correct: correct == 3 },
+          { answer: opt4 || "", is_correct: correct == 4 },
+        ];
+        return {
+          question: question || "",
+          questionType: (type?.toString().trim().toLowerCase() === "image" ? "image" : "text") as "text" | "image",
+          options,
+          degree: parseInt(degree) || 1,
+        };
+      }).filter(q => q.question); // Filter out empty rows
+
+      setQuestions([...questions, ...importedQuestions]);
+      toast.success(`تم استيراد ${importedQuestions.length} سؤال من Excel`);
+    };
+    reader.readAsBinaryString(file);
+  };
+
   // Handle submit for adding new exam
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validate required fields
+    if (!formData.title || !formData.teacher_id || !examImage || questions.length === 0 || events.length === 0) {
+      setError("يرجى ملء جميع الحقول المطلوبة: العنوان، المعلم، الصورة، الأسئلة، والأحداث");
+      return;
+    }
+
+    // Validate events
+    for (const event of events) {
+      if (!event.start_at || !event.end_at || !event.group_id || !event.day) {
+        setError("يرجى ملء جميع بيانات الأحداث");
+        return;
+      }
+    }
+
     try {
-      await postData("exams", formData, {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+      const formDataToSend = new FormData();
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("teacher_id", formData.teacher_id);
+      formDataToSend.append("image", examImage);
+      formDataToSend.append("question_count", questions.length.toString());
+
+      // Add events (convert datetime-local to Y-m-d H:i:s)
+      events.forEach((event, index) => {
+        formDataToSend.append(`events[${index}][start_at]`, toYMDHIS(event.start_at));
+        formDataToSend.append(`events[${index}][end_at]`, toYMDHIS(event.end_at));
+        formDataToSend.append(`events[${index}][group_id]`, event.group_id);
+        formDataToSend.append(`events[${index}][day]`, event.day);
       });
+
+      // Add questions
+      questions.forEach((question, index) => {
+        const questionNumber = index + 1;
+        formDataToSend.append(
+          `questions[${questionNumber}][question]`,
+          question.question
+        );
+        formDataToSend.append(
+          `questions[${questionNumber}][questionType]`,
+          question.questionType || "text"
+        );
+        formDataToSend.append(
+          `questions[${questionNumber}][degree]`,
+          (question.degree || 1).toString()
+        );
+
+        question.options.forEach((option: any, optIndex: number) => {
+          formDataToSend.append(
+            `questions[${questionNumber}][${optIndex + 1}]`,
+            option.answer
+          );
+        });
+
+        const correctAnswerIndex = question.options.findIndex(
+          (opt: any) => opt.is_correct
+        );
+        formDataToSend.append(
+          `questions[${questionNumber}][answer]`,
+          (correctAnswerIndex + 1).toString()
+        );
+      });
+
+      await postData("store-scheduled-exam", formDataToSend, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      });
+
       reset();
       setFormData({
         title: "",
@@ -251,6 +412,14 @@ function ExamsDataTable() {
         teacher_id: "",
         level_id: "",
       });
+      setQuestions([]);
+      setEvents([{
+        start_at: "",
+        end_at: "",
+        group_id: "",
+        day: ""
+      }]);
+      setExamImage(null);
       refetchExams();
       toast.success("تم إضافة الامتحان بنجاح");
       dialogCloseRef.current?.click();
@@ -268,6 +437,8 @@ function ExamsDataTable() {
       }
     }
   };
+
+  // ... (rest of the code remains unchanged)
 
   // Update exam
   const updateExam = async (id: number) => {
@@ -403,6 +574,25 @@ function ExamsDataTable() {
       subject_id: "",
       teacher_id: "",
       level_id: "",
+    });
+    setQuestions([]);
+    setEvents([{
+      start_at: "",
+      end_at: "",
+      group_id: "",
+      day: ""
+    }]);
+    setExamImage(null);
+    setCurrentQuestion({
+      question: "",
+      questionType: "text",
+      options: [
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+        { answer: "", is_correct: false },
+      ],
+      degree: 1
     });
     setError(null);
   };
@@ -587,134 +777,377 @@ function ExamsDataTable() {
           <DialogTrigger asChild>
             <Button variant="outline">إضافة امتحان</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>إضافة امتحان جديد</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="title"
+                      className="block mb-2 text-sm font-medium"
+                    >
+                      عنوان الامتحان *
+                    </label>
+                    <Input
+                      {...register("title")}
+                      id="title"
+                      placeholder="أدخل عنوان الامتحان"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="teacher_id"
+                      className="block mb-2 text-sm font-medium"
+                    >
+                      المعلم *
+                    </label>
+                    <select
+                      {...register("teacher_id")}
+                      id="teacher_id"
+                      name="teacher_id"
+                      value={formData.teacher_id}
+                      onChange={handleInputChange}
+                      required
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">اختر المعلم</option>
+                      {teachers.map((teacher) => (
+                        <option key={teacher.id} value={teacher.id}>
+                          {teacher.user.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div>
                   <label
-                    htmlFor="title"
+                    htmlFor="image"
                     className="block mb-2 text-sm font-medium"
                   >
-                    عنوان الامتحان
+                    صورة الامتحان *
                   </label>
                   <Input
-                    {...register("title")}
-                    id="title"
-                    placeholder="أدخل عنوان الامتحان"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setExamImage(e.target.files[0]);
+                      }
+                    }}
+                    required
                   />
+                  {examImage && (
+                    <p className="text-sm text-green-600 mt-1">
+                      تم اختيار: {examImage.name}
+                    </p>
+                  )}
                 </div>
-                <div>
-                  <label
-                    htmlFor="type"
-                    className="block mb-2 text-sm font-medium"
-                  >
-                    نوع الامتحان
-                  </label>
-                  <select
-                    {...register("type")}
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="exam">امتحان</option>
-                    <option value="quiz">اختبار</option>
-                    <option value="test">تقييم</option>
-                  </select>
+
+                {/* Events Section */}
+                <div className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold">الأحداث (المواعيد) *</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEvents([
+                          ...events,
+                          {
+                            start_at: "",
+                            end_at: "",
+                            group_id: "",
+                            day: "",
+                          },
+                        ]);
+                      }}
+                    >
+                      إضافة حدث
+                    </Button>
+                  </div>
+                  {events.map((event, index) => (
+                    <div
+                      key={index}
+                      className="grid gap-3 mb-3 p-3 bg-gray-50 rounded"
+                    >
+                      <div>
+                        <label className="block text-xs mb-1">اليوم *</label>
+                        <select
+                          value={event.day}
+                          onChange={(e) => {
+                            const newEvents = [...events];
+                            newEvents[index].day = e.target.value;
+                            setEvents(newEvents);
+                          }}
+                          required
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">اختر اليوم</option>
+                          <option value="saturday">السبت</option>
+                          <option value="sunday">الأحد</option>
+                          <option value="monday">الإثنين</option>
+                          <option value="tuesday">الثلاثاء</option>
+                          <option value="wednesday">الأربعاء</option>
+                          <option value="thursday">الخميس</option>
+                          <option value="friday">الجمعة</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-nowrap text-xs mb-1">
+                          وقت البداية *
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={event.start_at}
+                          onChange={(e) => {
+                            const newEvents = [...events];
+                            newEvents[index].start_at = e.target.value;
+                            setEvents(newEvents);
+                          }}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-nowrap text-xs mb-1">
+                          وقت النهاية *
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={event.end_at}
+                          onChange={(e) => {
+                            const newEvents = [...events];
+                            newEvents[index].end_at = e.target.value;
+                            setEvents(newEvents);
+                          }}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs mb-1">المجموعة *</label>
+                        <select
+                          value={event.group_id}
+                          onChange={(e) => {
+                            const newEvents = [...events];
+                            newEvents[index].group_id = e.target.value;
+                            setEvents(newEvents);
+                          }}
+                          required
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">اختر المجموعة</option>
+                          {groups?.groups?.map((group: any) => (
+                            <option key={group.id} value={group.id}>
+                              {group.group}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-end">
+                        {events.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEvents(events.filter((_, i) => i !== index));
+                            }}
+                            className="text-red-500"
+                          >
+                            حذف
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label
-                    htmlFor="thumbnail"
-                    className="block mb-2 text-sm font-medium"
-                  >
-                    رابط الصورة
-                  </label>
-                  <Input
-                    {...register("thumbnail")}
-                    id="thumbnail"
-                    placeholder="أدخل رابط الصورة"
-                    name="thumbnail"
-                    value={formData.thumbnail}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="subject_id"
-                    className="block mb-2 text-sm font-medium"
-                  >
-                    المادة
-                  </label>
-                  <select
-                    {...register("subject_id")}
-                    id="subject_id"
-                    name="subject_id"
-                    value={formData.subject_id}
-                    onChange={handleInputChange}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">اختر المادة</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="teacher_id"
-                    className="block mb-2 text-sm font-medium"
-                  >
-                    المعلم
-                  </label>
-                  <select
-                    {...register("teacher_id")}
-                    id="teacher_id"
-                    name="teacher_id"
-                    value={formData.teacher_id}
-                    onChange={handleInputChange}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">اختر المعلم</option>
-                    {teachers.map((teacher) => (
-                      <option key={teacher.id} value={teacher.id}>
-                        {teacher.user.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="level_id"
-                    className="block mb-2 text-sm font-medium"
-                  >
-                    المستوى
-                  </label>
-                  <select
-                    {...register("level_id")}
-                    id="level_id"
-                    name="level_id"
-                    value={formData.level_id}
-                    onChange={handleInputChange}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">اختر المستوى</option>
-                    {levels.map((level) => (
-                      <option key={level.id} value={level.id}>
-                        {level.name}
-                      </option>
-                    ))}
-                  </select>
+
+                {/* Questions Section */}
+                <div className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold">
+                      الأسئلة * ({questions.length} سؤال)
+                    </h3>
+                    <div className="flex gap-2">
+                      <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer bg-yellow-600 hover:bg-yellow-700 text-white text-sm">
+                        <span>استيراد من Excel</span>
+                        <input
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={handleExcelUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Display added questions */}
+                  {questions.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto mb-3">
+                      {questions.map((q, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center p-2 bg-gray-50 rounded mb-2"
+                        >
+                          <span className="text-sm">
+                            {index + 1}. {q.question}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setQuestions(
+                                questions.filter((_, i) => i !== index)
+                              )
+                            }
+                            className="text-red-500"
+                          >
+                            حذف
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add question form */}
+                  <div className="space-y-3 border-t pt-3">
+                    <div>
+                      <label className="block text-sm mb-1">نوع السؤال</label>
+                      <select
+                        value={currentQuestion.questionType}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            questionType: e.target.value as "text" | "image",
+                          })
+                        }
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="text">نص</option>
+                        <option value="image">صورة</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm mb-1">
+                        {currentQuestion.questionType === "text"
+                          ? "نص السؤال"
+                          : "رابط الصورة"}
+                      </label>
+                      <Input
+                        value={currentQuestion.question}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            question: e.target.value,
+                          })
+                        }
+                        placeholder={
+                          currentQuestion.questionType === "text"
+                            ? "أدخل السؤال"
+                            : "https://example.com/image.jpg"
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm mb-1">الدرجة</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={currentQuestion.degree}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            degree: parseInt(e.target.value) || 1,
+                          })
+                        }
+                        className="w-20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm">الخيارات</label>
+                      {currentQuestion.options.map((option, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={option.answer}
+                            onChange={(e) => {
+                              const newOptions = [...currentQuestion.options];
+                              newOptions[index].answer = e.target.value;
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                options: newOptions,
+                              });
+                            }}
+                            placeholder={`الخيار ${index + 1}`}
+                          />
+                          <Button
+                            type="button"
+                            variant={"outline"}
+                            size="sm"
+                            onClick={() => {
+                              const newOptions = currentQuestion.options.map(
+                                (opt, i) => ({
+                                  ...opt,
+                                  is_correct: i === index,
+                                })
+                              );
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                options: newOptions,
+                              });
+                            }}
+                          >
+                            {option.is_correct ? "صحيح ✓" : "تحديد"}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          currentQuestion.question &&
+                          currentQuestion.options.some((opt) => opt.is_correct)
+                        ) {
+                          setQuestions([...questions, { ...currentQuestion }]);
+                          setCurrentQuestion({
+                            question: "",
+                            questionType: "text",
+                            options: [
+                              { answer: "", is_correct: false },
+                              { answer: "", is_correct: false },
+                              { answer: "", is_correct: false },
+                              { answer: "", is_correct: false },
+                            ],
+                            degree: 1,
+                          });
+                        }
+                      }}
+                      className="w-full"
+                      disabled={
+                        !currentQuestion.question ||
+                        !currentQuestion.options.some((opt) => opt.is_correct)
+                      }
+                    >
+                      إضافة السؤال
+                    </Button>
+                  </div>
                 </div>
               </div>
+
               <div>
                 {error && (
                   <p
