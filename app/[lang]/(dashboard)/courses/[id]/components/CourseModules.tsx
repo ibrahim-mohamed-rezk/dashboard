@@ -33,6 +33,7 @@ import {
 import { useParams } from "next/navigation";
 import CustomModal from "@/components/ui/CustomModal";
 import { Badge } from "@/components/ui/badge";
+import DeleteConfirmationDialog from "@/components/delete-confirmation-dialog";
 import * as XLSX from "xlsx";
 
 const CourseModules = ({
@@ -52,7 +53,10 @@ const CourseModules = ({
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
   const [isViewing, setIsViewing] = useState(false);
   const [isEditingVideoQuiz, setIsEditingVideoQuiz] = useState(false);
+  const [isDeletingVideoQuiz, setIsDeletingVideoQuiz] = useState(false);
   const [videos, setVideos] = useState<VideoTypes[]>([]);
+
+  console.log(selectedModule?.type, isEditingVideoQuiz);
 
   // Server-side filters for modules
   const [moduleFilters, setModuleFilters] = useState({
@@ -76,6 +80,8 @@ const CourseModules = ({
 
     created_at: "",
   });
+
+  console.log(editForm);
 
   const [newModuleForm, setNewModuleForm] = useState({
     type: "video",
@@ -126,6 +132,7 @@ const CourseModules = ({
       { answer: "", is_correct: false },
       { answer: "", is_correct: false },
     ],
+    degree: 1,
   });
 
   const params = useParams();
@@ -394,6 +401,7 @@ const CourseModules = ({
       formData.append("questions_count", editForm.questions_count.toString());
       formData.append("duration", editForm.duration.toString());
       formData.append("passing_score", editForm.passing_score.toString());
+      formData.append("created_at", editForm.created_at);
 
       // Add questions data
       editForm.questions.forEach((question, index) => {
@@ -401,6 +409,11 @@ const CourseModules = ({
         formData.append(
           `questions[${questionNumber}][question]`,
           question.question
+        );
+        // Ensure degree is always sent to satisfy backend validation
+        formData.append(
+          `questions[${questionNumber}][degree]`,
+          (question.degree ?? 1).toString()
         );
 
         question.options.forEach((option, optIndex) => {
@@ -443,7 +456,7 @@ const CourseModules = ({
       quizData.questions?.map((q: any) => ({
         id: q.id,
         question: q.question,
-        questionType: q.questionType || ("text" as const), // ✅ تم الإصلاح
+        questionType: q.questionType || ("text" as const),
         options: q.options.map((opt: any, index: number) => ({
           id: opt.id,
           answer: opt.answer,
@@ -459,6 +472,7 @@ const CourseModules = ({
       duration: (quizData as any)?.duration ?? 0,
       passing_score: (quizData as any)?.passing_score ?? 0,
       questions: transformedQuestions,
+      created_at: quizData.created_at,
     }));
     setIsEditingVideoQuiz(true);
   };
@@ -732,6 +746,7 @@ const CourseModules = ({
         answer: opt.answer,
         is_correct: opt.is_correct,
       })),
+      degree: question.degree || 1,
     });
     // Also set currentQuestion to preserve type
     setCurrentQuestion((prev) => ({
@@ -751,6 +766,10 @@ const CourseModules = ({
       ...updatedQuestions[editingQuestionIndex],
       question: editQuestionForm.question,
       options: editQuestionForm.options,
+      degree:
+        (editQuestionForm as any).degree ??
+        updatedQuestions[editingQuestionIndex].degree ??
+        1,
     };
 
     setEditForm({
@@ -767,6 +786,7 @@ const CourseModules = ({
         { answer: "", is_correct: false },
         { answer: "", is_correct: false },
       ],
+      degree: 1,
     });
   };
 
@@ -780,6 +800,7 @@ const CourseModules = ({
         { answer: "", is_correct: false },
         { answer: "", is_correct: false },
       ],
+      degree: 1,
     });
   };
 
@@ -1472,14 +1493,24 @@ const CourseModules = ({
                             سؤال
                           </p>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={handleEditVideoQuiz}
-                          className="border-blue-200 text-blue-700 hover:bg-blue-100"
-                        >
-                          <HelpCircle className="w-4 h-4 mr-2" />
-                          تعديل الاختبار
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={handleEditVideoQuiz}
+                            className="border-blue-200 text-blue-700 hover:bg-blue-100"
+                          >
+                            <HelpCircle className="w-4 h-4 mr-2" />
+                            تعديل الاختبار
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsDeletingVideoQuiz(true)}
+                            className="border-red-200 text-red-700 hover:bg-red-100"
+                          >
+                            <Trash className="w-4 h-4 mr-2" />
+                            حذف الاختبار
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1714,6 +1745,25 @@ const CourseModules = ({
                                     )
                                   )}
                                 </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">
+                                    الدرجة
+                                  </label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={
+                                      (editQuestionForm as any).degree || 1
+                                    }
+                                    onChange={(e) =>
+                                      setEditQuestionForm((prev) => ({
+                                        ...prev,
+                                        degree: parseInt(e.target.value) || 1,
+                                      }))
+                                    }
+                                    className="w-24"
+                                  />
+                                </div>
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
@@ -1831,6 +1881,24 @@ const CourseModules = ({
                             }
                             placeholder="أدخل السؤال هنا"
                             rows={2}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            الدرجة
+                          </label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={currentQuestion.degree}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                degree: parseInt(e.target.value) || 1,
+                              })
+                            }
+                            className="w-24"
                           />
                         </div>
 
@@ -2031,6 +2099,33 @@ const CourseModules = ({
               </div>
             </div>
 
+            {/* Excel Import */}
+            <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <h4 className="font-medium mb-1 dark:text-white">
+                    استيراد الأسئلة من Excel
+                  </h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    الصيغة المتوقعة: السؤال، خيار 1-4، رقم الإجابة الصحيحة
+                    (1-4)، النوع (اختياري: text|image)
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-sm">
+                    <Upload className="h-4 w-4" />
+                    <span>استيراد من Excel</span>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleExcelUploadForEdit}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
             {/* Questions List */}
             {editForm.questions.length > 0 && (
               <div className="space-y-4">
@@ -2103,6 +2198,23 @@ const CourseModules = ({
                     }
                     placeholder="أدخل السؤال هنا"
                     rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    الدرجة
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={currentQuestion.degree}
+                    onChange={(e) =>
+                      setCurrentQuestion({
+                        ...currentQuestion,
+                        degree: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    className="w-24"
                   />
                 </div>
 
@@ -3075,6 +3187,14 @@ const CourseModules = ({
           </div>
         </div>
       </CustomModal>
+
+      {/* Delete Video Quiz Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={isDeletingVideoQuiz}
+        onClose={() => setIsDeletingVideoQuiz(false)}
+        onConfirm={handleDeleteVideoQuiz}
+        toastMessage="تم حذف اختبار الفيديو بنجاح"
+      />
     </div>
   );
 };

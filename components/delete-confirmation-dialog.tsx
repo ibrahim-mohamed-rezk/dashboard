@@ -1,4 +1,4 @@
-import React, { useState, useTransition } from "react";
+import React, { useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,12 @@ import {
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
-const DeleteConfirmationDialog = ({ open, onClose, onConfirm, defaultToast = true, toastMessage = "Successfully deleted",
+const DeleteConfirmationDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  defaultToast = true,
+  toastMessage = "تم الحذف بنجاح",
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,22 +39,21 @@ const DeleteConfirmationDialog = ({ open, onClose, onConfirm, defaultToast = tru
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent>
+      <AlertDialogContent dir="rtl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>هل أنت متأكد من الحذف؟</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete your
-            account and remove your data from our servers.
+            لا يمكن التراجع عن هذا الإجراء. سيتم حذف هذا العنصر بشكل نهائي من النظام.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose}>إلغاء</AlertDialogCancel>
           <AlertDialogAction
             className={isPending ? "pointer-events-none" : ""}
             onClick={() => startTransition(handleConfirm)}
           >
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isPending ? "Deleting.." : "Continue"}
+            {isPending ? "يتم الحذف..." : "تأكيد الحذف"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select";
 import CustomModal from "@/components/ui/CustomModal";
 
+
 interface BankQuestion {
   id: number;
   question: string;
@@ -58,7 +59,7 @@ interface BankSection {
   date?: string;
   id: number;
   name: string;
-  type: "questions" | "file";
+  type: "questions" | "file" | null;
   questions?: BankQuestion[];
   file_path?: string;
   created_at?: string;
@@ -95,16 +96,10 @@ interface MultipleQuestionForm {
 interface BankModulesComponentProps {
   bankId: string;
   token: string;
-  initialBankData?: any;
 }
 
-const BankModulesComponent = ({
-  bankId,
-  token,
-  initialBankData,
-}: BankModulesComponentProps) => {
+const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
   // State management
-  const [bankData, setBankData] = useState<Bank[]>([]);
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   const [selectedSection, setSelectedSection] = useState<BankSection | null>(
     null
@@ -115,15 +110,14 @@ const BankModulesComponent = ({
   const [isViewing, setIsViewing] = useState(false);
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
+  const [filterType, setFilterType] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
-    null
-  );
+  const [date_from, setDate_from] = useState<any>(null);
+  const [date_to, setDate_to] = useState<any>(null);
+
   const [sectionTitle, setSectionTitle] = useState<string>("");
-  const [sectionType, setSectionType] = useState<"questions" | "file">(
+  const [sectionType, setSectionType] = useState<"questions" | "file" | null>(
     "questions"
   );
   const [sectionDate, setSectionDate] = useState<string>("");
@@ -147,7 +141,12 @@ const BankModulesComponent = ({
     try {
       const response = await getData(
         `banks/${bankId}`,
-        {},
+        {
+          date_from,
+          date_to,
+          type: filterType,
+          search: searchTerm,
+        },
         {
           Authorization: `Bearer ${token}`,
         }
@@ -162,7 +161,7 @@ const BankModulesComponent = ({
   // Initial data fetch
   useEffect(() => {
     fetchBanks();
-  }, [bankId, token]);
+  }, [bankId, token, date_from, date_to, filterType, searchTerm]);
 
   // Get sections from the current bank data
   const sections = selectedBank?.sections || [];
@@ -193,28 +192,6 @@ const BankModulesComponent = ({
       questionSections,
     };
   }, [selectedBank, sections]);
-
-  // Filtered sections
-  const filteredSections = useMemo(() => {
-    let filtered = sections;
-
-    if (searchTerm.trim()) {
-      filtered = filtered.filter(
-        (section) =>
-          section.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (section.questions &&
-            section.questions.some((q) =>
-              q.question.toLowerCase().includes(searchTerm.toLowerCase())
-            ))
-      );
-    }
-
-    if (filterType !== "all") {
-      filtered = filtered.filter((section) => section.type === filterType);
-    }
-
-    return filtered;
-  }, [sections, searchTerm, filterType]);
 
   // Handle Edit Section
   const handleEdit = (section: BankSection) => {
@@ -364,7 +341,7 @@ const BankModulesComponent = ({
       const formData = new FormData();
       formData.append("name", sectionTitle);
       formData.append("bank_id", bankId.toString());
-      formData.append("type", sectionType);
+      formData.append("type", sectionType || "");
 
       if (sectionType === "file") {
         if (!fileToUpload) {
@@ -487,10 +464,10 @@ const BankModulesComponent = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedQuestions.length === filteredSections.length) {
+    if (selectedQuestions.length === sections.length) {
       setSelectedQuestions([]);
     } else {
-      setSelectedQuestions(filteredSections.map((s) => s.id));
+      setSelectedQuestions(sections.map((s) => s.id));
     }
   };
 
@@ -685,7 +662,7 @@ const BankModulesComponent = ({
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-bold">أقسام البنك</h2>
               <span className="text-sm text-gray-500 dark:text-gray-300">
-                ({filteredSections.length} من {sections.length} قسم)
+                ({sections.length} قسم)
               </span>
             </div>
 
@@ -725,11 +702,26 @@ const BankModulesComponent = ({
                 <SelectValue placeholder="فلترة حسب النوع" />
               </SelectTrigger>
               <SelectContent className="dark:bg-gray-800 dark:text-white">
-                <SelectItem value="all">جميع الأنواع</SelectItem>
+                <SelectItem value="">جميع الأنواع</SelectItem>
                 <SelectItem value="questions">أسئلة</SelectItem>
                 <SelectItem value="file">ملفات</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <input
+                type="date"
+                value={date_from || ""}
+                onChange={(e) => setDate_from(e.target.value || null)}
+                className="w-full lg:w-40 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              />
+              <span className="text-gray-500 dark:text-gray-300">-</span>
+              <input
+                type="date"
+                value={date_to || ""}
+                onChange={(e) => setDate_to(e.target.value || null)}
+                className="w-full lg:w-40 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              />
+            </div>
           </div>
 
           {/* Bulk Actions */}
@@ -767,8 +759,8 @@ const BankModulesComponent = ({
                         onClick={handleSelectAll}
                         className="p-1"
                       >
-                        {selectedQuestions.length === filteredSections.length &&
-                        filteredSections.length > 0 ? (
+                        {selectedQuestions.length === sections.length &&
+                        sections.length > 0 ? (
                           <CheckSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         ) : (
                           <Square className="h-4 w-4 dark:text-gray-400" />
@@ -801,21 +793,19 @@ const BankModulesComponent = ({
                       </p>
                     </td>
                   </tr>
-                ) : filteredSections.length === 0 ? (
+                ) : sections.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isBulkMode ? 8 : 7}
                       className="text-center py-8"
                     >
                       <p className="text-gray-500 dark:text-gray-300 text-lg">
-                        {searchTerm || filterType !== "all"
-                          ? "لا توجد أقسام تطابق البحث"
-                          : "لا توجد أقسام متاحة حالياً"}
+                        لا توجد أقسام متاحة حالياً
                       </p>
                     </td>
                   </tr>
                 ) : (
-                  filteredSections.map((section, index) => (
+                  sections.map((section, index) => (
                     <tr
                       key={section.id}
                       className={`transition-colors ${
@@ -1330,7 +1320,7 @@ const BankModulesComponent = ({
                   نوع القسم
                 </label>
                 <select
-                  value={sectionType}
+                  value={sectionType || ""}
                   onChange={(e) =>
                     setSectionType(e.target.value as "questions" | "file")
                   }

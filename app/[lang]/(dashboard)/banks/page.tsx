@@ -92,6 +92,7 @@ interface Bank {
   updated_at: string;
   level_id: string;
   image?: string | null;
+  subject_id?: number;
 }
 
 interface FormData {
@@ -102,6 +103,9 @@ interface FormData {
   position: "online" | "offline";
   level_id: string;
   image: File | null;
+  created_at: string;
+  teacher_id?: number | "";
+  subject_id?: number | "";
 }
 
 interface PaginationMeta {
@@ -160,6 +164,9 @@ function BanksTable() {
     position: "online",
     level_id: levels[0]?.id || 1,
     image: null,
+    created_at: "",
+    teacher_id: "",
+    subject_id: "",
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -395,6 +402,15 @@ function BanksTable() {
       formDataToSend.append("level_id", formData.level_id);
       formDataToSend.append("position", formData.position);
       formDataToSend.append("banktable_type", "course");
+      if (formData.subject_id) {
+        formDataToSend.append("subject_id", String(formData.subject_id));
+      }
+      if (formData.teacher_id) {
+        formDataToSend.append("teacher_id", String(formData.teacher_id));
+      }
+      if (formData.created_at) {
+        formDataToSend.append("created_at", formData.created_at);
+      }
       if (formData.image) {
         formDataToSend.append("image", formData.image);
       }
@@ -411,6 +427,9 @@ function BanksTable() {
         position: "online",
         level_id: "1",
         image: null,
+        created_at: "",
+        teacher_id: "",
+        subject_id: "",
       });
       setImagePreview(null);
       await fetchData(currentPage);
@@ -438,6 +457,14 @@ function BanksTable() {
       position: bank.position || "online",
       level_id: bank.level_id || "1",
       image: null,
+      created_at: bank.created_at
+        ? new Date(bank.created_at).toISOString().slice(0, 10)
+        : "",
+      teacher_id:
+        bank.banktable_type === "teacher" && bank.banktable_id
+          ? Number(bank.banktable_id)
+          : "",
+      subject_id: bank.subject_id ? Number(bank.subject_id) : "",
     });
     setImagePreview(bank.image || null);
     setEditBank(true);
@@ -575,37 +602,39 @@ function BanksTable() {
   // === NEW: Add selection column ===
   const columns: ColumnDef<Bank>[] = [
     {
-  id: "select",
-  header: ({ table }) => (
-    <div className="flex items-center justify-center">
-      <div className="relative">
-        <input
-          type="checkbox"
-          checked={table.getIsAllPageRowsSelected()}
-          onChange={() => table.toggleAllPageRowsSelected()}
-          ref={(input) => {
-            if (input) {
-              input.indeterminate = !table.getIsAllPageRowsSelected() && table.getIsSomePageRowsSelected();
-            }
-          }}
-          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-      </div>
-    </div>
-  ),
-  cell: ({ row }) => (
-    <div className="flex items-center justify-center">
-      <input
-        type="checkbox"
-        checked={row.getIsSelected()}
-        onChange={() => row.toggleSelected()}
-        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-      />
-    </div>
-  ),
-  enableSorting: false,
-  enableHiding: false,
-},
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={table.getIsAllPageRowsSelected()}
+              onChange={() => table.toggleAllPageRowsSelected()}
+              ref={(input) => {
+                if (input) {
+                  input.indeterminate =
+                    !table.getIsAllPageRowsSelected() &&
+                    table.getIsSomePageRowsSelected();
+                }
+              }}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={() => row.toggleSelected()}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "image",
       header: "الصورة",
@@ -619,10 +648,6 @@ function BanksTable() {
                   src={image}
                   alt={row.getValue("name")}
                   className="object-cover w-full h-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder-bank.png";
-                  }}
                 />
               </div>
             ) : (
@@ -824,7 +849,10 @@ function BanksTable() {
       }, {} as Record<number, boolean>),
     },
     onRowSelectionChange: (updater) => {
-      const selection = updater instanceof Function ? updater(table.getState().rowSelection) : updater;
+      const selection =
+        updater instanceof Function
+          ? updater(table.getState().rowSelection)
+          : updater;
       const selectedIds = Object.keys(selection)
         .filter((key) => selection[parseInt(key)])
         .map((key) => data[parseInt(key)]?.id)
@@ -845,6 +873,15 @@ function BanksTable() {
       formDataToSend.append("banktable_type", "course");
       formDataToSend.append("position", formData.position);
       formDataToSend.append("level_id", formData.level_id);
+      if (formData.subject_id) {
+        formDataToSend.append("subject_id", String(formData.subject_id));
+      }
+      if (formData.teacher_id) {
+        formDataToSend.append("teacher_id", String(formData.teacher_id));
+      }
+      if (formData.created_at) {
+        formDataToSend.append("created_at", formData.created_at);
+      }
       formDataToSend.append("_method", "PUT");
       if (formData.image) {
         formDataToSend.append("image", formData.image);
@@ -863,6 +900,9 @@ function BanksTable() {
         position: "online",
         level_id: "1",
         image: null,
+        created_at: "",
+        teacher_id: "",
+        subject_id: "",
       });
       setImagePreview(null);
       await fetchData(currentPage);
@@ -1094,6 +1134,8 @@ function BanksTable() {
                       position: "online",
                       level_id: "1",
                       image: null,
+                      created_at: "",
+                      teacher_id: "",
                     });
                     setImagePreview(null);
                   }}
@@ -1199,6 +1241,59 @@ function BanksTable() {
                     </div>
                     <div className="space-y-2">
                       <label
+                        htmlFor="created_at"
+                        className="text-sm font-medium"
+                      >
+                        تاريخ الإنشاء
+                      </label>
+                      <Input
+                        id="created_at"
+                        name="created_at"
+                        type="date"
+                        value={formData.created_at}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="subject_id"
+                        className="text-sm font-medium"
+                      >
+                        المادة
+                      </label>
+                      <select
+                        id="subject_id"
+                        name="subject_id"
+                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                        value={formData.subject_id ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            subject_id: e.target.value
+                              ? parseInt(e.target.value)
+                              : "",
+                          }))
+                        }
+                      >
+                        <option
+                          value=""
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          اختر المادة
+                        </option>
+                        {subjects.map((subject) => (
+                          <option
+                            key={subject.id}
+                            value={subject.id}
+                            className="dark:bg-gray-800 dark:!text-white"
+                          >
+                            {subject.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label
                         htmlFor="banktable_type"
                         className="text-sm font-medium"
                       >
@@ -1280,6 +1375,44 @@ function BanksTable() {
                                 {teacher.user?.full_name}
                               </option>
                             ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="teacher_id"
+                        className="text-sm font-medium"
+                      >
+                        المعلم
+                      </label>
+                      <select
+                        id="teacher_id"
+                        name="teacher_id"
+                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                        value={formData.teacher_id ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            teacher_id: e.target.value
+                              ? parseInt(e.target.value)
+                              : "",
+                          }))
+                        }
+                      >
+                        <option
+                          value=""
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          اختر المعلم
+                        </option>
+                        {teachers.map((teacher) => (
+                          <option
+                            key={teacher.id}
+                            value={teacher.id}
+                            className="dark:bg-gray-800 dark:!text-white"
+                          >
+                            {teacher.user?.full_name || `معلم #${teacher.id}`}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -1549,6 +1682,59 @@ function BanksTable() {
                     </div>
                   </div>
                   <div className="space-y-2">
+                    <label
+                      htmlFor="edit-created_at"
+                      className="text-sm font-medium"
+                    >
+                      تاريخ الإنشاء
+                    </label>
+                    <Input
+                      id="edit-created_at"
+                      name="created_at"
+                      type="date"
+                      value={formData.created_at}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="edit-subject_id"
+                      className="text-sm font-medium"
+                    >
+                      المادة
+                    </label>
+                    <select
+                      id="edit-subject_id"
+                      name="subject_id"
+                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                      value={formData.subject_id ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          subject_id: e.target.value
+                            ? parseInt(e.target.value)
+                            : "",
+                        }))
+                      }
+                    >
+                      <option
+                        value=""
+                        className="dark:bg-gray-800 dark:!text-white"
+                      >
+                        اختر المادة
+                      </option>
+                      {subjects.map((subject) => (
+                        <option
+                          key={subject.id}
+                          value={subject.id}
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          {subject.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
                     <label htmlFor="edit-price" className="text-sm font-medium">
                       المستوي
                     </label>
@@ -1628,6 +1814,44 @@ function BanksTable() {
                               {teacher.user?.full_name}
                             </option>
                           ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="edit-teacher_id"
+                      className="text-sm font-medium"
+                    >
+                      المعلم
+                    </label>
+                    <select
+                      id="edit-teacher_id"
+                      name="teacher_id"
+                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                      value={formData.teacher_id ?? ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          teacher_id: e.target.value
+                            ? parseInt(e.target.value)
+                            : "",
+                        }))
+                      }
+                    >
+                      <option
+                        value=""
+                        className="dark:bg-gray-800 dark:!text-white"
+                      >
+                        اختر المعلم
+                      </option>
+                      {teachers.map((teacher) => (
+                        <option
+                          key={teacher.id}
+                          value={teacher.id}
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          {teacher.user?.full_name || `معلم #${teacher.id}`}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -1742,8 +1966,8 @@ function BanksTable() {
             <DialogDescription>
               هل أنت متأكد أنك تريد حذف{" "}
               <strong>{selectedToDelete.length}</strong>{" "}
-              {selectedToDelete.length === 1 ? "بنك" : "بنوك"}؟ لا يمكن التراجع عن
-              هذا الإجراء.
+              {selectedToDelete.length === 1 ? "بنك" : "بنوك"}؟ لا يمكن التراجع
+              عن هذا الإجراء.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 pt-4">
