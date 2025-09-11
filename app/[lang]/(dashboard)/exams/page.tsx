@@ -356,7 +356,7 @@ function ExamsDataTable() {
       formDataToSend.append("title", formData.title);
       formDataToSend.append("teacher_id", formData.teacher_id);
       formDataToSend.append("image", examImage);
-      formDataToSend.append("question_count", questions.length.toString());
+      formDataToSend.append("questions_count", questions.length.toString());
 
       // Add events (convert datetime-local to Y-m-d H:i:s)
       events.forEach((event, index) => {
@@ -722,13 +722,13 @@ function ExamsDataTable() {
           >
             عرض الأسئلة
           </Button>
-          <Button
+          {/* <Button
             onClick={() => setEditingExam(row.original)}
             size="sm"
             variant="outline"
           >
             تعديل
-          </Button>
+          </Button> */}
           <Button
             onClick={() => deleteExam(row.original.id)}
             className="bg-red-500 hover:bg-red-600"
