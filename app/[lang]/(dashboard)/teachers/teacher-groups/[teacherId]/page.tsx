@@ -584,7 +584,9 @@ function TeacherGroupsDataTable() {
                 <SelectItem value="">كل المعلمين</SelectItem>
                 {teachers.map((teacher: any) => (
                   <SelectItem key={teacher.id} value={String(teacher.id)}>
-                    {teacher.id}
+                    {teacher.user?.full_name ||
+                      teacher.full_name ||
+                      `Teacher ${teacher.id}`}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -143,7 +143,7 @@ function GroupStudentsManager() {
       );
 
       // Filter out students already in the group
-      const allStudents = response.data || response;
+      const allStudents = response.data.students || response;
       const currentStudentIds = students.map((s) => s.student_id);
       const filtered = allStudents.filter(
         (student: Student) => !currentStudentIds.includes(student.id)
@@ -155,6 +155,8 @@ function GroupStudentsManager() {
       toast.error("فشل في جلب قائمة الطلاب المتاحين");
     }
   };
+
+  console.log(availableStudents);
 
   // Get token from API
   useEffect(() => {

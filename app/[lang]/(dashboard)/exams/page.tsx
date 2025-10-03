@@ -153,12 +153,15 @@ function ExamsDataTable() {
   const [levels, setLevels] = useState<Level[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [groups, setGroups] = useState<any>([]);
-  const [events, setEvents] = useState<Event[]>([{
-    start_at: "",
-    end_at: "",
-    group_id: "",
-    day: ""
-  }]);
+  const [filteredGroups, setFilteredGroups] = useState<any>([]);
+  const [events, setEvents] = useState<Event[]>([
+    {
+      start_at: "",
+      end_at: "",
+      group_id: "",
+      day: "",
+    },
+  ]);
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState({
     question: "",
@@ -169,7 +172,7 @@ function ExamsDataTable() {
       { answer: "", is_correct: false },
       { answer: "", is_correct: false },
     ],
-    degree: 1
+    degree: 1,
   });
   const [examImage, setExamImage] = useState<File | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -235,7 +238,7 @@ function ExamsDataTable() {
       );
       setSubjects(subjectsResponse.data || subjectsResponse);
 
-      // Fetch groups
+      // Fetch all groups
       const groupsResponse = await getData(
         "teacher-groups",
         {},
@@ -245,8 +248,33 @@ function ExamsDataTable() {
       );
       setGroups(groupsResponse.data || groupsResponse);
     } catch (error) {
-      console.log("Error fetching teachers, levels, subjects, or groups:", error);
+      console.log(
+        "Error fetching teachers, levels, subjects, or groups:",
+        error
+      );
     }
+  };
+
+  // Filter groups by teacher ID
+  const filterGroupsByTeacher = (teacherId: string) => {
+    if (!teacherId || !groups?.groups) {
+      setFilteredGroups([]);
+      return;
+    }
+
+    // Debug: Log the first group to see its structure
+    if (groups.groups.length > 0) {
+      console.log("First group structure:", groups.groups[0]);
+      console.log("Looking for teacher ID:", teacherId);
+    }
+
+    // Filter groups by teacher ID
+    const teacherGroups = groups.groups.filter(
+      (group: any) => `${group.teacher}` === teacherId
+    );
+
+    console.log("Filtered groups:", teacherGroups);
+    setFilteredGroups(teacherGroups);
   };
 
   // Get token from Next.js API
@@ -298,33 +326,38 @@ function ExamsDataTable() {
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = evt.target?.result;
       if (!data) return;
-      
+
       const workbook = XLSX.read(data, { type: "binary" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
       // Expected format: Question, Option1, Option2, Option3, Option4, Correct Answer (1-4), Type (optional), Degree (optional)
-      const importedQuestions = json.slice(1).map((row) => {
-        const [question, opt1, opt2, opt3, opt4, correct, type, degree] = row;
-        const options = [
-          { answer: opt1 || "", is_correct: correct == 1 },
-          { answer: opt2 || "", is_correct: correct == 2 },
-          { answer: opt3 || "", is_correct: correct == 3 },
-          { answer: opt4 || "", is_correct: correct == 4 },
-        ];
-        return {
-          question: question || "",
-          questionType: (type?.toString().trim().toLowerCase() === "image" ? "image" : "text") as "text" | "image",
-          options,
-          degree: parseInt(degree) || 1,
-        };
-      }).filter(q => q.question); // Filter out empty rows
+      const importedQuestions = json
+        .slice(1)
+        .map((row) => {
+          const [question, opt1, opt2, opt3, opt4, correct, type, degree] = row;
+          const options = [
+            { answer: opt1 || "", is_correct: correct == 1 },
+            { answer: opt2 || "", is_correct: correct == 2 },
+            { answer: opt3 || "", is_correct: correct == 3 },
+            { answer: opt4 || "", is_correct: correct == 4 },
+          ];
+          return {
+            question: question || "",
+            questionType: (type?.toString().trim().toLowerCase() === "image"
+              ? "image"
+              : "text") as "text" | "image",
+            options,
+            degree: parseInt(degree) || 1,
+          };
+        })
+        .filter((q) => q.question); // Filter out empty rows
 
       setQuestions([...questions, ...importedQuestions]);
       toast.success(`تم استيراد ${importedQuestions.length} سؤال من Excel`);
@@ -336,10 +369,18 @@ function ExamsDataTable() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     // Validate required fields
-    if (!formData.title || !formData.teacher_id || !examImage || questions.length === 0 || events.length === 0) {
-      setError("يرجى ملء جميع الحقول المطلوبة: العنوان، المعلم، الصورة، الأسئلة، والأحداث");
+    if (
+      !formData.title ||
+      !formData.teacher_id ||
+      !examImage ||
+      questions.length === 0 ||
+      events.length === 0
+    ) {
+      setError(
+        "يرجى ملء جميع الحقول المطلوبة: العنوان، المعلم، الصورة، الأسئلة، والأحداث"
+      );
       return;
     }
 
@@ -360,8 +401,14 @@ function ExamsDataTable() {
 
       // Add events (convert datetime-local to Y-m-d H:i:s)
       events.forEach((event, index) => {
-        formDataToSend.append(`events[${index}][start_at]`, toYMDHIS(event.start_at));
-        formDataToSend.append(`events[${index}][end_at]`, toYMDHIS(event.end_at));
+        formDataToSend.append(
+          `events[${index}][start_at]`,
+          toYMDHIS(event.start_at)
+        );
+        formDataToSend.append(
+          `events[${index}][end_at]`,
+          toYMDHIS(event.end_at)
+        );
         formDataToSend.append(`events[${index}][group_id]`, event.group_id);
         formDataToSend.append(`events[${index}][day]`, event.day);
       });
@@ -413,13 +460,16 @@ function ExamsDataTable() {
         level_id: "",
       });
       setQuestions([]);
-      setEvents([{
-        start_at: "",
-        end_at: "",
-        group_id: "",
-        day: ""
-      }]);
+      setEvents([
+        {
+          start_at: "",
+          end_at: "",
+          group_id: "",
+          day: "",
+        },
+      ]);
       setExamImage(null);
+      setFilteredGroups([]);
       refetchExams();
       toast.success("تم إضافة الامتحان بنجاح");
       dialogCloseRef.current?.click();
@@ -538,6 +588,15 @@ function ExamsDataTable() {
     }
   }, [token, currentPage]);
 
+  // Filter groups when teacher selection changes
+  useEffect(() => {
+    if (formData.teacher_id && groups?.groups) {
+      filterGroupsByTeacher(formData.teacher_id);
+    } else {
+      setFilteredGroups([]);
+    }
+  }, [formData.teacher_id, groups]);
+
   // Update form data when editing exam changes
   useEffect(() => {
     if (editingExam) {
@@ -576,13 +635,16 @@ function ExamsDataTable() {
       level_id: "",
     });
     setQuestions([]);
-    setEvents([{
-      start_at: "",
-      end_at: "",
-      group_id: "",
-      day: ""
-    }]);
+    setEvents([
+      {
+        start_at: "",
+        end_at: "",
+        group_id: "",
+        day: "",
+      },
+    ]);
     setExamImage(null);
+    setFilteredGroups([]);
     setCurrentQuestion({
       question: "",
       questionType: "text",
@@ -592,7 +654,7 @@ function ExamsDataTable() {
         { answer: "", is_correct: false },
         { answer: "", is_correct: false },
       ],
-      degree: 1
+      degree: 1,
     });
     setError(null);
   };
@@ -777,7 +839,7 @@ function ExamsDataTable() {
           <DialogTrigger asChild>
             <Button variant="outline">إضافة امتحان</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="md:max-w-7xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>إضافة امتحان جديد</DialogTitle>
             </DialogHeader>
@@ -944,10 +1006,14 @@ function ExamsDataTable() {
                           required
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         >
-                          <option value="">اختر المجموعة</option>
-                          {groups?.groups?.map((group: any) => (
+                          <option value="">
+                            {filteredGroups?.length === 0 && formData.teacher_id
+                              ? "لا توجد مجموعات لهذا المعلم"
+                              : "اختر المجموعة"}
+                          </option>
+                          {filteredGroups?.map((group: any) => (
                             <option key={group.id} value={group.id}>
-                              {group.group}
+                              {group.group || group.group_name}
                             </option>
                           ))}
                         </select>
@@ -992,28 +1058,57 @@ function ExamsDataTable() {
 
                   {/* Display added questions */}
                   {questions.length > 0 && (
-                    <div className="max-h-40 overflow-y-auto mb-3">
+                    <div className="max-h-60 overflow-y-auto mb-3 space-y-3">
                       {questions.map((q, index) => (
                         <div
                           key={index}
-                          className="flex justify-between items-center p-2 bg-gray-50 rounded mb-2"
+                          className="border rounded-lg p-4 bg-gray-50"
                         >
-                          <span className="text-sm">
-                            {index + 1}. {q.question}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setQuestions(
-                                questions.filter((_, i) => i !== index)
-                              )
-                            }
-                            className="text-red-500"
-                          >
-                            حذف
-                          </Button>
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm mb-2">
+                                السؤال {index + 1}: {q.question}
+                              </h4>
+                              <div className="text-xs text-gray-600 mb-2">
+                                النوع:{" "}
+                                {q.questionType === "text" ? "نص" : "صورة"} |
+                                الدرجة: {q.degree}
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setQuestions(
+                                  questions.filter((_, i) => i !== index)
+                                )
+                              }
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              حذف
+                            </Button>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-gray-700 mb-1">
+                              الخيارات:
+                            </div>
+                            {q.options.map((option: any, optIndex: number) => (
+                              <div
+                                key={optIndex}
+                                className={`p-2 rounded text-xs ${
+                                  option.is_correct
+                                    ? "bg-green-100 border border-green-300 text-green-800"
+                                    : "bg-white border border-gray-200"
+                                }`}
+                              >
+                                <span className="font-medium">
+                                  {option.is_correct && "✓ "}
+                                  {optIndex + 1}. {option.answer}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1181,7 +1276,7 @@ function ExamsDataTable() {
         open={!!editingExam}
         onOpenChange={(open) => !open && handleEditDialogClose()}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>تعديل الامتحان</DialogTitle>
           </DialogHeader>
@@ -1193,6 +1288,48 @@ function ExamsDataTable() {
               }}
             >
               <div className="space-y-4">
+                {/* Show existing questions if available */}
+                {editingExam.questions && editingExam.questions.length > 0 && (
+                  <div className="border rounded-lg p-4 bg-blue-50">
+                    <h3 className="font-semibold mb-3 text-blue-800">
+                      الأسئلة الحالية ({editingExam.questions.length} سؤال)
+                    </h3>
+                    <div className="max-h-60 overflow-y-auto space-y-3">
+                      {editingExam.questions.map((question, index) => (
+                        <div
+                          key={question.id}
+                          className="border rounded-lg p-3 bg-white"
+                        >
+                          <h4 className="font-semibold text-sm mb-2">
+                            السؤال {index + 1}: {question.question}
+                          </h4>
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-gray-700 mb-1">
+                              الخيارات:
+                            </div>
+                            {question.options.map((option) => (
+                              <div
+                                key={option.id}
+                                className={`p-2 rounded text-xs ${
+                                  option.id === question.correct_answer
+                                    ? "bg-green-100 border border-green-300 text-green-800"
+                                    : "bg-white border border-gray-200"
+                                }`}
+                              >
+                                <span className="font-medium">
+                                  {option.id === question.correct_answer &&
+                                    "✓ "}
+                                  {option.id}. {option.answer}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label
                     htmlFor="edit_title"

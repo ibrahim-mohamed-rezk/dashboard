@@ -42,6 +42,7 @@ import { getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
 import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 
 interface PaginationLink {
   url: string | null;
@@ -96,11 +97,14 @@ function BasicDataTable() {
   const [isUsedFilter, setIsUsedFilter] = useState<string>("");
 
   // Multi-select delete states
-  const [rowSelection, setRowSelection] = useState({});
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [selectedCode, setSelectedCode] =
     useState<SubscriptionCodeTypes | null>(null);
+  const [groupSelections, setGroupSelections] = useState<
+    Record<string, boolean>
+  >({});
 
   // Use real database ID for row identification
   const getRowId = (row: SubscriptionCodeTypes) => row.id.toString();
@@ -108,6 +112,100 @@ function BasicDataTable() {
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("تم نسخ الكود بنجاح");
+  };
+
+  // Export all codes to Excel
+  const exportAllCodes = () => {
+    try {
+      const allCodes = groups ? groups.flatMap((group) => group.items) : data;
+
+      if (!allCodes || allCodes.length === 0) {
+        toast.error("لا توجد أكواد للتصدير");
+        return;
+      }
+
+      const worksheetData = allCodes.map((code) => ({
+        الكود: code.code,
+        السعر:
+          code.price && Number(code.price) > 0 ? `${code.price} ج.م` : "مجاني",
+        المستوى: levels.find((l) => l.id === code.level_id)?.name || "-",
+        "تاريخ البداية": new Date(code.valid_from).toLocaleDateString("ar-EG"),
+        "تاريخ النهاية": new Date(code.valid_to).toLocaleDateString("ar-EG"),
+        "حالة الاستخدام": code.is_used === 1 ? "مستخدم" : "غير مستخدم",
+        الحالة: code.status === "true" ? "نشط" : "غير نشط",
+        "اسم المعلم": code.teacher_name || "-",
+        "تاريخ الإنشاء": new Date(code.created_at).toLocaleDateString("ar-EG"),
+        "تاريخ التحديث": new Date(code.updated_at).toLocaleDateString("ar-EG"),
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "جميع_الأكواد");
+      XLSX.writeFile(workbook, `all_codes_${Date.now()}.xlsx`);
+      toast.success("تم تصدير جميع الأكواد بنجاح");
+    } catch (error) {
+      console.error("Export error:", error);
+      console.error(
+        "All codes data:",
+        groups ? groups.flatMap((group) => group.items) : data
+      );
+      const errorMessage =
+        error instanceof Error ? error.message : "خطأ غير معروف";
+      toast.error(`فشل في تصدير جميع الأكواد: ${errorMessage}`);
+    }
+  };
+
+  // Export specific group codes to Excel
+  const exportGroupCodes = (group: {
+    group_key: string;
+    group_label: string;
+    items: SubscriptionCodeTypes[];
+  }) => {
+    try {
+      // Check if group has items
+      if (!group.items || group.items.length === 0) {
+        toast.error(`المجموعة ${group.group_label} فارغة`);
+        return;
+      }
+
+      // Sanitize group label for file and sheet names
+      const sanitizedGroupLabel = group.group_label
+        .replace(/[^\w\s-]/g, "") // Remove special characters except word chars, spaces, and hyphens
+        .replace(/\s+/g, "_") // Replace spaces with underscores
+        .substring(0, 31); // Excel sheet names have a 31 character limit
+
+      const worksheetData = group.items.map((code) => ({
+        الكود: code.code,
+        السعر:
+          code.price && Number(code.price) > 0 ? `${code.price} ج.م` : "مجاني",
+        المستوى: levels.find((l) => l.id === code.level_id)?.name || "-",
+        "تاريخ البداية": new Date(code.valid_from).toLocaleDateString("ar-EG"),
+        "تاريخ النهاية": new Date(code.valid_to).toLocaleDateString("ar-EG"),
+        "حالة الاستخدام": code.is_used === 1 ? "مستخدم" : "غير مستخدم",
+        الحالة: code.status === "true" ? "نشط" : "غير نشط",
+        "اسم المعلم": code.teacher_name || "-",
+        "تاريخ الإنشاء": new Date(code.created_at).toLocaleDateString("ar-EG"),
+        "تاريخ التحديث": new Date(code.updated_at).toLocaleDateString("ar-EG"),
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+
+      // Use sanitized name for sheet
+      XLSX.utils.book_append_sheet(workbook, worksheet, sanitizedGroupLabel);
+
+      // Use sanitized name for file
+      const fileName = `${sanitizedGroupLabel}_codes_${Date.now()}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+      toast.success(`تم تصدير أكواد ${group.group_label} بنجاح`);
+    } catch (error) {
+      console.error("Export error:", error);
+      console.error("Group data:", group);
+      const errorMessage =
+        error instanceof Error ? error.message : "خطأ غير معروف";
+      toast.error(`فشل في تصدير أكواد ${group.group_label}: ${errorMessage}`);
+    }
   };
 
   // Single delete function
@@ -670,6 +768,58 @@ function BasicDataTable() {
   // Get selected count
   const selectedCount = Object.keys(rowSelection).length;
 
+  // Handle group select all
+  const handleGroupSelectAll = (
+    groupKey: string,
+    groupItems: SubscriptionCodeTypes[]
+  ) => {
+    const isAllSelected = groupSelections[groupKey];
+
+    if (isAllSelected) {
+      // Deselect all items in this group
+      setRowSelection((prev) => {
+        const next = { ...prev };
+        groupItems.forEach((item) => {
+          delete next[String(item.id)];
+        });
+        return next;
+      });
+    } else {
+      // Select all items in this group
+      setRowSelection((prev) => {
+        const next = { ...prev };
+        groupItems.forEach((item) => {
+          next[String(item.id)] = true;
+        });
+        return next;
+      });
+    }
+
+    setGroupSelections((prev) => ({
+      ...prev,
+      [groupKey]: !isAllSelected,
+    }));
+  };
+
+  // Check if all items in a group are selected
+  const isGroupFullySelected = (
+    groupKey: string,
+    groupItems: SubscriptionCodeTypes[]
+  ) => {
+    return groupItems.every((item) => rowSelection[String(item.id)]);
+  };
+
+  // Check if some items in a group are selected
+  const isGroupPartiallySelected = (
+    groupKey: string,
+    groupItems: SubscriptionCodeTypes[]
+  ) => {
+    const selectedCount = groupItems.filter(
+      (item) => rowSelection[String(item.id)]
+    ).length;
+    return selectedCount > 0 && selectedCount < groupItems.length;
+  };
+
   return (
     <>
       <div className="flex items-center justify-between gap-2 px-4 mb-4">
@@ -729,6 +879,10 @@ function BasicDataTable() {
               حذف {selectedCount} عنصر
             </Button>
           )}
+
+          <Button onClick={exportAllCodes} variant="outline" className="h-10">
+            تصدير جميع الأكواد
+          </Button>
 
           <Button
             onClick={generateStudentCode}
@@ -804,6 +958,7 @@ function BasicDataTable() {
               <Input
                 type="number"
                 min="1"
+                max="1000"
                 value={codeCount as string}
                 onChange={(e) => {
                   setCodeCount(e.target.value);
@@ -952,8 +1107,43 @@ function BasicDataTable() {
               <AccordionItem key={group.group_key} value={group.group_key}>
                 <AccordionTrigger>
                   <div className="flex w-full items-center justify-between px-4">
-                    <span className="font-medium">{group.group_label}</span>
-                    <Badge variant="outline">{group.count}</Badge>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isGroupFullySelected(
+                          group.group_key,
+                          group.items
+                        )}
+                        ref={(input) => {
+                          if (input) {
+                            input.indeterminate = isGroupPartiallySelected(
+                              group.group_key,
+                              group.items
+                            );
+                          }
+                        }}
+                        onChange={() =>
+                          handleGroupSelectAll(group.group_key, group.items)
+                        }
+                        className="w-4 h-4 rounded border-gray-300"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className="font-medium">{group.group_label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportGroupCodes(group);
+                        }}
+                        className="h-8 px-3 text-xs"
+                      >
+                        تصدير المجموعة
+                      </Button>
+                      <Badge variant="outline">{group.count}</Badge>
+                    </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -980,21 +1170,36 @@ function BasicDataTable() {
                             <TableCell>
                               <input
                                 type="checkbox"
-                                checked={Boolean(
-                                  (rowSelection as any)[String(item.id)]
-                                )}
-                                onChange={() =>
-                                  setRowSelection((prev: any) => {
-                                    const next: any = { ...prev };
+                                checked={Boolean(rowSelection[String(item.id)])}
+                                onChange={() => {
+                                  setRowSelection((prev) => {
+                                    const next = { ...prev };
                                     const key = String(item.id);
                                     if (next[key]) {
                                       delete next[key];
                                     } else {
                                       next[key] = true;
                                     }
+
+                                    // Update group selection state after state change
+                                    setTimeout(() => {
+                                      const currentGroupKey = group.group_key;
+                                      const groupItems = group.items;
+                                      const isGroupFullySelected =
+                                        groupItems.every((groupItem) => {
+                                          const itemKey = String(groupItem.id);
+                                          return next[itemKey];
+                                        });
+
+                                      setGroupSelections((prev) => ({
+                                        ...prev,
+                                        [currentGroupKey]: isGroupFullySelected,
+                                      }));
+                                    }, 0);
+
                                     return next;
-                                  })
-                                }
+                                  });
+                                }}
                                 className="w-4 h-4 rounded border-gray-300"
                               />
                             </TableCell>

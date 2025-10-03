@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Title>Exam Questions Test</Title>
+  <Author>Test Data Generator</Author>
+  <Created>2024-01-01T00:00:00Z</Created>
+ </DocumentProperties>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="Header">
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000" ss:Bold="1"/>
+   <Interior ss:Color="#CCCCCC" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Questions">
+  <Table ss:ExpandedColumnCount="8" ss:ExpandedRowCount="13" x:FullColumns="1" x:FullRows="1">
+   <Column ss:AutoFitWidth="0" ss:Width="60"/>
+   <Column ss:AutoFitWidth="0" ss:Width="30"/>
+   <Column ss:AutoFitWidth="0" ss:Width="30"/>
+   <Column ss:AutoFitWidth="0" ss:Width="30"/>
+   <Column ss:AutoFitWidth="0" ss:Width="30"/>
+   <Column ss:AutoFitWidth="0" ss:Width="15"/>
+   <Column ss:AutoFitWidth="0" ss:Width="10"/>
+   <Column ss:AutoFitWidth="0" ss:Width="10"/>
+   <Row ss:AutoFitHeight="0">
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Question</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Option1</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Option2</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Option3</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Option4</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Correct Answer</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Degree</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">What is the capital of France?</Data></Cell>
+    <Cell><Data ss:Type="String">London</Data></Cell>
+    <Cell><Data ss:Type="String">Berlin</Data></Cell>
+    <Cell><Data ss:Type="String">Paris</Data></Cell>
+    <Cell><Data ss:Type="String">Madrid</Data></Cell>
+    <Cell><Data ss:Type="Number">3</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">What is 2 + 2?</Data></Cell>
+    <Cell><Data ss:Type="String">3</Data></Cell>
+    <Cell><Data ss:Type="String">4</Data></Cell>
+    <Cell><Data ss:Type="String">5</Data></Cell>
+    <Cell><Data ss:Type="String">6</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">Which planet is closest to the Sun?</Data></Cell>
+    <Cell><Data ss:Type="String">Venus</Data></Cell>
+    <Cell><Data ss:Type="String">Mercury</Data></Cell>
+    <Cell><Data ss:Type="String">Earth</Data></Cell>
+    <Cell><Data ss:Type="String">Mars</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">Who painted the Mona Lisa?</Data></Cell>
+    <Cell><Data ss:Type="String">Vincent van Gogh</Data></Cell>
+    <Cell><Data ss:Type="String">Pablo Picasso</Data></Cell>
+    <Cell><Data ss:Type="String">Leonardo da Vinci</Data></Cell>
+    <Cell><Data ss:Type="String">Michelangelo</Data></Cell>
+    <Cell><Data ss:Type="Number">3</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">What is the largest ocean?</Data></Cell>
+    <Cell><Data ss:Type="String">Atlantic</Data></Cell>
+    <Cell><Data ss:Type="String">Indian</Data></Cell>
+    <Cell><Data ss:Type="String">Arctic</Data></Cell>
+    <Cell><Data ss:Type="String">Pacific</Data></Cell>
+    <Cell><Data ss:Type="Number">4</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">What does HTML stand for?</Data></Cell>
+    <Cell><Data ss:Type="String">HyperText Markup Language</Data></Cell>
+    <Cell><Data ss:Type="String">High Tech Modern Language</Data></Cell>
+    <Cell><Data ss:Type="String">Home Tool Markup Language</Data></Cell>
+    <Cell><Data ss:Type="String">Hyperlink and Text Markup Language</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">What is the plural of 'child'?</Data></Cell>
+    <Cell><Data ss:Type="String">childs</Data></Cell>
+    <Cell><Data ss:Type="String">children</Data></Cell>
+    <Cell><Data ss:Type="String">childes</Data></Cell>
+    <Cell><Data ss:Type="String">childies</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">https://example.com/math-problem.jpg</Data></Cell>
+    <Cell><Data ss:Type="String">Answer A</Data></Cell>
+    <Cell><Data ss:Type="String">Answer B</Data></Cell>
+    <Cell><Data ss:Type="String">Answer C</Data></Cell>
+    <Cell><Data ss:Type="String">Answer D</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+    <Cell><Data ss:Type="String">image</Data></Cell>
+    <Cell><Data ss:Type="Number">3</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">Which of the following is NOT a programming language?</Data></Cell>
+    <Cell><Data ss:Type="String">Python</Data></Cell>
+    <Cell><Data ss:Type="String">Java</Data></Cell>
+    <Cell><Data ss:Type="String">HTML</Data></Cell>
+    <Cell><Data ss:Type="String">C++</Data></Cell>
+    <Cell><Data ss:Type="Number">3</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">https://example.com/diagram.png</Data></Cell>
+    <Cell><Data ss:Type="String">Option 1</Data></Cell>
+    <Cell><Data ss:Type="String">Option 2</Data></Cell>
+    <Cell><Data ss:Type="String">Option 3</Data></Cell>
+    <Cell><Data ss:Type="String">Option 4</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+    <Cell><Data ss:Type="String">image</Data></Cell>
+    <Cell><Data ss:Type="Number">2</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">If all birds can fly, and penguins are birds, then:</Data></Cell>
+    <Cell><Data ss:Type="String">Penguins can fly</Data></Cell>
+    <Cell><Data ss:Type="String">Penguins cannot fly</Data></Cell>
+    <Cell><Data ss:Type="String">Some birds cannot fly</Data></Cell>
+    <Cell><Data ss:Type="String">The statement is false</Data></Cell>
+    <Cell><Data ss:Type="Number">4</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">3</Data></Cell>
+   </Row>
+   <Row ss:AutoFitHeight="0">
+    <Cell><Data ss:Type="String">ما هي عاصمة المملكة العربية السعودية؟</Data></Cell>
+    <Cell><Data ss:Type="String">الرياض</Data></Cell>
+    <Cell><Data ss:Type="String">جدة</Data></Cell>
+    <Cell><Data ss:Type="String">الدمام</Data></Cell>
+    <Cell><Data ss:Type="String">مكة المكرمة</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+    <Cell><Data ss:Type="String">text</Data></Cell>
+    <Cell><Data ss:Type="Number">1</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+</Workbook>
