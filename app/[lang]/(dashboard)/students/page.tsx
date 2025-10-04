@@ -632,6 +632,7 @@ function BasicDataTable() {
     feachAreaData();
     feachLevelsData();
     feachGovernorData();
+    fetchTeachers();
     // feachSubjectsData();
   }, [token]);
 
@@ -673,8 +674,8 @@ function BasicDataTable() {
       setData(studentsData);
       setPagination((prev) => ({
         ...prev,
-          total: paginate.total,
-      lastPage: paginate.last_page,
+        total: paginate.total,
+        lastPage: paginate.last_page,
       }));
 
       calculateStatistics(studentsData, paginate);
@@ -696,9 +697,7 @@ function BasicDataTable() {
         setToken(response.data.token);
         const userData = JSON.parse(response.data.user);
         setUser(userData);
-        if (userData.role === "admin") {
-          fetchTeachers();
-        }
+        fetchTeachers();
       } catch (error) {
         throw error;
       }
@@ -873,47 +872,51 @@ function BasicDataTable() {
 
   // table
   const table = useReactTable({
-  data,
-  columns,
-  getCoreRowModel: getCoreRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
-  manualPagination: true,
-  pageCount: pagination.lastPage,
-  state: {
-    pagination: {
-      pageIndex: pagination.pageIndex,
-      pageSize: pagination.pageSize,
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    pageCount: pagination.lastPage,
+    state: {
+      pagination: {
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
+      },
+      rowSelection: selectedToDelete.reduce((acc, id) => {
+        const index = data.findIndex((d) => d.user?.id === Number(id));
+        if (index !== -1) acc[index] = true;
+        return acc;
+      }, {} as Record<number, boolean>),
     },
-    rowSelection: selectedToDelete.reduce((acc, id) => {
-      const index = data.findIndex((d) => d.user?.id === Number(id));
-      if (index !== -1) acc[index] = true;
-      return acc;
-    }, {} as Record<number, boolean>),
-  },
-  onPaginationChange: (updater) => {
-    const newPagination = updater instanceof Function ? updater(pagination) : updater;
-    setPagination((prev) => ({
-      ...prev,
-      pageIndex: newPagination.pageIndex,
-      pageSize: newPagination.pageSize,
-    }));
-  },
-  onRowSelectionChange: (updater) => {
-    const selection = updater instanceof Function ? updater(table.getState().rowSelection) : updater;
-  const selectedIds = Object.keys(selection)
-    .filter((key) => selection[parseInt(key)])
-    .map((key) => {
-      const userId = data[parseInt(key)]?.user?.id;
-      return userId !== undefined ? userId.toString() : undefined;
-    })
-    .filter((id): id is string => id !== undefined);
+    onPaginationChange: (updater) => {
+      const newPagination =
+        updater instanceof Function ? updater(pagination) : updater;
+      setPagination((prev) => ({
+        ...prev,
+        pageIndex: newPagination.pageIndex,
+        pageSize: newPagination.pageSize,
+      }));
+    },
+    onRowSelectionChange: (updater) => {
+      const selection =
+        updater instanceof Function
+          ? updater(table.getState().rowSelection)
+          : updater;
+      const selectedIds = Object.keys(selection)
+        .filter((key) => selection[parseInt(key)])
+        .map((key) => {
+          const userId = data[parseInt(key)]?.user?.id;
+          return userId !== undefined ? userId.toString() : undefined;
+        })
+        .filter((id): id is string => id !== undefined);
 
-  setSelectedToDelete(selectedIds);
-  },
-  enableRowSelection: true,
-});
+      setSelectedToDelete(selectedIds);
+    },
+    enableRowSelection: true,
+  });
 
   return (
     <>
