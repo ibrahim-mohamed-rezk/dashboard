@@ -68,6 +68,7 @@ interface User {
   type?: "online" | "offline" | "both" | string;
   online_courses_count?: number;
   has_offline_courses?: boolean;
+  tech_no?: string;
 }
 
 interface PaginationMeta {
@@ -598,6 +599,15 @@ function BasicDataTable() {
       header: "ID",
       cell: ({ row }) => (
         <span className="text-xs text-gray-500">{row.original.user.id}</span>
+      ),
+    },
+    {
+      accessorKey: "tech_no",
+      header: "كود المعلم",
+      cell: ({ row }) => (
+        <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+          {row.original.tech_no || "-"}
+        </span>
       ),
     },
     {
