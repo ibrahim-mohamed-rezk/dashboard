@@ -160,6 +160,44 @@ function BasicDataTable() {
     growthRate: 0,
   });
 
+  // Student-teachers data for dashboard tab
+  const [studentTeachers, setStudentTeachers] = useState<any[]>([]);
+  const [studentTeachersLoading, setStudentTeachersLoading] = useState(false);
+  const [studentTeachersError, setStudentTeachersError] = useState<
+    string | null
+  >(null);
+
+  // Student-teachers selection state
+  const [studentTeachersSelection, setStudentTeachersSelection] = useState<
+    Record<string, boolean>
+  >({});
+  const [isStudentBulkDeleteDialogOpen, setIsStudentBulkDeleteDialogOpen] =
+    useState(false);
+
+  // Add student to group modal state
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [addStudentForm, setAddStudentForm] = useState({
+    student_id: "",
+    teacher_id: "",
+    subject_id: "",
+    level_id: "",
+    group_id: "",
+  });
+
+  // Filter options for student-teachers
+  const [studentTeachersFilters, setStudentTeachersFilters] = useState({
+    teacher_id: "",
+    level_id: "",
+    subject_id: "",
+    group_search: "",
+  });
+
+  // Filter options data
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [filterLevels, setFilterLevels] = useState<any[]>([]);
+  const [filterSubjects, setFilterSubjects] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+
   // ✅ Multi-select state
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
@@ -218,6 +256,79 @@ function BasicDataTable() {
     setTab(initialTab);
     setTabReady(true); // Mark that tab is now ready
   }, [searchParams]);
+
+  // Fetch student-teachers data
+  const fetchStudentTeachers = async () => {
+    if (!token) return;
+
+    setStudentTeachersLoading(true);
+    setStudentTeachersError(null);
+
+    try {
+      const response = await getData(
+        "student-teachers",
+        { ...studentTeachersFilters },
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setStudentTeachers(response.data || response);
+    } catch (error) {
+      console.error("Error fetching student-teachers:", error);
+      setStudentTeachersError("Failed to fetch student-teachers data");
+    } finally {
+      setStudentTeachersLoading(false);
+    }
+  };
+
+  // Fetch filter options
+  const fetchFilterOptions = async () => {
+    if (!token) return;
+
+    try {
+      // Fetch teachers
+      const teachersResponse = await getData(
+        "teachers",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setTeachers(teachersResponse.data || teachersResponse);
+
+      // Fetch levels
+      const levelsResponse = await getData(
+        "levels",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setFilterLevels(levelsResponse.data || levelsResponse);
+
+      // Fetch subjects
+      const subjectsResponse = await getData(
+        "subjects",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setFilterSubjects(subjectsResponse.data || subjectsResponse);
+
+      // Fetch students
+      const studentsResponse = await getData(
+        "students",
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      setStudents(studentsResponse.data.students || studentsResponse);
+    } catch (error) {
+      console.error("Error fetching filter options:", error);
+    }
+  };
   const refetchUsers = async (page: number = 1) => {
     try {
       const response = await getData(
@@ -439,6 +550,289 @@ function BasicDataTable() {
     }
   };
 
+  // Excel import/export handlers
+  const handleExportToExcel = () => {
+    try {
+      // Create Excel content using HTML table format that Excel can open
+      const headers = [
+        "ID",
+        "Student ID",
+        "Student Name",
+        "Teacher ID",
+        "Teacher Name",
+        "Subject ID",
+        "Subject Name",
+        "Level ID",
+        "Level Name",
+        "Group ID",
+        "Group Name",
+      ];
+
+      // Create HTML table for Excel
+      const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+              xmlns:x="urn:schemas-microsoft-com:office:excel" 
+              xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta charset="utf-8">
+          <meta name="ExcelCreated" content="01/01/2024">
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Student Teachers</x:Name>
+                  <x:WorksheetOptions>
+                    <x:DefaultRowHeight>285</x:DefaultRowHeight>
+                  </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+        </head>
+        <body>
+          <table>
+            <tr>
+              ${headers.map((header) => `<td><b>${header}</b></td>`).join("")}
+            </tr>
+            ${studentTeachers
+              .map(
+                (row) => `
+              <tr>
+                <td>${row.id}</td>
+                <td>${row.student_id}</td>
+                <td>${row.student_name || ""}</td>
+                <td>${row.teacher_id}</td>
+                <td>${row.teacher_name || ""}</td>
+                <td>${row.subject_id}</td>
+                <td>${row.subject_name || ""}</td>
+                <td>${row.level_id}</td>
+                <td>${row.level_name || ""}</td>
+                <td>${row.group_id}</td>
+                <td>${row.group_name || ""}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </table>
+        </body>
+        </html>
+      `;
+
+      // Create and download file
+      const blob = new Blob([htmlContent], {
+        type: "application/vnd.ms-excel;charset=utf-8;",
+      });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `student-teachers-${new Date().toISOString().split("T")[0]}.xls`
+      );
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("تم تصدير البيانات إلى Excel بنجاح");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("فشل في تصدير البيانات");
+    }
+  };
+
+  const handleImportFromExcel = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xls,.xlsx,.csv";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        handleFileImport(file);
+      }
+    };
+    input.click();
+  };
+
+  const handleFileImport = async (file: File) => {
+    try {
+      let dataRows: string[][] = [];
+
+      // Handle different file types
+      if (file.name.endsWith(".csv")) {
+        // Parse CSV file
+        const text = await file.text();
+        const lines = text.split("\n").filter((line) => line.trim());
+
+        if (lines.length < 2) {
+          toast.error("الملف فارغ أو لا يحتوي على بيانات");
+          return;
+        }
+
+        dataRows = lines.map((line) =>
+          line.split(",").map((v) => v.trim().replace(/"/g, ""))
+        );
+      } else if (file.name.endsWith(".xls") || file.name.endsWith(".xlsx")) {
+        // For Excel files, we'll parse the HTML table format we created
+        const text = await file.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/html");
+        const table = doc.querySelector("table");
+
+        if (!table) {
+          toast.error("لا يمكن قراءة بيانات Excel من الملف");
+          return;
+        }
+
+        const rows = Array.from(table.querySelectorAll("tr"));
+        dataRows = rows.map((row) =>
+          Array.from(row.querySelectorAll("td")).map(
+            (cell) => cell.textContent || ""
+          )
+        );
+      } else {
+        toast.error("نوع الملف غير مدعوم. يرجى استخدام CSV أو XLS");
+        return;
+      }
+
+      if (dataRows.length < 2) {
+        toast.error("الملف فارغ أو لا يحتوي على بيانات");
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Process each row (skip header row)
+      for (let i = 1; i < dataRows.length; i++) {
+        const values = dataRows[i];
+
+        if (!values || values.length < 11) continue;
+
+        // Map columns to our data structure based on our export format
+        const rowData = {
+          student_id: values[1] || "", // Student ID column
+          teacher_id: values[3] || "", // Teacher ID column
+          subject_id: values[5] || "", // Subject ID column
+          level_id: values[7] || "", // Level ID column
+          group_id: values[9] || "", // Group ID column
+        };
+
+        // Validate required fields
+        if (
+          !rowData.student_id ||
+          !rowData.teacher_id ||
+          !rowData.subject_id ||
+          !rowData.level_id ||
+          !rowData.group_id
+        ) {
+          errorCount++;
+          continue;
+        }
+
+        try {
+          // Add student to group one by one
+          await postData("student-teachers", rowData, {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Error adding student to group:", error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`تم إضافة ${successCount} طالب(ين) للمجموعات بنجاح`);
+        fetchStudentTeachers(); // Refresh data
+      }
+
+      if (errorCount > 0) {
+        toast.error(`فشل في إضافة ${errorCount} طالب(ين) - تحقق من البيانات`);
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("فشل في قراءة الملف");
+    }
+  };
+
+  // Add student to group handler
+  const handleAddStudentToGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await postData("student-teachers", addStudentForm, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      });
+
+      toast.success("تم إضافة الطالب للمجموعة بنجاح");
+      setIsAddStudentModalOpen(false);
+      setAddStudentForm({
+        student_id: "",
+        teacher_id: "",
+        subject_id: "",
+        level_id: "",
+        group_id: "",
+      });
+      fetchStudentTeachers(); // Refresh data
+    } catch (error) {
+      console.error("Add student to group error:", error);
+      toast.error("فشل في إضافة الطالب للمجموعة");
+    }
+  };
+
+  const handleDeleteStudentFromGroup = async (studentTeacherId: number) => {
+    if (confirm("هل أنت متأكد من إزالة الطالب من هذه المجموعة؟")) {
+      try {
+        await deleteData(`student-teachers/${studentTeacherId}`, {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        });
+        toast.success("تم إزالة الطالب من المجموعة بنجاح");
+        fetchStudentTeachers(); // Refresh the data
+      } catch (error) {
+        console.error("Remove student from group error:", error);
+        toast.error("فشل في إزالة الطالب من المجموعة");
+      }
+    }
+  };
+
+  // Bulk remove students from groups
+  const handleBulkRemoveStudentsFromGroups = async () => {
+    const selectedStudentTeacherIds = Object.keys(studentTeachersSelection)
+      .map((rowId) => {
+        const student = studentTeachers.find((s) => String(s.id) === rowId);
+        return student ? student.id : null;
+      })
+      .filter(Boolean);
+
+    console.log("Selected student-teacher IDs:", selectedStudentTeacherIds);
+
+    try {
+      await Promise.all(
+        selectedStudentTeacherIds.map((studentTeacherId) =>
+          deleteData(`student-teachers/${studentTeacherId}`, {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          })
+        )
+      );
+      toast.success(
+        `تم إزالة ${selectedStudentTeacherIds.length} طالب(ين) من المجموعات بنجاح!`
+      );
+      setStudentTeachersSelection({}); // Clear selection
+      fetchStudentTeachers();
+    } catch (error) {
+      console.error("Bulk remove students from groups error:", error);
+      toast.error("فشل في إزالة بعض الطلاب من المجموعات");
+    } finally {
+      setIsStudentBulkDeleteDialogOpen(false);
+    }
+  };
+
   // Handle edit user click
   const handleEditUser = (user: User) => {
     setEditingUser(user);
@@ -554,6 +948,21 @@ function BasicDataTable() {
       }));
     }
   }, [totalUsers]);
+
+  // Fetch student-teachers data when dashboard tab is active
+  useEffect(() => {
+    if (activeTab === "dashboard" && token) {
+      fetchStudentTeachers();
+      fetchFilterOptions();
+    }
+  }, [activeTab, token]);
+
+  // Refetch data when filters change
+  useEffect(() => {
+    if (activeTab === "dashboard" && token) {
+      fetchStudentTeachers();
+    }
+  }, [studentTeachersFilters]);
 
   // columns of table
   const columns: ColumnDef<User>[] = [
@@ -800,6 +1209,183 @@ function BasicDataTable() {
     },
   ];
 
+  // Student-teachers table columns
+  const studentTeachersColumns: ColumnDef<any>[] = [
+    // Select Column
+    {
+      id: "select",
+      header: ({ table }) => {
+        const isAllSelected = table.getIsAllPageRowsSelected();
+        const isSomeSelected = table.getIsSomePageRowsSelected();
+
+        return (
+          <div className="flex items-center">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={() => table.toggleAllPageRowsSelected()}
+                className="w-4 h-4 text-blue-600 rounded border-gray-300"
+              />
+              {isSomeSelected && !isAllSelected && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-3 h-0.5 bg-white rounded"></div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={() => row.toggleSelected()}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+          />
+        </div>
+      ),
+    },
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500 font-mono">
+          {row.original.id}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "student_id",
+      header: "معرف الطالب",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500 font-mono">
+          {row.original.student_id || "N/A"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "student_name",
+      header: "اسم الطالب",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="rounded-full">
+            <AvatarImage
+              src={DEFAULT_IMAGE}
+              alt={row.original.student_name || "Student"}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_IMAGE;
+              }}
+            />
+            <AvatarFallback>
+              {row.original.student_name?.[0] ?? "?"}
+            </AvatarFallback>
+          </Avatar>
+          <span>{row.original.student_name || "N/A"}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "teacher_id",
+      header: "معرف المعلم",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500 font-mono">
+          {row.original.teacher_id || "N/A"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "teacher_name",
+      header: "اسم المعلم",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="rounded-full">
+            <AvatarImage
+              src={DEFAULT_IMAGE}
+              alt={row.original.teacher_name || "Teacher"}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_IMAGE;
+              }}
+            />
+            <AvatarFallback>
+              {row.original.teacher_name?.[0] ?? "?"}
+            </AvatarFallback>
+          </Avatar>
+          <span>{row.original.teacher_name || "N/A"}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "subject_id",
+      header: "معرف المادة",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500 font-mono">
+          {row.original.subject_id || "N/A"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "subject_name",
+      header: "المادة",
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.subject_name || "N/A"}</span>
+      ),
+    },
+    {
+      accessorKey: "level_id",
+      header: "معرف المرحلة",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500 font-mono">
+          {row.original.level_id || "N/A"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "level_name",
+      header: "المرحلة",
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.level_name || "N/A"}</span>
+      ),
+    },
+    {
+      accessorKey: "group_id",
+      header: "معرف المجموعة",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500 font-mono">
+          {row.original.group_id || "N/A"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "group_name",
+      header: "المجموعة",
+      cell: ({ row }) => (
+        <Badge variant="outline" className="bg-blue-100 text-blue-700">
+          {row.original.group_name || "N/A"}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "actions",
+      header: "الإجراءات",
+      cell: ({ row }) => (
+        <div className="flex gap-2 items-center justify-center">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleDeleteStudentFromGroup(row.original.id)}
+            className="text-red-600 hover:text-red-700"
+          >
+            إزالة من المجموعة
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   // ✅ Table with row selection
   const table = useReactTable({
     data,
@@ -818,6 +1404,22 @@ function BasicDataTable() {
 
   // ✅ Get selected count
   const selectedCount = Object.keys(rowSelection).length;
+
+  // Student-teachers table
+  const studentTeachersTable = useReactTable({
+    data: studentTeachers,
+    columns: studentTeachersColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      rowSelection: studentTeachersSelection,
+    },
+    onRowSelectionChange: setStudentTeachersSelection,
+    enableRowSelection: true,
+    getRowId: (row) => String(row.id),
+  });
 
   return (
     <>
@@ -923,7 +1525,7 @@ function BasicDataTable() {
               : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           }`}
         >
-          لوحة التحكم
+          طلاب المجموعة
         </button>
       </div>
 
@@ -1561,9 +2163,245 @@ function BasicDataTable() {
       )}
 
       {activeTab === "dashboard" && (
-        <div className="text-center py-10">
-          <h2 className="text-xl font-semibold">لوحة التحكم</h2>
-          <p className="text-gray-500 mt-2">محتوى لوحة التحكم قيد الإعداد.</p>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              علاقات الطلاب والمعلمين
+            </h2>
+            <div className="flex items-center gap-2">
+              {/* Student Management Buttons */}
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={handleExportToExcel}
+              >
+                <Upload className="w-4 h-4" />
+                تصدير إلى Excel
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={handleImportFromExcel}
+              >
+                <Users className="w-4 h-4" />
+                استيراد من Excel
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => setIsAddStudentModalOpen(true)}
+              >
+                <Users2 className="w-4 h-4" />
+                إضافة طالب للمجموعة
+              </Button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-2 px-4 mb-4">
+            {/* Group Search Filter */}
+            <Input
+              removeWrapper={true}
+              placeholder="بحث بالمجموعة..."
+              value={studentTeachersFilters.group_search}
+              onChange={(e) =>
+                setStudentTeachersFilters((prev) => ({
+                  ...prev,
+                  group_search: e.target.value,
+                }))
+              }
+              className="!max-w-sm min-w-[200px] h-10"
+            />
+
+            {/* Teacher Filter */}
+            <select
+              value={studentTeachersFilters.teacher_id}
+              onChange={(e) =>
+                setStudentTeachersFilters((prev) => ({
+                  ...prev,
+                  teacher_id: e.target.value,
+                }))
+              }
+              className="min-w-[150px] p-2 border rounded"
+            >
+              <option value="">كل المعلمين</option>
+              {teachers?.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.user?.full_name || teacher.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Level Filter */}
+            <select
+              value={studentTeachersFilters.level_id}
+              onChange={(e) =>
+                setStudentTeachersFilters((prev) => ({
+                  ...prev,
+                  level_id: e.target.value,
+                }))
+              }
+              className="min-w-[150px] p-2 border rounded"
+            >
+              <option value="">كل المستويات</option>
+              {filterLevels?.map((level) => (
+                <option key={level.id} value={level.id}>
+                  {level.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Subject Filter */}
+            <select
+              value={studentTeachersFilters.subject_id}
+              onChange={(e) =>
+                setStudentTeachersFilters((prev) => ({
+                  ...prev,
+                  subject_id: e.target.value,
+                }))
+              }
+              className="min-w-[150px] p-2 border rounded"
+            >
+              <option value="">كل المواد</option>
+              {filterSubjects?.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Reset Filters Button */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStudentTeachersFilters({
+                  teacher_id: "",
+                  level_id: "",
+                  subject_id: "",
+                  group_search: "",
+                });
+              }}
+              className="h-10 px-4"
+            >
+              إعادة تعيين الفلاتر
+            </Button>
+
+            {/* Bulk Remove Button */}
+            {Object.keys(studentTeachersSelection).length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setIsStudentBulkDeleteDialogOpen(true)}
+                className="h-10 px-4 text-red-600 hover:text-red-700"
+              >
+                إزالة المحدد من المجموعات (
+                {Object.keys(studentTeachersSelection).length})
+              </Button>
+            )}
+          </div>
+
+          {studentTeachersLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-500">جاري تحميل البيانات...</p>
+              </div>
+            </div>
+          ) : studentTeachersError ? (
+            <div className="text-center py-10">
+              <div className="text-red-500 mb-4">
+                <p className="text-lg font-medium">خطأ في تحميل البيانات</p>
+                <p className="text-sm">{studentTeachersError}</p>
+              </div>
+              <Button onClick={fetchStudentTeachers} variant="outline">
+                إعادة المحاولة
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="dark:bg-[#1F2937] w-full rounded-md shadow-md">
+                <TableHeader>
+                  {studentTeachersTable.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {studentTeachersTable.getRowModel().rows?.length ? (
+                    studentTeachersTable.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={studentTeachersColumns.length}
+                        className="text-center py-10"
+                      >
+                        <div className="text-gray-500">
+                          <p className="text-lg font-medium">لا توجد بيانات</p>
+                          <p className="text-sm">
+                            لم يتم العثور على علاقات طلاب ومعلمين
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination for student-teachers table */}
+              {studentTeachersTable.getPageCount() > 1 && (
+                <div className="flex items-center justify-center py-6">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => studentTeachersTable.previousPage()}
+                      disabled={!studentTeachersTable.getCanPreviousPage()}
+                      className="h-9 px-4 font-medium"
+                    >
+                      السابق
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">
+                        صفحة{" "}
+                        {studentTeachersTable.getState().pagination.pageIndex +
+                          1}{" "}
+                        من {studentTeachersTable.getPageCount()}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => studentTeachersTable.nextPage()}
+                      disabled={!studentTeachersTable.getCanNextPage()}
+                      className="h-9 px-4 font-medium"
+                    >
+                      التالي
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1592,6 +2430,178 @@ function BasicDataTable() {
                 حذف المحدد
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Student Bulk Remove Confirmation Dialog */}
+      {isStudentBulkDeleteDialogOpen && (
+        <Dialog
+          open={isStudentBulkDeleteDialogOpen}
+          onOpenChange={setIsStudentBulkDeleteDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>تأكيد الإزالة الجماعية من المجموعات</DialogTitle>
+            </DialogHeader>
+            <p>
+              هل أنت متأكد من إزالة{" "}
+              <strong>{Object.keys(studentTeachersSelection).length}</strong>{" "}
+              طالب(ين) من المجموعات؟ لا يمكن التراجع عن هذا الإجراء.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsStudentBulkDeleteDialogOpen(false)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleBulkRemoveStudentsFromGroups}
+              >
+                إزالة المحدد
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Add Student to Group Modal */}
+      {isAddStudentModalOpen && (
+        <Dialog
+          open={isAddStudentModalOpen}
+          onOpenChange={setIsAddStudentModalOpen}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>إضافة طالب للمجموعة</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddStudentToGroup}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    الطالب
+                  </label>
+                  <select
+                    value={addStudentForm.student_id}
+                    onChange={(e) =>
+                      setAddStudentForm((prev) => ({
+                        ...prev,
+                        student_id: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border rounded"
+                    required
+                  >
+                    <option value="">اختر الطالب</option>
+                    {students?.map((student) => (
+                      <option key={student.id} value={student.id}>
+                        {student.user?.full_name ||
+                          student.name ||
+                          `الطالب ${student.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    معرف المعلم
+                  </label>
+                  <select
+                    value={addStudentForm.teacher_id}
+                    onChange={(e) =>
+                      setAddStudentForm((prev) => ({
+                        ...prev,
+                        teacher_id: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border rounded"
+                    required
+                  >
+                    <option value="">اختر المعلم</option>
+                    {teachers?.map((teacher) => (
+                      <option key={teacher.id} value={teacher.id}>
+                        {teacher.user?.full_name || teacher.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    المادة
+                  </label>
+                  <select
+                    value={addStudentForm.subject_id}
+                    onChange={(e) =>
+                      setAddStudentForm((prev) => ({
+                        ...prev,
+                        subject_id: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border rounded"
+                    required
+                  >
+                    <option value="">اختر المادة</option>
+                    {filterSubjects?.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    المرحلة
+                  </label>
+                  <select
+                    value={addStudentForm.level_id}
+                    onChange={(e) =>
+                      setAddStudentForm((prev) => ({
+                        ...prev,
+                        level_id: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border rounded"
+                    required
+                  >
+                    <option value="">اختر المرحلة</option>
+                    {filterLevels?.map((level) => (
+                      <option key={level.id} value={level.id}>
+                        {level.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    معرف المجموعة
+                  </label>
+                  <input
+                    type="number"
+                    value={addStudentForm.group_id}
+                    onChange={(e) =>
+                      setAddStudentForm((prev) => ({
+                        ...prev,
+                        group_id: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddStudentModalOpen(false)}
+                >
+                  إلغاء
+                </Button>
+                <Button type="submit">إضافة</Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       )}
