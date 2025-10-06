@@ -25,7 +25,18 @@ import {
   Building2,
   Book,
   ClipboardListIcon,
-  BookOpen
+  BookOpen,
+  BarChart3,
+  Settings,
+  Globe,
+  Users,
+  GraduationCap,
+  Database,
+  FileText,
+  MapPin,
+  Layers,
+  Tag,
+  Play,
 } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -206,20 +217,93 @@ const ModuleSidebar = ({ user }: { user: User }) => {
             </Link>
           </div>
           <ScrollArea className=" pt-6 grow ">
-            {menus.map((item, i) => (
-              <div
-                key={i}
-                onClick={() => toggleSubMenu(i)}
-                className=" mb-3 last:mb-0"
-              >
-                <SingleIconMenu
-                  index={i}
-                  activeIndex={activeIndex}
-                  item={item}
-                  locationName={locationName}
-                />
+            {/* الاحصائيات Section Icon */}
+            <div
+              onClick={() => toggleSubMenu(0)}
+              className=" mb-3 last:mb-0 group relative"
+              title="الاحصائيات"
+            >
+              <SingleIconMenu
+                index={0}
+                activeIndex={activeIndex}
+                item={{
+                  title: "الاحصائيات",
+                  icon: BarChart3,
+                }}
+                locationName={locationName}
+              />
+              {/* Tooltip */}
+              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                الاحصائيات
+                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
               </div>
-            ))}
+            </div>
+
+            {/* التشغيل Section Icon */}
+            <div
+              onClick={() => toggleSubMenu(1)}
+              className=" mb-3 last:mb-0 group relative"
+              title="التشغيل"
+            >
+              <SingleIconMenu
+                index={1}
+                activeIndex={activeIndex}
+                item={{
+                  title: "التشغيل",
+                  icon: Play,
+                }}
+                locationName={locationName}
+              />
+              {/* Tooltip */}
+              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                التشغيل
+                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+              </div>
+            </div>
+
+            {/* الاون لاين Section Icon */}
+            <div
+              onClick={() => toggleSubMenu(2)}
+              className=" mb-3 last:mb-0 group relative"
+              title="الاون لاين"
+            >
+              <SingleIconMenu
+                index={2}
+                activeIndex={activeIndex}
+                item={{
+                  title: "الاون لاين",
+                  icon: Globe,
+                }}
+                locationName={locationName}
+              />
+              {/* Tooltip */}
+              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                الاون لاين
+                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+              </div>
+            </div>
+
+            {/* الاعدادات Section Icon */}
+            <div
+              onClick={() => toggleSubMenu(3)}
+              className=" mb-3 last:mb-0 group relative"
+              title="الاعدادات"
+            >
+              <SingleIconMenu
+                index={3}
+                activeIndex={activeIndex}
+                item={{
+                  title: "الاعدادات",
+                  icon: Settings,
+                }}
+                locationName={locationName}
+              />
+              {/* Tooltip */}
+              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                الاعدادات
+                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+              </div>
+            </div>
           </ScrollArea>
           <FooterMenu />
         </div>
@@ -242,62 +326,77 @@ const ModuleSidebar = ({ user }: { user: User }) => {
           <ScrollArea className="h-[calc(100%-40px)]  grow ">
             <div className="px-4 " dir="rtl">
               <ul>
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/dashboard",
-                        title: "الاحصائيات",
-                        icon: Graph,
-                      }}
-                      toggleNested={toggleNested}
-                      index={0}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/teachers",
-                        title: "المعلمين",
-                        icon: UserIcon,
-                      }}
-                      toggleNested={toggleNested}
-                      index={7}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/admins",
-                        title: "الادمن",
-                        icon: UserCircle,
-                      }}
-                      toggleNested={toggleNested}
-                      index={7}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-
-                {user.role === "admin" &&
-                  user.modules.map((item) => {
-                    if (item.access === false) return;
-                    return (
+                {/* الاحصائيات Section */}
+                {activeIndex === 0 && (
+                  <li className="mb-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-2 px-2">
+                      <BarChart3 className="w-4 h-4" />
+                      <span>الاحصائيات</span>
+                    </div>
+                    <ul className="mr-4">
                       <li className="mb-1.5 last:mb-0">
                         <MenuItem
                           childItem={{
-                            href: item.id === 5 ? "/banners" : "/blogs",
-                            title: item.id === 5 ? "البنرات" : "المقالات",
-                            icon: item.id === 5 ? ImageIcon : File,
+                            href: "/dashboard",
+                            title: "الاحصائيات",
+                            icon: Graph,
+                          }}
+                          toggleNested={toggleNested}
+                          index={0}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>
+                      {/* <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/dashboard",
+                            title: "اي داش بورد",
+                            icon: BarChart3,
+                          }}
+                          toggleNested={toggleNested}
+                          index={0}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>  */}
+                    </ul>
+                  </li>
+                )}
+
+                {/* التشغيل Section */}
+                {activeIndex === 1 && (
+                  <li className="mb-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-2 px-2">
+                      <Settings className="w-4 h-4" />
+                      <span>التشغيل</span>
+                    </div>
+                    <ul className="mr-4">
+                      {user.role === "admin" &&
+                        user.modules.map((item) => {
+                          if (item.access === false) return;
+                          return (
+                            <li className="mb-1.5 last:mb-0" key={item.id}>
+                              <MenuItem
+                                childItem={{
+                                  href: item.id === 5 ? "/banners" : "/blogs",
+                                  title: item.id === 5 ? "البنرات" : "المقالات",
+                                  icon: item.id === 5 ? ImageIcon : File,
+                                }}
+                                toggleNested={toggleNested}
+                                index={1}
+                                nestedIndex={nestedIndex}
+                                locationName={locationName}
+                              />
+                            </li>
+                          );
+                        })}
+                      <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/courses",
+                            title: "الكورسات",
+                            icon: Video,
                           }}
                           toggleNested={toggleNested}
                           index={1}
@@ -305,179 +404,218 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           locationName={locationName}
                         />
                       </li>
-                    );
-                  })}
+                      <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/banks",
+                            title: "بنوك الأسئلة",
+                            icon: Database,
+                          }}
+                          toggleNested={toggleNested}
+                          index={1}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>
+                      <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/exams",
+                            title: "الامتحانات",
+                            icon: ClipboardListIcon,
+                          }}
+                          toggleNested={toggleNested}
+                          index={1}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>
+                      <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/students",
+                            title: "الطلاب",
+                            icon: Users,
+                          }}
+                          toggleNested={toggleNested}
+                          index={1}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/codes",
+                              title: "الاكواد",
+                              icon: Code,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                    </ul>
+                  </li>
+                )}
 
-                <li className="mb-1.5 last:mb-0">
-                  <MenuItem
-                    childItem={{
-                      href: "/courses",
-                      title: "الكورسات",
-                      icon: Video,
-                    }}
-                    toggleNested={toggleNested}
-                    index={1}
-                    nestedIndex={nestedIndex}
-                    locationName={locationName}
-                  />
-                </li>
-                <li className="mb-1.5 last:mb-0">
-                  <MenuItem
-                    childItem={{
-                      href: "/books",
-                      title: "الكتب",
-                      icon: Book,
-                    }}
-                    toggleNested={toggleNested}
-                    index={1}
-                    nestedIndex={nestedIndex}
-                    locationName={locationName}
-                  />
-                </li>
-                <li className="mb-1.5 last:mb-0">
-                  <MenuItem
-                    childItem={{
-                      href: "/banks",
-                      title: "بنوك الاسئلة",
-                      icon: Building2,
-                    }}
-                    toggleNested={toggleNested}
-                    index={1}
-                    nestedIndex={nestedIndex}
-                    locationName={locationName}
-                  />
-                </li>
-                <li className="mb-1.5 last:mb-0">
-                  <MenuItem
-                    childItem={{
-                      href: "/students",
-                      title: "الطلاب",
-                      icon: UserIcon,
-                    }}
-                    toggleNested={toggleNested}
-                    index={1}
-                    nestedIndex={nestedIndex}
-                    locationName={locationName}
-                  />
-                </li>
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/codes",
-                        title: "الاكواد",
-                        icon: Code,
-                      }}
-                      toggleNested={toggleNested}
-                      index={1}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
+                {/* الاون لاين Section */}
+                {activeIndex === 2 && (
+                  <li className="mb-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-2 px-2">
+                      <Globe className="w-4 h-4" />
+                      <span>الاون لاين</span>
+                    </div>
+                    <ul className="mr-4">
+                      <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/articles",
+                            title: "المقالات",
+                            icon: FileText,
+                          }}
+                          toggleNested={toggleNested}
+                          index={1}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>
+                      <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/books",
+                            title: "الكتب",
+                            icon: Book,
+                          }}
+                          toggleNested={toggleNested}
+                          index={1}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>
+                    </ul>
                   </li>
                 )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/coupons",
-                        title: "كوبونات الخصم",
-                        icon: Percent,
-                      }}
-                      toggleNested={toggleNested}
-                      index={1}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
+
+                {/* الاعدادات Section */}
+                {activeIndex === 3 && (
+                  <li className="mb-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-2 px-2">
+                      <Settings className="w-4 h-4" />
+                      <span>الاعدادات</span>
+                    </div>
+                    <ul className="mr-4">
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/teachers",
+                              title: "المعلمين",
+                              icon: GraduationCap,
+                            }}
+                            toggleNested={toggleNested}
+                            index={7}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/admins",
+                              title: "الادمن",
+                              icon: UserCircle,
+                            }}
+                            toggleNested={toggleNested}
+                            index={7}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/places",
+                              title: "المناطق",
+                              icon: MapPin,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/levels",
+                              title: "المستويات الدراسيه",
+                              icon: Layers,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/jobs",
+                              title: "الوظائف",
+                              icon: Briefcase,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/coupons",
+                              title: "كوبونات الخصم",
+                              icon: Percent,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.role === "admin" && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/subjects",
+                              title: "المواد الدراسيه",
+                              icon: BookOpen,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                    </ul>
                   </li>
                 )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/jobs",
-                        title: "الوظائف",
-                        icon: Briefcase,
-                      }}
-                      toggleNested={toggleNested}
-                      index={1}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/places",
-                        title: "المناطق",
-                        icon: Location,
-                      }}
-                      toggleNested={toggleNested}
-                      index={1}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/purchases",
-                        title: "المشتريات",
-                        icon: Cart,
-                      }}
-                      toggleNested={toggleNested}
-                      index={1}
-                      nestedIndex={nestedIndex} 
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/levels",
-                        title: "المستوىات الدراسيه",
-                        icon: Cart,
-                      }}
-                      toggleNested={toggleNested}
-                      index={1}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-                {user.role === "admin" && (
-                  <li className="mb-1.5 last:mb-0">
-                    <MenuItem
-                      childItem={{
-                        href: "/subjects",
-                        title: "المواد الدراسيه",
-                        icon: BookOpen,
-                      }}
-                      toggleNested={toggleNested}
-                      index={1}
-                      nestedIndex={nestedIndex}
-                      locationName={locationName}
-                    />
-                  </li>
-                )}
-                <li className="mb-1.5 last:mb-0">
-                  <MenuItem
-                    childItem={{
-                      href: "/exams",
-                      title: "الامتحانات",
-                      icon: ClipboardListIcon,
-                    }}
-                    toggleNested={toggleNested}
-                    index={1}
-                    nestedIndex={nestedIndex}
-                    locationName={locationName}
-                  />
-                </li>
               </ul>
             </div>
           </ScrollArea>
