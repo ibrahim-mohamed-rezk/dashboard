@@ -107,6 +107,7 @@ type FormData = {
   levels: string;
   cover: string | File | null;
   avatar: string | File | null;
+  tech_no?: string;
 };
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/150x150";
@@ -143,6 +144,7 @@ function BasicDataTable() {
     cover: "",
     password: "",
     avatar: "",
+    tech_no: "",
   });
   const [filters, setFilters] = useState({
     subject_id: "",
@@ -214,6 +216,7 @@ function BasicDataTable() {
       cover: "",
       password: "",
       avatar: "",
+      tech_no: "",
     });
   };
   // Apply client-side filtering
@@ -420,6 +423,7 @@ function BasicDataTable() {
     avatar: z.string().url("Invalid image URL"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     subject_id: z.string().optional(),
+    tech_no: z.string().optional(),
   });
   const { register, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -866,6 +870,7 @@ function BasicDataTable() {
       password: "",
       avatar: user.user.avatar,
       subject_id: user.user.subject_id?.toString() || "",
+      tech_no: user.tech_no || "",
     });
     setShowEditModal(true);
     setEditError(null);
@@ -1743,6 +1748,16 @@ function BasicDataTable() {
                         />
                       </div>
                       <div>
+                        <label htmlFor="tech_no"> كود المعلم</label>
+                        <Input
+                          {...register("tech_no")}
+                          id="tech_no"
+                          placeholder="Enter technical number"
+                          name="tech_no"
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
                         <label htmlFor="subject_id">Subject</label>
                         <select
                           {...register("subject_id")}
@@ -1976,6 +1991,20 @@ function BasicDataTable() {
                       onChange={handleInputChange}
                       className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                       placeholder="Enter new password (leave empty to keep current)"
+                    />
+                  </div>
+                  {/* Tech No */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      كود المعلم
+                    </label>
+                    <input
+                      type="text"
+                      name="tech_no"
+                      value={formData.tech_no || ""}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="Enter technical number"
                     />
                   </div>
                   {/* Subject */}

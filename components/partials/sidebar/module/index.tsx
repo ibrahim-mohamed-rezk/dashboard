@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { cn, isLocationMatch, getDynamicPath, translate } from "@/lib/utils";
+import { cn, isLocationMatch, getDynamicPath } from "@/lib/utils";
 import { menusConfig } from "@/config/menus";
 import SingleIconMenu from "./single-icon-menu";
 import { usePathname } from "next/navigation";
@@ -7,22 +7,18 @@ import { useSidebar } from "@/store";
 import MenuItem from "./menu-item";
 import Link from "next/link";
 import FooterMenu from "./footer-menu";
-import { Cart, Graph, Location, SiteLogo } from "@/components/svg";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import MenuOverlayPortal from "./MenuOverlayPortal";
 import { User } from "@/lib/type";
 import {
   File,
-  UserIcon,
   Video,
   Image as ImageIcon,
   Code,
   UserCircle,
   Percent,
-  Bus,
   Briefcase,
-  Building2,
   Book,
   ClipboardListIcon,
   BookOpen,
@@ -35,8 +31,9 @@ import {
   FileText,
   MapPin,
   Layers,
-  Tag,
   Play,
+  ClipboardCheck,
+  ClipboardSignature,
 } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -337,9 +334,9 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <li className="mb-1.5 last:mb-0">
                         <MenuItem
                           childItem={{
-                            href: "/dashboard",
-                            title: "الاحصائيات",
-                            icon: Graph,
+                            href: "/exams/exams-statistics",
+                            title: "إحصايات الامتحانات",
+                            icon: ClipboardListIcon,
                           }}
                           toggleNested={toggleNested}
                           index={0}
@@ -347,19 +344,32 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           locationName={locationName}
                         />
                       </li>
-                      {/* <li className="mb-1.5 last:mb-0">
+                      <li className="mb-1.5 last:mb-0">
                         <MenuItem
                           childItem={{
-                            href: "/dashboard",
-                            title: "اي داش بورد",
-                            icon: BarChart3,
+                            href: "/exams/questions-statistics",
+                            title: "إحصايات اسئله الامتحانات",
+                            icon: ClipboardCheck,
                           }}
                           toggleNested={toggleNested}
                           index={0}
                           nestedIndex={nestedIndex}
                           locationName={locationName}
                         />
-                      </li>  */}
+                      </li>
+                      <li className="mb-1.5 last:mb-0">
+                        <MenuItem
+                          childItem={{
+                            href: "/exams/questions-statistics-teacher",
+                            title: "إحصايات الامتحانات للمدرس",
+                            icon: ClipboardSignature,
+                          }}
+                          toggleNested={toggleNested}
+                          index={0}
+                          nestedIndex={nestedIndex}
+                          locationName={locationName}
+                        />
+                      </li>
                     </ul>
                   </li>
                 )}
