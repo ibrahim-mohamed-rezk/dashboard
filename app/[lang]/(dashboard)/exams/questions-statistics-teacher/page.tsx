@@ -18,11 +18,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Users, TrendingUp, Target, Filter } from "lucide-react";
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Target,
+  Filter,
+  Download,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { getData } from "@/lib/axios/server";
 import axios from "axios";
 import { Label } from "@/components/ui/label";
+import * as XLSX from "xlsx";
 
 // Statistics Card Component
 const StatCard = ({
@@ -140,6 +148,66 @@ function QuestionsStatisticsTable() {
       totalCorrect,
       totalAttempts,
     });
+  };
+
+  // Export to Excel function
+  const exportToExcel = () => {
+    if (!data || data.length === 0) {
+      alert("لا توجد بيانات للتصدير");
+      return;
+    }
+
+    // Prepare data for Excel export
+    const excelData = data.map((item, index) => ({
+      "رقم التسلسل": index + 1,
+      "رقم المعلم": item.teacher_id,
+      "اسم المعلم": item.teacher,
+      "رقم الامتحان": item.exam_id,
+      "عنوان الامتحان": item.exam || "بدون عنوان",
+      "نوع الامتحان": item.type || "-",
+      المرحلة: item.level,
+      "رقم السؤال": item.question_id,
+      السؤال: item.question || "بدون نص",
+      "عدد المحاولات": item.attempts,
+      "الإجابات الصحيحة": item.correct,
+      "الإجابات الخاطئة": item.wrong,
+      "النسبة المئوية": `${item.percentage.toFixed(2)}%`,
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    const colWidths = [
+      { wch: 12 }, // رقم التسلسل
+      { wch: 12 }, // رقم المعلم
+      { wch: 20 }, // اسم المعلم
+      { wch: 12 }, // رقم الامتحان
+      { wch: 30 }, // عنوان الامتحان
+      { wch: 15 }, // نوع الامتحان
+      { wch: 15 }, // المرحلة
+      { wch: 12 }, // رقم السؤال
+      { wch: 50 }, // السؤال
+      { wch: 15 }, // عدد المحاولات
+      { wch: 18 }, // الإجابات الصحيحة
+      { wch: 18 }, // الإجابات الخاطئة
+      { wch: 15 }, // النسبة المئوية
+    ];
+    ws["!cols"] = colWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "إحصائيات الأسئلة للمعلمين");
+
+    // Generate filename with current date
+    const currentDate = new Date().toLocaleDateString("ar-SA");
+    const filename = `إحصائيات_الأسئلة_للمعلمين_${currentDate.replace(
+      /\//g,
+      "-"
+    )}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
   };
 
   // Fetch filter options
@@ -489,6 +557,17 @@ function QuestionsStatisticsTable() {
               ))}
             </select>
           </div>
+
+          {/* Export to Excel Button */}
+          <Button
+            variant="outline"
+            onClick={exportToExcel}
+            disabled={loading || !data || data.length === 0}
+            className="h-10 px-4 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            تصدير إلى Excel
+          </Button>
 
           {/* Reset Filters Button */}
           <Button

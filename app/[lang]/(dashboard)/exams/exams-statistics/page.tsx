@@ -18,11 +18,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Users, TrendingUp, Target, Filter } from "lucide-react";
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Target,
+  Filter,
+  Download,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { getData } from "@/lib/axios/server";
 import axios from "axios";
 import { Label } from "@/components/ui/label";
+import * as XLSX from "xlsx";
 
 // Statistics Card Component
 const StatCard = ({
@@ -115,6 +123,9 @@ function ExamStatisticsTable() {
     totalAttempts: 0,
   });
 
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+
   // Calculate statistics from data
   const calculateStatistics = (examData: ExamResult[]) => {
     const uniqueExams = new Set(examData.map((item) => item.exam_id)).size;
@@ -133,6 +144,62 @@ function ExamStatisticsTable() {
       averagePercentage: Math.round(averagePercentage * 100) / 100,
       totalAttempts,
     });
+  };
+
+  // Export to Excel function
+  const exportToExcel = async () => {
+    if (!data.length) {
+      alert("لا توجد بيانات للتصدير");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Prepare data for export
+      const exportData = data.map((item) => ({
+        "رقم الامتحان": item.exam_id,
+        "عنوان الامتحان": item.title || "بدون عنوان",
+        "نوع الامتحان": item.type || "-",
+        "رقم الطالب": item.student_id,
+        "اسم الطالب": item.student,
+        المرحلة: item.level,
+        المجموعة: item.group || "بدون مجموعة",
+        "الإجابات الصحيحة": item.correct,
+        "الإجابات الخاطئة": item.wrong,
+        "إجمالي الأسئلة": item.total,
+        "النسبة المئوية": `${item.percentage.toFixed(2)}%`,
+      }));
+
+      // Create workbook and worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "نتائج الامتحانات");
+
+      // Add statistics sheet
+      const statsData = [
+        { الإحصائية: "إجمالي الامتحانات", القيمة: statistics.totalExams },
+        { الإحصائية: "إجمالي الطلاب", القيمة: statistics.totalStudents },
+        {
+          الإحصائية: "متوسط النسبة المئوية",
+          القيمة: `${statistics.averagePercentage}%`,
+        },
+        { الإحصائية: "إجمالي المحاولات", القيمة: statistics.totalAttempts },
+      ];
+      const statsWs = XLSX.utils.json_to_sheet(statsData);
+      XLSX.utils.book_append_sheet(wb, statsWs, "الإحصائيات");
+
+      // Generate filename with current date
+      const currentDate = new Date().toLocaleDateString("ar-SA");
+      const filename = `نتائج_الامتحانات_${currentDate}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      alert("حدث خطأ أثناء تصدير الملف");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Fetch students and exams for filter options
@@ -254,7 +321,9 @@ function ExamStatisticsTable() {
       accessorKey: "type",
       header: "نوع الامتحان",
       cell: ({ row }) => (
-        <span className="capitalize">{row.original.type? row.original.type : "-"}</span>
+        <span className="capitalize">
+          {row.original.type ? row.original.type : "-"}
+        </span>
       ),
     },
     {
@@ -453,6 +522,25 @@ function ExamStatisticsTable() {
           >
             <Filter className="w-4 h-4 mr-2" />
             إعادة تعيين الفلاتر
+          </Button>
+
+          {/* Export to Excel Button */}
+          <Button
+            onClick={exportToExcel}
+            disabled={isExporting || !data.length}
+            className="h-10 px-4 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isExporting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                جاري التصدير...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                تصدير Excel
+              </>
+            )}
           </Button>
         </div>
       </div>

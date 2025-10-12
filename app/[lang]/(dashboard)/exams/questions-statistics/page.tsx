@@ -18,11 +18,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Users, TrendingUp, Target, Filter } from "lucide-react";
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Target,
+  Filter,
+  Download,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { getData } from "@/lib/axios/server";
 import axios from "axios";
 import { Label } from "@/components/ui/label";
+import * as XLSX from "xlsx";
 
 // Statistics Card Component
 const StatCard = ({
@@ -119,10 +127,15 @@ function QuestionsStatisticsTable() {
 
   // Calculate statistics from data
   const calculateStatistics = (questionData: QuestionResult[]) => {
-    const uniqueQuestions = new Set(questionData.map((item) => item.question_id)).size;
-    const uniqueStudents = new Set(questionData.map((item) => item.student_id)).size;
+    const uniqueQuestions = new Set(
+      questionData.map((item) => item.question_id)
+    ).size;
+    const uniqueStudents = new Set(questionData.map((item) => item.student_id))
+      .size;
     const totalAttempts = questionData.length;
-    const correctAnswers = questionData.filter((item) => item.is_correct).length;
+    const correctAnswers = questionData.filter(
+      (item) => item.is_correct
+    ).length;
 
     setStatistics({
       totalQuestions: uniqueQuestions,
@@ -130,6 +143,63 @@ function QuestionsStatisticsTable() {
       correctAnswers,
       totalAttempts,
     });
+  };
+
+  // Export to Excel function
+  const exportToExcel = () => {
+    if (!data || data.length === 0) {
+      alert("لا توجد بيانات للتصدير");
+      return;
+    }
+
+    // Prepare data for Excel export
+    const excelData = data.map((item) => ({
+      "رقم الامتحان": item.exam_id,
+      "عنوان الامتحان": item.exam || "بدون عنوان",
+      "نوع الامتحان": item.type || "-",
+      "رقم الطالب": item.student_id,
+      "اسم الطالب": item.student,
+      المرحلة: item.level,
+      المجموعة: item.group || "بدون مجموعة",
+      "رقم السؤال": item.question_id,
+      السؤال: item.question || "بدون نص",
+      صحيح: item.is_correct ? "نعم" : "لا",
+      "الإجابة الصحيحة": item.correct_answer || "غير محدد",
+      "آخر إجابة": item.last_answer,
+      "عدد المحاولات": item.attempts,
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    const colWidths = [
+      { wch: 12 }, // رقم الامتحان
+      { wch: 25 }, // عنوان الامتحان
+      { wch: 15 }, // نوع الامتحان
+      { wch: 12 }, // رقم الطالب
+      { wch: 20 }, // اسم الطالب
+      { wch: 15 }, // المرحلة
+      { wch: 15 }, // المجموعة
+      { wch: 12 }, // رقم السؤال
+      { wch: 40 }, // السؤال
+      { wch: 8 }, // صحيح
+      { wch: 20 }, // الإجابة الصحيحة
+      { wch: 12 }, // آخر إجابة
+      { wch: 15 }, // عدد المحاولات
+    ];
+    ws["!cols"] = colWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "إحصائيات الأسئلة");
+
+    // Generate filename with current date
+    const currentDate = new Date().toLocaleDateString("ar-SA");
+    const filename = `إحصائيات_الأسئلة_${currentDate.replace(/\//g, "-")}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
   };
 
   // Fetch students and exams for filter options
@@ -251,7 +321,9 @@ function QuestionsStatisticsTable() {
       accessorKey: "type",
       header: "نوع الامتحان",
       cell: ({ row }) => (
-        <span className="capitalize">{row.original.type? row.original.type : "-"}</span>
+        <span className="capitalize">
+          {row.original.type ? row.original.type : "-"}
+        </span>
       ),
     },
     {
@@ -304,9 +376,13 @@ function QuestionsStatisticsTable() {
       accessorKey: "is_correct",
       header: "صحيح",
       cell: ({ row }) => (
-        <Badge 
-          variant="soft" 
-          className={row.original.is_correct ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}
+        <Badge
+          variant="soft"
+          className={
+            row.original.is_correct
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }
         >
           {row.original.is_correct ? "نعم" : "لا"}
         </Badge>
@@ -448,6 +524,17 @@ function QuestionsStatisticsTable() {
             </select>
           </div>
 
+          {/* Export to Excel Button */}
+          <Button
+            variant="outline"
+            onClick={exportToExcel}
+            disabled={loading || data.length === 0}
+            className="h-10 px-4 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            تصدير إلى Excel
+          </Button>
+
           {/* Reset Filters Button */}
           <Button
             variant="outline"
@@ -537,9 +624,7 @@ function QuestionsStatisticsTable() {
                 >
                   <div className="text-gray-500">
                     <p className="font-medium">لا توجد نتائج</p>
-                    <p className="text-sm">
-                      لم يتم العثور على أي نتائج أسئلة
-                    </p>
+                    <p className="text-sm">لم يتم العثور على أي نتائج أسئلة</p>
                   </div>
                 </TableCell>
               </TableRow>
