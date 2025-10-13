@@ -29,6 +29,8 @@ import {
   Edit,
   X,
   Trash2,
+  FileSpreadsheet,
+  Download,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData } from "@/lib/axios/server";
@@ -38,7 +40,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import DatePickerWithRange from "@/components/date-picker-with-range";
 // === NEW ===
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
+import * as XLSX from "xlsx";
 
 // Helper to check if a string is a valid image URL
 function isImageUrl(url: string | undefined | null): boolean {
@@ -462,6 +465,59 @@ const StudentUpdateModal = ({
   );
 };
 
+const exportToExcel = (
+  data: StudentTypes[],
+  filename: string = "students.xlsx"
+) => {
+  if (!data || data.length === 0) {
+    toast.error("لا توجد بيانات للتصدير");
+    return;
+  }
+
+  // Prepare data for Excel export
+  const excelData = data.map((student) => ({
+    "الاسم الكامل": student.user?.full_name || "",
+    "كود الطالب": student.stu_no || "",
+    "اسم المدرسة": student.school_name || "",
+    "هاتف الأب": student.father_phone || "",
+    الحالة: student.status || "",
+    "البريد الإلكتروني": student.user?.email || "",
+    الهاتف: student.user?.phone || "",
+    المحافظة: student.governorate_id || "",
+    المنطقة: student.area_id || "",
+    المرحلة: student.level_id || "",
+  }));
+
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(excelData);
+
+  // Set column widths
+  const colWidths = [
+    { wch: 20 }, // الاسم الكامل
+    { wch: 15 }, // كود الطالب
+    { wch: 25 }, // اسم المدرسة
+    { wch: 15 }, // هاتف الأب
+    { wch: 10 }, // الحالة
+    { wch: 25 }, // البريد الإلكتروني
+    { wch: 15 }, // الهاتف
+    { wch: 12 }, // المحافظة
+    { wch: 12 }, // المنطقة
+    { wch: 12 }, // المرحلة
+  ];
+  ws["!cols"] = colWidths;
+
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(wb, ws, "الطلاب");
+
+  // Generate filename with current date
+  const currentDate = new Date().toISOString().split("T")[0];
+  const finalFilename = `students_${currentDate}.xlsx`;
+
+  // Save file
+  XLSX.writeFile(wb, finalFilename);
+};
+
 // === NEW === Delete Confirmation Modal with Toast
 const DeleteConfirmationModal = ({
   isOpen,
@@ -549,6 +605,8 @@ function BasicDataTable() {
   const [selectedToDelete, setSelectedToDelete] = useState<string[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // === NEW === Export
+  const [isExporting, setIsExporting] = useState(false);
 
   // Calculate statistics
   const calculateStatistics = (studentsData: StudentTypes[], paginate: any) => {
@@ -742,6 +800,48 @@ function BasicDataTable() {
       toast.error("تعذر حذف بعض الطلاب. يرجى المحاولة لاحقًا.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // === NEW === Export handlers
+  const fetchAllStudentsForExport = async () => {
+    try {
+      const response = await getData(
+        "students",
+        {
+          per_page: 1000000, // Get all students
+          ...filters,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      return response.data.students;
+    } catch (error) {
+      console.error("Failed to fetch students for export:", error);
+      toast.error("فشل في جلب بيانات الطلاب للتصدير");
+      return [];
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const allStudents = await fetchAllStudentsForExport();
+      if (allStudents.length > 0) {
+        exportToExcel(
+          allStudents,
+          `students_${new Date().toISOString().split("T")[0]}.xlsx`
+        );
+        toast.success("تم تصدير البيانات بنجاح");
+      } else {
+        toast.error("لا توجد بيانات للتصدير");
+      }
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("فشل في تصدير البيانات");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1146,6 +1246,20 @@ function BasicDataTable() {
             }}
             className="max-w-sm min-w-[200px] h-10"
           />
+
+          {/* === NEW === Export Button */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className="flex items-center gap-1"
+            >
+              <Download className="w-4 h-4" />
+              {isExporting ? "جاري التصدير..." : "تصدير Excel"}
+            </Button>
+          </div>
 
           {/* === NEW === Delete Button */}
           {selectedToDelete.length > 0 && (

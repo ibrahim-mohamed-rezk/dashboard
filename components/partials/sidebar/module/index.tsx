@@ -382,25 +382,6 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>التشغيل</span>
                     </div>
                     <ul className="mr-4">
-                      {user.role === "admin" &&
-                        user.modules.map((item) => {
-                          if (item.access === false) return;
-                          return (
-                            <li className="mb-1.5 last:mb-0" key={item.id}>
-                              <MenuItem
-                                childItem={{
-                                  href: item.id === 5 ? "/banners" : "/blogs",
-                                  title: item.id === 5 ? "البنرات" : "المقالات",
-                                  icon: item.id === 5 ? ImageIcon : File,
-                                }}
-                                toggleNested={toggleNested}
-                                index={1}
-                                nestedIndex={nestedIndex}
-                                locationName={locationName}
-                              />
-                            </li>
-                          );
-                        })}
                       <li className="mb-1.5 last:mb-0">
                         <MenuItem
                           childItem={{
@@ -480,19 +461,25 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاون لاين</span>
                     </div>
                     <ul className="mr-4">
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/articles",
-                            title: "المقالات",
-                            icon: FileText,
-                          }}
-                          toggleNested={toggleNested}
-                          index={1}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
+                      {user.role === "admin" &&
+                        user.modules.map((item) => {
+                          if (item.access === false) return;
+                          return (
+                            <li className="mb-1.5 last:mb-0" key={item.id}>
+                              <MenuItem
+                                childItem={{
+                                  href: item.id === 5 ? "/banners" : "/blogs",
+                                  title: item.id === 5 ? "البنرات" : "المقالات",
+                                  icon: item.id === 5 ? ImageIcon : File,
+                                }}
+                                toggleNested={toggleNested}
+                                index={1}
+                                nestedIndex={nestedIndex}
+                                locationName={locationName}
+                              />
+                            </li>
+                          );
+                        })}
                       <li className="mb-1.5 last:mb-0">
                         <MenuItem
                           childItem={{
