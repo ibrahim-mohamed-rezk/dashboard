@@ -31,14 +31,8 @@ import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
 
 interface PaginationLink {
   url: string | null;
@@ -68,6 +62,7 @@ interface CouponPayload {
 }
 
 function BasicDataTable() {
+  const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Coupon[]>([]);
   const [token, setToken] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -280,6 +275,8 @@ function BasicDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         throw error;
       }
@@ -470,6 +467,11 @@ function BasicDataTable() {
 
   // Get selected count
   const selectedCount = Object.keys(rowSelection).length;
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Coupons" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>

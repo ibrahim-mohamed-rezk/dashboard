@@ -31,6 +31,8 @@ import { getData } from "@/lib/axios/server";
 import axios from "axios";
 import { Label } from "@/components/ui/label";
 import * as XLSX from "xlsx";
+import { User } from "@/lib/type";
+import useAuthrization from "@/hooks/useAuthrization";
 
 // Statistics Card Component
 const StatCard = ({
@@ -95,6 +97,7 @@ interface TeacherQuestionResult {
 function QuestionsStatisticsTable() {
   const [data, setData] = useState<TeacherQuestionResult[]>([]);
   const [token, setToken] = useState("");
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -300,6 +303,8 @@ function QuestionsStatisticsTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         console.error("Failed to get token:", error);
       }
@@ -457,6 +462,11 @@ function QuestionsStatisticsTable() {
       }));
     },
   });
+
+    const isAuthrized = useAuthrization({ user: user as User, module: "QuestionsStatisticsTeacher" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <div className="space-y-6">

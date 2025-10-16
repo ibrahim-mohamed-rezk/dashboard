@@ -71,6 +71,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
       }
     }
   };
+
   // for second level  menu
   const toggleNested = (subIndex: number) => {
     if (nestedIndex === subIndex) {
@@ -215,92 +216,133 @@ const ModuleSidebar = ({ user }: { user: User }) => {
           </div>
           <ScrollArea className=" pt-6 grow ">
             {/* الاحصائيات Section Icon */}
-            <div
-              onClick={() => toggleSubMenu(0)}
-              className=" mb-3 last:mb-0 group relative"
-              title="الاحصائيات"
-            >
-              <SingleIconMenu
-                index={0}
-                activeIndex={activeIndex}
-                item={{
-                  title: "الاحصائيات",
-                  icon: BarChart3,
-                }}
-                locationName={locationName}
-              />
-              {/* Tooltip */}
-              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                الاحصائيات
-                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+            {user.modules.some((item) => {
+              return (
+                item.access === true &&
+                (item.name === "ExamsStatistics" ||
+                  item.name === "QuestionsStatistics" ||
+                  item.name === "QuestionsStatisticsTeacher")
+              );
+            }) && (
+              <div
+                onClick={() => toggleSubMenu(0)}
+                className=" mb-3 last:mb-0 group relative"
+                title="الاحصائيات"
+              >
+                <SingleIconMenu
+                  index={0}
+                  activeIndex={activeIndex}
+                  item={{
+                    title: "الاحصائيات",
+                    icon: BarChart3,
+                  }}
+                  locationName={locationName}
+                />
+                {/* Tooltip */}
+                <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  الاحصائيات
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* التشغيل Section Icon */}
-            <div
-              onClick={() => toggleSubMenu(1)}
-              className=" mb-3 last:mb-0 group relative"
-              title="التشغيل"
-            >
-              <SingleIconMenu
-                index={1}
-                activeIndex={activeIndex}
-                item={{
-                  title: "التشغيل",
-                  icon: Play,
-                }}
-                locationName={locationName}
-              />
-              {/* Tooltip */}
-              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                التشغيل
-                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+            {user.modules.some((item) => {
+              return (
+                item.access === true &&
+                (item.name === "courses" ||
+                  item.name === "Banks" ||
+                  item.name === "Students" ||
+                  item.name === "Codes")
+              );
+            }) && (
+              <div
+                onClick={() => toggleSubMenu(1)}
+                className=" mb-3 last:mb-0 group relative"
+                title="التشغيل"
+              >
+                <SingleIconMenu
+                  index={1}
+                  activeIndex={activeIndex}
+                  item={{
+                    title: "التشغيل",
+                    icon: Play,
+                  }}
+                  locationName={locationName}
+                />
+                {/* Tooltip */}
+                <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  التشغيل
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* الاون لاين Section Icon */}
-            <div
-              onClick={() => toggleSubMenu(2)}
-              className=" mb-3 last:mb-0 group relative"
-              title="الاون لاين"
-            >
-              <SingleIconMenu
-                index={2}
-                activeIndex={activeIndex}
-                item={{
-                  title: "الاون لاين",
-                  icon: Globe,
-                }}
-                locationName={locationName}
-              />
-              {/* Tooltip */}
-              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                الاون لاين
-                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+            {user.modules.some((item) => {
+              return (
+                item.access === true &&
+                (item.name === "Banners" ||
+                  item.name === "Blogs" ||
+                  item.name === "Books")
+              );
+            }) && (
+              <div
+                onClick={() => toggleSubMenu(2)}
+                className=" mb-3 last:mb-0 group relative"
+                title="الاون لاين"
+              >
+                <SingleIconMenu
+                  index={2}
+                  activeIndex={activeIndex}
+                  item={{
+                    title: "الاون لاين",
+                    icon: Globe,
+                  }}
+                  locationName={locationName}
+                />
+                {/* Tooltip */}
+                <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  الاون لاين
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* الاعدادات Section Icon */}
-            <div
-              onClick={() => toggleSubMenu(3)}
-              className=" mb-3 last:mb-0 group relative"
-              title="الاعدادات"
-            >
-              <SingleIconMenu
-                index={3}
-                activeIndex={activeIndex}
-                item={{
-                  title: "الاعدادات",
-                  icon: Settings,
-                }}
-                locationName={locationName}
-              />
-              {/* Tooltip */}
-              <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                الاعدادات
-                <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+            {user.modules.some((item) => {
+              return (
+                item.access === true &&
+                (item.name === "Teachers" ||
+                  item.name === "Admins" ||
+                  item.name === "Places" ||
+                  item.name === "Levels" ||
+                  item.name === "Jobs" ||
+                  item.name === "Coupons" ||
+                  item.name === "Subjects")
+              );
+            }) && (
+              <div
+                onClick={() => toggleSubMenu(3)}
+                className=" mb-3 last:mb-0 group relative"
+                title="الاعدادات"
+              >
+                <SingleIconMenu
+                  index={3}
+                  activeIndex={activeIndex}
+                  item={{
+                    title: "الاعدادات",
+                    icon: Settings,
+                  }}
+                  locationName={locationName}
+                />
+                {/* Tooltip */}
+                <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  الاعدادات
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+                </div>
               </div>
-            </div>
+            )}
           </ScrollArea>
           <FooterMenu />
         </div>
@@ -331,45 +373,68 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاحصائيات</span>
                     </div>
                     <ul className="mr-4">
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/exams/exams-statistics",
-                            title: "إحصايات الامتحانات",
-                            icon: ClipboardListIcon,
-                          }}
-                          toggleNested={toggleNested}
-                          index={0}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/exams/questions-statistics",
-                            title: "إحصايات اسئله الامتحانات",
-                            icon: ClipboardCheck,
-                          }}
-                          toggleNested={toggleNested}
-                          index={0}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/exams/questions-statistics-teacher",
-                            title: "إحصايات الامتحانات للمدرس",
-                            icon: ClipboardSignature,
-                          }}
-                          toggleNested={toggleNested}
-                          index={0}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
+                      {user.modules.some((item) => {
+                        return (
+                          item.access === true &&
+                          item.name === "ExamsStatistics"
+                        );
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/exams/exams-statistics",
+                              title: "إحصايات الامتحانات",
+                              icon: ClipboardListIcon,
+                            }}
+                            toggleNested={toggleNested}
+                            index={0}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      
+                      {user.modules.some((item) => {
+                        return (
+                          item.access === true &&
+                          item.name === "QuestionsStatistics"
+                        );
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/exams/questions-statistics",
+                              title: "إحصايات اسئله الامتحانات",
+                              icon: ClipboardCheck,
+                            }}
+                            toggleNested={toggleNested}
+                            index={0}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      
+                      {user.modules.some((item) => {
+                        return (
+                          item.access === true &&
+                          item.name === "QuestionsStatisticsTeacher"
+                        );
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/exams/questions-statistics-teacher",
+                              title: "إحصايات الامتحانات للمدرس",
+                              icon: ClipboardSignature,
+                            }}
+                            toggleNested={toggleNested}
+                            index={0}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
                     </ul>
                   </li>
                 )}
@@ -382,59 +447,60 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>التشغيل</span>
                     </div>
                     <ul className="mr-4">
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/courses",
-                            title: "الكورسات",
-                            icon: Video,
-                          }}
-                          toggleNested={toggleNested}
-                          index={1}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/banks",
-                            title: "بنوك الأسئلة",
-                            icon: Database,
-                          }}
-                          toggleNested={toggleNested}
-                          index={1}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/exams",
-                            title: "الامتحانات",
-                            icon: ClipboardListIcon,
-                          }}
-                          toggleNested={toggleNested}
-                          index={1}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/students",
-                            title: "الطلاب",
-                            icon: Users,
-                          }}
-                          toggleNested={toggleNested}
-                          index={1}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
-                      {user.role === "admin" && (
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "courses";
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/Courses",
+                              title: "الكورسات",
+                              icon: Video,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Banks";
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/banks",
+                              title: "بنوك الأسئلة",
+                              icon: Database,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Students";
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/students",
+                              title: "الطلاب",
+                              icon: Users,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Codes";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
@@ -461,38 +527,59 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاون لاين</span>
                     </div>
                     <ul className="mr-4">
-                      {user.role === "admin" &&
-                        user.modules.map((item) => {
-                          if (item.access === false) return;
-                          return (
-                            <li className="mb-1.5 last:mb-0" key={item.id}>
-                              <MenuItem
-                                childItem={{
-                                  href: item.id === 5 ? "/banners" : "/blogs",
-                                  title: item.id === 5 ? "البنرات" : "المقالات",
-                                  icon: item.id === 5 ? ImageIcon : File,
-                                }}
-                                toggleNested={toggleNested}
-                                index={1}
-                                nestedIndex={nestedIndex}
-                                locationName={locationName}
-                              />
-                            </li>
-                          );
-                        })}
-                      <li className="mb-1.5 last:mb-0">
-                        <MenuItem
-                          childItem={{
-                            href: "/books",
-                            title: "الكتب",
-                            icon: Book,
-                          }}
-                          toggleNested={toggleNested}
-                          index={1}
-                          nestedIndex={nestedIndex}
-                          locationName={locationName}
-                        />
-                      </li>
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Blogs";
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/blogs",
+                              title: "المقالات",
+                              icon: File,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Banners";
+                      }) && (
+                        <li>
+                          <MenuItem
+                            childItem={{
+                              href: "/banners",
+                              title: "البنرات",
+                              icon: ImageIcon,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Books";
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/books",
+                              title: "الكتب",
+                              icon: Book,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
                     </ul>
                   </li>
                 )}
@@ -505,7 +592,9 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاعدادات</span>
                     </div>
                     <ul className="mr-4">
-                      {user.role === "admin" && (
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Teachers";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
@@ -520,7 +609,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.role === "admin" && (
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Admins";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
@@ -535,7 +627,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.role === "admin" && (
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Places";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
@@ -550,7 +645,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.role === "admin" && (
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Levels";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
@@ -565,7 +663,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.role === "admin" && (
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Jobs";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
@@ -580,7 +681,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.role === "admin" && (
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Coupons";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
@@ -595,7 +699,10 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.role === "admin" && (
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "Subjects";
+                      }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{

@@ -33,6 +33,8 @@ import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
 
 interface Subject {
   id: number;
@@ -76,6 +78,7 @@ type FormData = {
 function SubjectsDataTable() {
   const [data, setData] = useState<Subject[]>([]);
   const [token, setToken] = useState("");
+  const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
@@ -113,6 +116,8 @@ function SubjectsDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         throw error;
       }
@@ -382,6 +387,11 @@ function SubjectsDataTable() {
       // Not used, we handle pagination via refetchSubjects
     },
   });
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Subjects" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>

@@ -33,6 +33,8 @@ import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
 
 interface Level {
   id: number;
@@ -69,6 +71,7 @@ type FormData = {
 
 function LevelsDataTable() {
   const [data, setData] = useState<Level[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -107,6 +110,8 @@ function LevelsDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         throw error;
       }
@@ -364,6 +369,11 @@ function LevelsDataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     enableRowSelection: true, // Enable multi-select
   });
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Levels" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>

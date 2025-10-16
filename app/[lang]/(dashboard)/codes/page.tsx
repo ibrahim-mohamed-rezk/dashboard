@@ -43,6 +43,7 @@ import axios, { AxiosHeaders } from "axios";
 import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
+import useAuthrization from "@/hooks/useAuthrization";
 
 interface PaginationLink {
   url: string | null;
@@ -200,7 +201,7 @@ function BasicDataTable() {
 
       toast.success(`تم تصدير أكواد ${group.group_label} بنجاح`);
     } catch (error) {
-      console.error("Export error:", error);
+      console.error("Export error:", error); 
       console.error("Group data:", group);
       const errorMessage =
         error instanceof Error ? error.message : "خطأ غير معروف";
@@ -819,6 +820,11 @@ function BasicDataTable() {
     ).length;
     return selectedCount > 0 && selectedCount < groupItems.length;
   };
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Codes" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>

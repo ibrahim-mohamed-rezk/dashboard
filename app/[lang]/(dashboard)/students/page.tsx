@@ -42,6 +42,7 @@ import DatePickerWithRange from "@/components/date-picker-with-range";
 // === NEW ===
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
+import useAuthrization from "@/hooks/useAuthrization";
 
 // Helper to check if a string is a valid image URL
 function isImageUrl(url: string | undefined | null): boolean {
@@ -1017,6 +1018,11 @@ function BasicDataTable() {
     },
     enableRowSelection: true,
   });
+  const isAuthrized = useAuthrization({ user: user as User, module: "Students" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
+  
 
   return (
     <>

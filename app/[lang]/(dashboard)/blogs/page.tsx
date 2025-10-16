@@ -17,6 +17,8 @@ import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
 import { Upload, X } from "lucide-react";
 import { Editor } from "@tinymce/tinymce-react";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
 
 interface Blog {
   id: number;
@@ -313,6 +315,7 @@ function BlogTable() {
   const [data, setData] = useState<Blog[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [token, setToken] = useState<string>("");
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
@@ -711,6 +714,8 @@ const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         toast.error("Failed to get authentication token");
       }
@@ -743,6 +748,11 @@ const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Blogs" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <div className="w-full p-4">

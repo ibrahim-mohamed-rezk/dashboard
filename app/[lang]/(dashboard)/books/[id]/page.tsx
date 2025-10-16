@@ -8,6 +8,10 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
+import toast from "react-hot-toast";
+import { getData } from "@/lib/axios/server";
 
 interface Book {
   id: number;
@@ -29,27 +33,35 @@ const BookDetailsPage = () => {
   const { id } = useParams();
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string>("");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("/api/auth/getToken");
+        setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
+      } catch (error) {
+        throw error;
+      }
+    };
+    fetchData();
+  }, []);
 
   const fetchBook = async () => {
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        alert("الرجاء تسجيل الدخول أولاً");
-        return;
-      }
-
-      const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_ENDPOINT}/books/${id}`,
+      const res = await getData(
+        `books/${id}`,
+        {},
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          Authorization: `Bearer ${token}`,
         }
       );
-      setBook(res.data.data);
+      setBook(res.data);
     } catch (err) {
       console.error("Error fetching book:", err);
-      alert("حدث خطأ أثناء جلب بيانات الكتاب");
     } finally {
       setLoading(false);
     }
@@ -57,7 +69,7 @@ const BookDetailsPage = () => {
 
   useEffect(() => {
     fetchBook();
-  }, [id]);
+  }, [token]);
 
   if (loading) {
     return (
@@ -73,6 +85,11 @@ const BookDetailsPage = () => {
         لم يتم العثور على بيانات هذا الكتاب.
       </div>
     );
+  }
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Books" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
 
   return (
@@ -117,18 +134,10 @@ const BookDetailsPage = () => {
             </p>
 
             <div className="space-y-3 pt-4">
-              <a
-                href={book.file}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={book.file} target="_blank" rel="noopener noreferrer">
                 <Button className="w-full">📘 تحميل النسخة الكاملة</Button>
               </a>
-              <a
-                href={book.min_file}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={book.min_file} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" className="w-full">
                   👀 معاينة مختصرة
                 </Button>

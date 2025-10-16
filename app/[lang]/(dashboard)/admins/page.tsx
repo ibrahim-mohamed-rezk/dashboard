@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
 import axios from "axios";
-import { AdminTypes, Module, Teacher } from "@/lib/type";
+import { AdminTypes, Module, Teacher, User } from "@/lib/type";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, Users, Shield, BookOpen, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import useAuthrization from "@/hooks/useAuthrization";
 
 // Statistics Card Component
 const StatCard = ({
@@ -87,10 +88,10 @@ function BasicDataTable() {
   const [modules, setModules] = useState<Module[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [token, setToken] = useState("");
+  const [user, setUser] = useState<User | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<AdminTypes | null>(null);
-  const locale = "ar";
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -136,12 +137,14 @@ function BasicDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         throw error;
       }
     };
     feachData();
-  });
+  }, []);
 
   const refetchAdmins = async (page = 1) => {
     try {
@@ -341,11 +344,11 @@ function BasicDataTable() {
     );
     const teacherModules = validTeachers.map((t) => {
       const uniqueModuleIds = [
-        ...new Set(t.modules.filter((m) => m.access).map((m) => m.id)),
+        ...new Set((t.modules || []).filter((m) => m.access).map((m) => m.id)),
       ];
       return uniqueModuleIds;
     });
-    const adminModuleIds = admin.modules
+    const adminModuleIds = (admin.modules || [])
       .filter((m) => m.access)
       .map((m) => m.id);
     setFormData({
@@ -359,20 +362,24 @@ function BasicDataTable() {
       admin_modules: adminModuleIds,
     });
     const selectedTeachersList = validTeachers.map((adminTeacher) => {
-      const existingTeacher = teachers?.find((t) => t.user.id === adminTeacher.id);
+      const existingTeacher = teachers?.find(
+        (t) => t.user.id === adminTeacher.id
+      );
       if (existingTeacher) {
         return existingTeacher;
       }
       return {
-        id: adminTeacher.user.id,
+        id: adminTeacher.user?.id || adminTeacher.id,
         user: {
-          id: adminTeacher.user.id,
+          id: adminTeacher.user?.id || adminTeacher.id,
           full_name: adminTeacher.name || "Unknown Teacher",
-          email: `teacher${adminTeacher.user.id}@example.com`,
+          email: `teacher${
+            adminTeacher.user?.id || adminTeacher.id
+          }@example.com`,
           phone: "",
           avatar: "",
         },
-        modules: adminTeacher.modules,
+        modules: adminTeacher.modules || [],
       } as Teacher;
     });
     setSelectedTeachers(selectedTeachersList);
@@ -497,37 +504,37 @@ function BasicDataTable() {
   const columns: ColumnDef<AdminTypes>[] = [
     // ✅ Select Column
     {
-  id: "select",
-  header: ({ table }) => {
-    const isAllSelected = table.getIsAllPageRowsSelected();
-    const isSomeSelected = table.getIsSomePageRowsSelected();
+      id: "select",
+      header: ({ table }) => {
+        const isAllSelected = table.getIsAllPageRowsSelected();
+        const isSomeSelected = table.getIsSomePageRowsSelected();
 
-    return (
-      <div className="flex items-center">
-        <div className="relative">
-          <Checkbox
-            checked={isAllSelected}
-            onCheckedChange={() => table.toggleAllPageRowsSelected()}
-            className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
-          />
-          {isSomeSelected && !isAllSelected && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-3 h-0.5 bg-white rounded"></div>
+        return (
+          <div className="flex items-center">
+            <div className="relative">
+              <Checkbox
+                checked={isAllSelected}
+                onCheckedChange={() => table.toggleAllPageRowsSelected()}
+                className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+              />
+              {isSomeSelected && !isAllSelected && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-3 h-0.5 bg-white rounded"></div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={() => row.toggleSelected()}
+          />
         </div>
-      </div>
-    );
-  },
-  cell: ({ row }) => (
-    <div className="flex items-center">
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={() => row.toggleSelected()}
-      />
-    </div>
-  ),
-},
+      ),
+    },
     {
       accessorKey: "full_name",
       header: "الاسم الكامل",
@@ -620,6 +627,11 @@ function BasicDataTable() {
 
   // ✅ Get selected count
   const selectedCount = Object.keys(rowSelection).length;
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Admins" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>
@@ -777,7 +789,10 @@ function BasicDataTable() {
                       <div className="flex flex-wrap gap-2 mb-2">
                         {Array.from(
                           new Map(
-                            selectedTeachers.map((teacher) => [teacher.user.id, teacher])
+                            selectedTeachers.map((teacher) => [
+                              teacher.user.id,
+                              teacher,
+                            ])
                           ).values()
                         ).map((teacher) => (
                           <Badge
@@ -788,7 +803,9 @@ function BasicDataTable() {
                             {teacher.user.full_name}
                             <button
                               type="button"
-                              onClick={() => handleTeacherRemove(teacher.user.id)}
+                              onClick={() =>
+                                handleTeacherRemove(teacher.user.id)
+                              }
                               className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                             >
                               <X className="h-3 w-3" />
@@ -853,7 +870,10 @@ function BasicDataTable() {
                         </Label>
                         {Array.from(
                           new Map(
-                            selectedTeachers.map((teacher) => [teacher.user.id, teacher])
+                            selectedTeachers.map((teacher) => [
+                              teacher.user.id,
+                              teacher,
+                            ])
                           ).values()
                         ).map((teacher) => (
                           <div
@@ -870,7 +890,9 @@ function BasicDataTable() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() =>
-                                    handleSelectAllTeacherModules(teacher.user.id)
+                                    handleSelectAllTeacherModules(
+                                      teacher.user.id
+                                    )
                                   }
                                   className="h-8"
                                 >
@@ -881,7 +903,9 @@ function BasicDataTable() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() =>
-                                    handleDeselectAllTeacherModules(teacher.user.id)
+                                    handleDeselectAllTeacherModules(
+                                      teacher.user.id
+                                    )
                                   }
                                   className="h-8"
                                 >
@@ -891,7 +915,8 @@ function BasicDataTable() {
                             </div>
                             <div className="grid grid-cols-2 gap-2 ml-4">
                               {modules?.map((module) => {
-                                if (module.id === 7 || module.id === 8) return null;
+                                if (module.id === 7 || module.id === 8)
+                                  return null;
                                 return (
                                   <div
                                     key={module.id}
@@ -1059,11 +1084,14 @@ function BasicDataTable() {
               <DialogTitle>تأكيد الحذف الجماعي</DialogTitle>
             </DialogHeader>
             <p>
-              هل أنت متأكد من حذف <strong>{selectedCount}</strong> مشرف(ين)؟
-              لا يمكن التراجع عن هذا الإجراء.
+              هل أنت متأكد من حذف <strong>{selectedCount}</strong> مشرف(ين)؟ لا
+              يمكن التراجع عن هذا الإجراء.
             </p>
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
                 إلغاء
               </Button>
               <Button variant="outline" onClick={handleDeleteSelected}>

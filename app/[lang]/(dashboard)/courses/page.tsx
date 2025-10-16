@@ -71,8 +71,9 @@ import axios, { AxiosHeaders } from "axios";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { Teacher } from "@/lib/type";
+import { Teacher, User } from "@/lib/type";
 import { user } from "@/app/api/user/data";
+import useAuthrization from "@/hooks/useAuthrization";
 
 function generateSlug(title: string): string {
   const baseSlug = title.toLowerCase().replace(/\s+/g, "-");
@@ -142,6 +143,7 @@ interface PaginationMeta {
 const DEFAULT_IMAGE = "https://via.placeholder.com/150";
 
 function CoursesTable() {
+  const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Course[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -278,6 +280,8 @@ function CoursesTable() {
         setToken(response.data.token);
         setUserId(JSON.parse(response.data.user).id);
         setUserRole(JSON.parse(response.data.user).role);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         toast.error("Failed to get authentication token");
       }
@@ -1219,6 +1223,11 @@ function CoursesTable() {
       setIsLoading(false);
     }
   };
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Courses" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <div>

@@ -5,6 +5,7 @@ import CourseModules from "./components/CourseModules";
 const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
+  const user = JSON.parse(cookiesData.get("user")?.value || "{}");
   const paramsData = await params;
   const feachData = async () => {
     try {
@@ -21,6 +22,15 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     }
   };
   const courseData = await feachData();
+
+  if (
+    !user.modules.some((item: any) => {
+      item.name === "Courses";
+      item.access === true;
+    })
+  ) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <div className="w-full">

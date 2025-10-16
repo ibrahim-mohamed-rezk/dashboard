@@ -42,6 +42,7 @@ import { Teacher, User } from "@/lib/type";
 import { useEffect, useState } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
 import toast from "react-hot-toast";
+import useAuthrization from "@/hooks/useAuthrization";
 
 // Enhanced interfaces with error handling
 interface Banner {
@@ -791,7 +792,12 @@ function BannerTable() {
           </Button>
         </Alert>
       </div>
-    );
+    ); 
+  }
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Banners" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
 
   return (

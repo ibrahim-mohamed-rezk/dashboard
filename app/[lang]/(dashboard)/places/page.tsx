@@ -33,6 +33,8 @@ import { MapPin, Building2, Globe, Map, Upload, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
 
 // Types
 interface Governorate {
@@ -105,6 +107,7 @@ const StatCard = ({
 };
 
 function GovernoratesAreasManagement() {
+  const [user, setUser] = useState<User | null>(null);
   // Governorates state
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [governoratesMeta, setGovernoratesMeta] = useState<PaginationMeta>({
@@ -173,6 +176,8 @@ function GovernoratesAreasManagement() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         console.error("Error fetching token:", error);
       }
@@ -894,6 +899,11 @@ function GovernoratesAreasManagement() {
         </div>
       </div>
     );
+  }
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Places" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
 
   return (

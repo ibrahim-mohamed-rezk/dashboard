@@ -48,6 +48,8 @@ import {
   Users2,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User as UserType } from "@/lib/type";
 
 interface User {
   id: number;
@@ -120,6 +122,7 @@ function BasicDataTable() {
   const [levels, setLevels] = useState<LevelOption[]>([]);
   const [selectedLevelIds, setSelectedLevelIds] = useState<string[]>([]);
   const [token, setToken] = useState("");
+  const [user, setUser] = useState<UserType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -362,6 +365,8 @@ function BasicDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         throw error;
       }
@@ -1425,6 +1430,11 @@ function BasicDataTable() {
     enableRowSelection: true,
     getRowId: (row) => String(row.id),
   });
+
+  const isAuthrized = useAuthrization({ user: user as UserType, module: "Teachers" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>

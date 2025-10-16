@@ -30,21 +30,9 @@ import { useEffect, useState } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
 
-interface User {
-  id: number;
-  full_name: string;
-  email: string | null;
-  phone: string;
-  gender: string | null;
-  avatar: string | null;
-  role: string;
-  email_verified_at: string;
-  block: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
 
 interface Purchastable {
   id: number;
@@ -97,6 +85,7 @@ interface ApiResponse {
 
 function PurchasesDataTable() {
   const [data, setData] = useState<Purchase[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -131,6 +120,8 @@ function PurchasesDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         console.error("Failed to fetch token", error);
       }
@@ -372,6 +363,11 @@ function PurchasesDataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     enableRowSelection: true,
   });
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Purchases" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>

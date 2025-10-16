@@ -34,6 +34,8 @@ import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User } from "@/lib/type";
 
 // ... (interfaces and types remain unchanged)
 
@@ -138,6 +140,7 @@ function toYMDHIS(datetimeLocal: string): string {
 }
 
 function ExamsDataTable() {
+  const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Exam[]>([]);
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -283,6 +286,8 @@ function ExamsDataTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        const userData = JSON.parse(response.data.user);
+        setUser(userData);
       } catch (error) {
         throw error;
       }
@@ -813,6 +818,11 @@ function ExamsDataTable() {
     getFilteredRowModel: getFilteredRowModel(),
     enableRowSelection: true, // Enable multi-select
   });
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Exams" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <>

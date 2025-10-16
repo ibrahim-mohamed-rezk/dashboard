@@ -12,7 +12,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  MoreHorizontal,
   X,
   Search,
   Download,
@@ -49,7 +48,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
@@ -80,6 +78,7 @@ import toast from "react-hot-toast";
 import { CoursesData, Teacher, User } from "@/lib/type";
 import Link from "next/link";
 import Image from "next/image";
+import useAuthrization from "@/hooks/useAuthrization";
 
 interface Bank {
   id: number;
@@ -914,6 +913,11 @@ function BanksTable() {
       setIsLoading(false);
     }
   };
+
+  const isAuthrized = useAuthrization({ user: user as User, module: "Banks" });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <div className="space-y-4">
