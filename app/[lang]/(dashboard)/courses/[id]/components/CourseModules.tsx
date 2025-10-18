@@ -35,6 +35,7 @@ import CustomModal from "@/components/ui/CustomModal";
 import { Badge } from "@/components/ui/badge";
 import DeleteConfirmationDialog from "@/components/delete-confirmation-dialog";
 import * as XLSX from "xlsx";
+import { Editor } from "@tinymce/tinymce-react";
 
 const CourseModules = ({
   courseId,
@@ -1676,15 +1677,51 @@ const CourseModules = ({
                                   <label className="block text-sm font-medium mb-2">
                                     السؤال
                                   </label>
-                                  <Textarea
+                                  <Editor
+                                    apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
                                     value={editQuestionForm.question}
-                                    onChange={(e) =>
+                                    onEditorChange={(content: string) => {
                                       setEditQuestionForm((prev) => ({
                                         ...prev,
-                                        question: e.target.value,
-                                      }))
-                                    }
-                                    rows={2}
+                                        question: content,
+                                      }));
+                                    }}
+                                    init={{
+                                      height: 300,
+                                      menubar: true,
+                                      directionality: "rtl",
+                                      skin: "oxide-dark",
+                                      content_css: "dark",
+                                      plugins: [
+                                        "advlist",
+                                        "autolink",
+                                        "lists",
+                                        "link",
+                                        "image",
+                                        "charmap",
+                                        "preview",
+                                        "anchor",
+                                        "searchreplace",
+                                        "visualblocks",
+                                        "code",
+                                        "fullscreen",
+                                        "insertdatetime",
+                                        "media",
+                                        "table",
+                                        "code",
+                                        "help",
+                                        "wordcount",
+                                      ],
+                                      toolbar:
+                                        "undo redo | blocks | " +
+                                        "bold italic forecolor | alignleft aligncenter " +
+                                        "alignright alignjustify | bullist numlist outdent indent | " +
+                                        "removeformat | help",
+                                      content_style:
+                                        "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                                      branding: false,
+                                      promotion: false,
+                                    }}
                                   />
                                 </div>
                                 <div className="space-y-2">
@@ -1801,9 +1838,12 @@ const CourseModules = ({
                                         />
                                       </div>
                                     ) : (
-                                      <p className="mt-1">
-                                        {question.question}
-                                      </p>
+                                      <p
+                                        className="mt-1"
+                                        dangerouslySetInnerHTML={{
+                                          __html: question.question,
+                                        }}
+                                      />
                                     )}
                                   </div>
                                   <div className="flex gap-1">
@@ -1871,16 +1911,51 @@ const CourseModules = ({
                           <label className="block text-sm font-medium mb-2">
                             السؤال
                           </label>
-                          <Textarea
+                          <Editor
+                            apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
                             value={currentQuestion.question}
-                            onChange={(e) =>
+                            onEditorChange={(content: string) => {
                               setCurrentQuestion({
                                 ...currentQuestion,
-                                question: e.target.value,
-                              })
-                            }
-                            placeholder="أدخل السؤال هنا"
-                            rows={2}
+                                question: content,
+                              });
+                            }}
+                            init={{
+                              height: 300,
+                              menubar: true,
+                              directionality: "rtl",
+                              skin: "oxide-dark",
+                              content_css: "dark",
+                              plugins: [
+                                "advlist",
+                                "autolink",
+                                "lists",
+                                "link",
+                                "image",
+                                "charmap",
+                                "preview",
+                                "anchor",
+                                "searchreplace",
+                                "visualblocks",
+                                "code",
+                                "fullscreen",
+                                "insertdatetime",
+                                "media",
+                                "table",
+                                "code",
+                                "help",
+                                "wordcount",
+                              ],
+                              toolbar:
+                                "undo redo | blocks | " +
+                                "bold italic forecolor | alignleft aligncenter " +
+                                "alignright alignjustify | bullist numlist outdent indent | " +
+                                "removeformat | help",
+                              content_style:
+                                "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                              branding: false,
+                              promotion: false,
+                            }}
                           />
                         </div>
 
@@ -2138,7 +2213,12 @@ const CourseModules = ({
                     >
                       <div className="flex justify-between items-start mb-2">
                         <p className="font-medium dark:text-white">
-                          {index + 1}. {question.question}
+                          {index + 1}.{" "}
+                          <span
+                            dangerouslySetInnerHTML={{
+                              __html: question.question,
+                            }}
+                          />
                         </p>
                         <Button
                           variant="ghost"
@@ -2478,7 +2558,13 @@ const CourseModules = ({
                                 </div>
                               );
                             }
-                            return <span>{question.question}</span>;
+                            return (
+                              <span
+                                dangerouslySetInnerHTML={{
+                                  __html: question.question,
+                                }}
+                              />
+                            );
                           })()}
                         </div>
                         <div className="space-y-2">
@@ -2906,7 +2992,11 @@ const CourseModules = ({
                                     />
                                   </div>
                                 ) : (
-                                  q.question
+                                  <span
+                                    dangerouslySetInnerHTML={{
+                                      __html: q.question,
+                                    }}
+                                  />
                                 )}
                               </p>
                               <span className="text-xs text-blue-600 dark:text-blue-300 mr-2">
@@ -2980,16 +3070,51 @@ const CourseModules = ({
                             <label className="block text-sm font-medium mb-2">
                               نص السؤال
                             </label>
-                            <Textarea
+                            <Editor
+                              apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
                               value={currentQuestion.question}
-                              onChange={(e) =>
+                              onEditorChange={(content: string) => {
                                 setCurrentQuestion({
                                   ...currentQuestion,
-                                  question: e.target.value,
-                                })
-                              }
-                              placeholder="أدخل نص السؤال"
-                              rows={2}
+                                  question: content,
+                                });
+                              }}
+                              init={{
+                                height: 300,
+                                menubar: true,
+                                directionality: "rtl",
+                                skin: "oxide-dark",
+                                content_css: "dark",
+                                plugins: [
+                                  "advlist",
+                                  "autolink",
+                                  "lists",
+                                  "link",
+                                  "image",
+                                  "charmap",
+                                  "preview",
+                                  "anchor",
+                                  "searchreplace",
+                                  "visualblocks",
+                                  "code",
+                                  "fullscreen",
+                                  "insertdatetime",
+                                  "media",
+                                  "table",
+                                  "code",
+                                  "help",
+                                  "wordcount",
+                                ],
+                                toolbar:
+                                  "undo redo | blocks | " +
+                                  "bold italic forecolor | alignleft aligncenter " +
+                                  "alignright alignjustify | bullist numlist outdent indent | " +
+                                  "removeformat | help",
+                                content_style:
+                                  "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                                branding: false,
+                                promotion: false,
+                              }}
                             />
                           </div>
                         ) : (

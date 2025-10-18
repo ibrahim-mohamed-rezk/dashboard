@@ -44,7 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import CustomModal from "@/components/ui/CustomModal";
-
+import { Editor } from "@tinymce/tinymce-react";
 
 interface BankQuestion {
   id: number;
@@ -1053,15 +1053,50 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
                                 <label className="block text-sm font-medium mb-1">
                                   عنوان السؤال
                                 </label>
-                                <Textarea
+                                <Editor
+                                  apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
                                   value={questionForm.title}
-                                  onChange={(e) =>
+                                  onEditorChange={(content: string) => {
                                     updateEditQuestionForm(index, {
-                                      title: e.target.value,
-                                    })
-                                  }
-                                  placeholder="أدخل عنوان السؤال هنا"
-                                  rows={3}
+                                      title: content,
+                                    });
+                                  }}
+                                  init={{
+                                    height: 300,
+                                    menubar: true,
+                                    directionality: "rtl",
+                                    skin: "oxide-dark",
+                                    content_css: "dark",
+                                    plugins: [
+                                      "advlist",
+                                      "autolink",
+                                      "lists",
+                                      "link",
+                                      "image",
+                                      "charmap",
+                                      "preview",
+                                      "anchor",
+                                      "searchreplace",
+                                      "visualblocks",
+                                      "code",
+                                      "fullscreen",
+                                      "insertdatetime",
+                                      "media",
+                                      "table",
+                                      "code",
+                                      "help",
+                                      "wordcount",
+                                    ],
+                                    toolbar:
+                                      "undo redo | blocks | " +
+                                      "bold italic forecolor | alignleft aligncenter " +
+                                      "alignright alignjustify | bullist numlist outdent indent | " +
+                                      "removeformat | help",
+                                    content_style:
+                                      "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                                    branding: false,
+                                    promotion: false,
+                                  }}
                                 />
                               </div>
                               <div className="space-y-3">
@@ -1218,9 +1253,12 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
                                   <h5 className="font-medium mb-2">
                                     السؤال {index + 1}
                                   </h5>
-                                  <p className="text-gray-700 mb-2">
-                                    {question.question}
-                                  </p>
+                                  <p
+                                    className="text-gray-700 mb-2"
+                                    dangerouslySetInnerHTML={{
+                                      __html: question.question,
+                                    }}
+                                  />
 
                                   {question.options &&
                                     question.options.length > 0 && (
@@ -1242,7 +1280,9 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
                                                 {optIndex + 1}.
                                               </span>
                                               <span className="flex-1">
-                                                {option}
+                                                {typeof option === "string"
+                                                  ? option
+                                                  : (option as any)?.answer}
                                               </span>
                                               {question.correct_answer !==
                                                 null &&
@@ -1392,13 +1432,48 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
                         <label className="block text-sm font-medium mb-1">
                           عنوان السؤال
                         </label>
-                        <Textarea
+                        <Editor
+                          apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
                           value={questionForm.title}
-                          onChange={(e) =>
-                            updateQuestionForm(index, { title: e.target.value })
-                          }
-                          placeholder="أدخل عنوان السؤال هنا"
-                          rows={3}
+                          onEditorChange={(content: string) => {
+                            updateQuestionForm(index, { title: content });
+                          }}
+                          init={{
+                            height: 300,
+                            menubar: true,
+                            directionality: "rtl",
+                            skin: "oxide-dark",
+                            content_css: "dark",
+                            plugins: [
+                              "advlist",
+                              "autolink",
+                              "lists",
+                              "link",
+                              "image",
+                              "charmap",
+                              "preview",
+                              "anchor",
+                              "searchreplace",
+                              "visualblocks",
+                              "code",
+                              "fullscreen",
+                              "insertdatetime",
+                              "media",
+                              "table",
+                              "code",
+                              "help",
+                              "wordcount",
+                            ],
+                            toolbar:
+                              "undo redo | blocks | " +
+                              "bold italic forecolor | alignleft aligncenter " +
+                              "alignright alignjustify | bullist numlist outdent indent | " +
+                              "removeformat | help",
+                            content_style:
+                              "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                            branding: false,
+                            promotion: false,
+                          }}
                         />
                       </div>
 

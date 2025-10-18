@@ -14,8 +14,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   if (
     !user.modules.some((item: any) => {
-      item.name === "Banks";
-      item.access === true;
+      return item.name === "Courses" && item.access === true;
     })
   ) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;

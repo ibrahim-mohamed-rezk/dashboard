@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Editor } from "@tinymce/tinymce-react";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
@@ -1077,7 +1078,12 @@ function ExamsDataTable() {
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex-1">
                               <h4 className="font-semibold text-sm mb-2">
-                                السؤال {index + 1}: {q.question}
+                                السؤال {index + 1}:{" "}
+                                <span
+                                  dangerouslySetInnerHTML={{
+                                    __html: q.question,
+                                  }}
+                                />
                               </h4>
                               <div className="text-xs text-gray-600 mb-2">
                                 النوع:{" "}
@@ -1149,20 +1155,65 @@ function ExamsDataTable() {
                           ? "نص السؤال"
                           : "رابط الصورة"}
                       </label>
-                      <Input
-                        value={currentQuestion.question}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            question: e.target.value,
-                          })
-                        }
-                        placeholder={
-                          currentQuestion.questionType === "text"
-                            ? "أدخل السؤال"
-                            : "https://example.com/image.jpg"
-                        }
-                      />
+                      {currentQuestion.questionType === "text" ? (
+                        <Editor
+                          apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+                          value={currentQuestion.question}
+                          onEditorChange={(content: string) => {
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              question: content,
+                            });
+                          }}
+                          init={{
+                            height: 300,
+                            menubar: true,
+                            directionality: "rtl",
+                            skin: "oxide-dark",
+                            content_css: "dark",
+                            plugins: [
+                              "advlist",
+                              "autolink",
+                              "lists",
+                              "link",
+                              "image",
+                              "charmap",
+                              "preview",
+                              "anchor",
+                              "searchreplace",
+                              "visualblocks",
+                              "code",
+                              "fullscreen",
+                              "insertdatetime",
+                              "media",
+                              "table",
+                              "code",
+                              "help",
+                              "wordcount",
+                            ],
+                            toolbar:
+                              "undo redo | blocks | " +
+                              "bold italic forecolor | alignleft aligncenter " +
+                              "alignright alignjustify | bullist numlist outdent indent | " +
+                              "removeformat | help",
+                            content_style:
+                              "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                            branding: false,
+                            promotion: false,
+                          }}
+                        />
+                      ) : (
+                        <Input
+                          value={currentQuestion.question}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              question: e.target.value,
+                            })
+                          }
+                          placeholder="https://example.com/image.jpg"
+                        />
+                      )}
                     </div>
 
                     <div>
@@ -1311,7 +1362,12 @@ function ExamsDataTable() {
                           className="border rounded-lg p-3 bg-white"
                         >
                           <h4 className="font-semibold text-sm mb-2">
-                            السؤال {index + 1}: {question.question}
+                            السؤال {index + 1}:{" "}
+                            <span
+                              dangerouslySetInnerHTML={{
+                                __html: question.question,
+                              }}
+                            />
                           </h4>
                           <div className="space-y-1">
                             <div className="text-xs font-medium text-gray-700 mb-1">
@@ -1501,7 +1557,10 @@ function ExamsDataTable() {
                   className="border rounded-lg p-4 bg-gray-50"
                 >
                   <h4 className="font-semibold mb-3 text-right">
-                    السؤال {index + 1}: {question.question}
+                    السؤال {index + 1}:{" "}
+                    <span
+                      dangerouslySetInnerHTML={{ __html: question.question }}
+                    />
                   </h4>
                   <div className="space-y-2">
                     {question.options.map((option) => (

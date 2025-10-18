@@ -252,8 +252,8 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                 item.access === true &&
                 (item.name === "Courses" ||
                   item.name === "Banks" ||
-                  item.name === "Students" ||
-                  item.name === "Codes")
+                  item.name === "students" ||
+                  item.name === "codes")
               );
             }) && (
               <div
@@ -315,11 +315,11 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                 item.access === true &&
                 (item.name === "Teachers" ||
                   item.name === "Admins" ||
-                  item.name === "Places" ||
-                  item.name === "Levels" ||
-                  item.name === "Jobs" ||
-                  item.name === "Coupons" ||
-                  item.name === "Subjects")
+                  item.name === "places" ||
+                  item.name === "levels" ||
+                  item.name === "jobs" ||
+                  item.name === "coupons" ||
+                  item.name === "subjects")
               );
             }) && (
               <div
@@ -393,7 +393,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      
+
                       {user.modules.some((item) => {
                         return (
                           item.access === true &&
@@ -414,7 +414,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      
+
                       {user.modules.some((item) => {
                         return (
                           item.access === true &&
@@ -465,6 +465,23 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
                       {user.modules.some((item) => {
+                        return item.access === true && item.name === "Exams";
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{  
+                              href: "/exams",
+                              title: "الامتحانات",
+                              icon: ClipboardListIcon,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+                      {user.modules.some((item) => {
                         return item.access === true && item.name === "Banks";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -482,7 +499,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
                       {user.modules.some((item) => {
-                        return item.access === true && item.name === "Students";
+                        return item.access === true && item.name === "students";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
@@ -499,7 +516,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
                       {user.modules.some((item) => {
-                        return item.access === true && item.name === "Codes";
+                        return item.access === true && item.name === "codes";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
@@ -647,7 +664,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       )}
 
                       {user.modules.some((item) => {
-                        return item.access === true && item.name === "Levels";
+                        return item.access === true && item.name === "levels";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
@@ -665,7 +682,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       )}
 
                       {user.modules.some((item) => {
-                        return item.access === true && item.name === "Jobs";
+                        return item.access === true && item.name === "jobs";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
@@ -683,7 +700,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       )}
 
                       {user.modules.some((item) => {
-                        return item.access === true && item.name === "Coupons";
+                        return item.access === true && item.name === "coupons";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
@@ -701,7 +718,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       )}
 
                       {user.modules.some((item) => {
-                        return item.access === true && item.name === "Subjects";
+                        return item.access === true && item.name === "subjects";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
