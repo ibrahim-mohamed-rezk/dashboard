@@ -220,8 +220,8 @@ const ModuleSidebar = ({ user }: { user: User }) => {
               return (
                 item.access === true &&
                 (item.name === "ExamsStatistics" ||
-                  item.name === "QuestionsStatistics" ||
-                  item.name === "QuestionsStatisticsTeacher")
+                  item.name === "questions_statistics" ||
+                  item.name === "questions_statistics_teacher")
               );
             }) && (
               <div
@@ -250,7 +250,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
             {user.modules.some((item) => {
               return (
                 item.access === true &&
-                (item.name === "courses" ||
+                (item.name === "Courses" ||
                   item.name === "Banks" ||
                   item.name === "Students" ||
                   item.name === "Codes")
@@ -397,7 +397,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       {user.modules.some((item) => {
                         return (
                           item.access === true &&
-                          item.name === "QuestionsStatistics"
+                          item.name === "questions_statistics"
                         );
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -418,7 +418,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       {user.modules.some((item) => {
                         return (
                           item.access === true &&
-                          item.name === "QuestionsStatisticsTeacher"
+                          item.name === "questions_statistics_teacher"
                         );
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -448,12 +448,12 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                     </div>
                     <ul className="mr-4">
                       {user.modules.some((item) => {
-                        return item.access === true && item.name === "courses";
+                        return item.access === true && item.name === "Courses";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
-                              href: "/Courses",
+                              href: "/courses",
                               title: "الكورسات",
                               icon: Video,
                             }}
