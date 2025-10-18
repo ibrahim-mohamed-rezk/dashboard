@@ -17,4 +17,6 @@ export const siteConfig = {
   // sticky,  static, hidden
   sidebarBg: "none",
   radius: 0.5,
+  // TinyMCE API Key
+  tinymceApiKey: "pvamxsxy12h0asghatpv9ozfq3kzfsg8pgfxjk3la8oypc9l",
 };

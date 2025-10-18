@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import DeleteConfirmationDialog from "@/components/delete-confirmation-dialog";
 import * as XLSX from "xlsx";
 import { Editor } from "@tinymce/tinymce-react";
+import { siteConfig } from "@/config/site";
 
 const CourseModules = ({
   courseId,
@@ -1678,7 +1679,7 @@ const CourseModules = ({
                                     السؤال
                                   </label>
                                   <Editor
-                                    apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+                                    apiKey={siteConfig.tinymceApiKey}
                                     value={editQuestionForm.question}
                                     onEditorChange={(content: string) => {
                                       setEditQuestionForm((prev) => ({
@@ -1912,7 +1913,7 @@ const CourseModules = ({
                             السؤال
                           </label>
                           <Editor
-                            apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+                            apiKey={siteConfig.tinymceApiKey}
                             value={currentQuestion.question}
                             onEditorChange={(content: string) => {
                               setCurrentQuestion({
@@ -3071,7 +3072,7 @@ const CourseModules = ({
                               نص السؤال
                             </label>
                             <Editor
-                              apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+                              apiKey={siteConfig.tinymceApiKey}
                               value={currentQuestion.question}
                               onEditorChange={(content: string) => {
                                 setCurrentQuestion({

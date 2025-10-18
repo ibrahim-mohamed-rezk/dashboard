@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { getData, postData, deleteData } from "@/lib/axios/server";
 import { toast } from "react-hot-toast";
 import {
@@ -45,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import CustomModal from "@/components/ui/CustomModal";
 import { Editor } from "@tinymce/tinymce-react";
+import { siteConfig } from "@/config/site";
 
 interface BankQuestion {
   id: number;
@@ -1054,7 +1054,7 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
                                   عنوان السؤال
                                 </label>
                                 <Editor
-                                  apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+                                  apiKey={siteConfig.tinymceApiKey}
                                   value={questionForm.title}
                                   onEditorChange={(content: string) => {
                                     updateEditQuestionForm(index, {
@@ -1433,7 +1433,7 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
                           عنوان السؤال
                         </label>
                         <Editor
-                          apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+                          apiKey={siteConfig.tinymceApiKey}
                           value={questionForm.title}
                           onEditorChange={(content: string) => {
                             updateQuestionForm(index, { title: content });

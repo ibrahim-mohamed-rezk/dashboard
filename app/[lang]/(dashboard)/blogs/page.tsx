@@ -17,6 +17,7 @@ import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios, { AxiosHeaders } from "axios";
 import { Upload, X } from "lucide-react";
 import { Editor } from "@tinymce/tinymce-react";
+import { siteConfig } from "@/config/site";
 import useAuthrization from "@/hooks/useAuthrization";
 import { User } from "@/lib/type";
 
@@ -195,7 +196,7 @@ const BlogForm = ({
         المحتوى *
       </label>
       <Editor
-        apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+        apiKey={siteConfig.tinymceApiKey}
         value={formData.content}
         onEditorChange={(content: string) => {
           setFormData((prev) => ({ ...prev, content }));

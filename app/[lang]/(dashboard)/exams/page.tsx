@@ -29,6 +29,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Editor } from "@tinymce/tinymce-react";
+import { siteConfig } from "@/config/site";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
@@ -1157,7 +1158,7 @@ function ExamsDataTable() {
                       </label>
                       {currentQuestion.questionType === "text" ? (
                         <Editor
-                          apiKey="f54o6xm5i2tmb8d40jlua7dpi1ksl4b8b6sw29xc2k579ayv"
+                          apiKey={siteConfig.tinymceApiKey}
                           value={currentQuestion.question}
                           onEditorChange={(content: string) => {
                             setCurrentQuestion({
