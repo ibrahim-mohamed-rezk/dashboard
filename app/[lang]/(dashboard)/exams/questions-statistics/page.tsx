@@ -448,7 +448,7 @@ function QuestionsStatisticsTable() {
     },
   });
 
-  const isAuthrized = useAuthrization({ user: user as User, module: "QuestionsStatistics" });
+  const isAuthrized = useAuthrization({ user: user as User, module: "questions_statistics" });
   if (!isAuthrized) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }

@@ -1018,7 +1018,7 @@ function BasicDataTable() {
     },
     enableRowSelection: true,
   });
-  const isAuthrized = useAuthrization({ user: user as User, module: "Students" });
+  const isAuthrized = useAuthrization({ user: user as User, module: "students" });
   if (!isAuthrized) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
