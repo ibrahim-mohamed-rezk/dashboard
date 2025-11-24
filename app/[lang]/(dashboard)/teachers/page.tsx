@@ -51,6 +51,9 @@ import { toast } from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
 import { User as UserType } from "@/lib/type";
 
+// --- Excel/XLSX Parsing ---
+import * as XLSX from "xlsx";
+
 interface User {
   id: number;
   user: {
@@ -652,10 +655,11 @@ function BasicDataTable() {
     }
   };
 
+  // --- Improved Excel Import Using XLSX ---
   const handleImportFromExcel = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".xls,.xlsx,.csv";
+    input.accept = ".xls,.xlsx,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -669,64 +673,107 @@ function BasicDataTable() {
     try {
       let dataRows: string[][] = [];
 
-      // Handle different file types
-      if (file.name.endsWith(".csv")) {
-        // Parse CSV file
-        const text = await file.text();
-        const lines = text.split("\n").filter((line) => line.trim());
+      // Use XLSX for robust multi-format parsing
+      const promise = new Promise<string[][]>((resolve, reject) => {
+        const reader = new FileReader();
 
-        if (lines.length < 2) {
-          toast.error("الملف فارغ أو لا يحتوي على بيانات");
-          return;
+        reader.onload = (evt) => {
+          const data = evt.target?.result;
+          let workbook;
+          try {
+            if (typeof data === "string" || data instanceof ArrayBuffer) {
+              workbook = XLSX.read(data, { type: data instanceof ArrayBuffer ? "array" : "binary" });
+            } else {
+              toast.error("تعذر قراءة الملف (نوع)");
+              return reject("Unknown file type");
+            }
+          } catch (err) {
+            toast.error("تعذر قراءة ملف Excel");
+            return reject(err);
+          }
+          // Use first sheet
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          // Sheet to JSON with headers
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
+          resolve(json);
+        };
+
+        if (file.name.endsWith(".csv")) {
+          reader.readAsText(file);
+        } else {
+          reader.readAsArrayBuffer(file);
         }
+      });
 
-        dataRows = lines.map((line) =>
-          line.split(",").map((v) => v.trim().replace(/"/g, ""))
-        );
-      } else if (file.name.endsWith(".xls") || file.name.endsWith(".xlsx")) {
-        // For Excel files, we'll parse the HTML table format we created
-        const text = await file.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, "text/html");
-        const table = doc.querySelector("table");
+      dataRows = await promise;
 
-        if (!table) {
-          toast.error("لا يمكن قراءة بيانات Excel من الملف");
-          return;
-        }
-
-        const rows = Array.from(table.querySelectorAll("tr"));
-        dataRows = rows.map((row) =>
-          Array.from(row.querySelectorAll("td")).map(
-            (cell) => cell.textContent || ""
-          )
-        );
-      } else {
-        toast.error("نوع الملف غير مدعوم. يرجى استخدام CSV أو XLS");
+      if (!dataRows || dataRows.length < 2) {
+        toast.error("الملف فارغ أو لا يحتوي على بيانات");
         return;
       }
 
-      if (dataRows.length < 2) {
-        toast.error("الملف فارغ أو لا يحتوي على بيانات");
+      // Find header row index (look for known headers)
+      let headerIdx = 0;
+      let foundHeader = false;
+      for (let i = 0; i < Math.min(5, dataRows.length); ++i) {
+        const row = dataRows[i].map(String).map((s) => s.trim());
+        if (
+          row.includes("ID") &&
+          row.includes("Student ID") &&
+          row.includes("Teacher ID") &&
+          row.includes("Group ID")
+        ) {
+          headerIdx = i;
+          foundHeader = true;
+          break;
+        }
+      }
+      if (!foundHeader) {
+        // fall back to assume first is header
+        headerIdx = 0;
+      }
+
+      // Find expected column indices
+      const headersRow = dataRows[headerIdx].map((h) => h.trim());
+      const colIdx = {
+        student_id: headersRow.findIndex((h) => h === "Student ID"),
+        teacher_id: headersRow.findIndex((h) => h === "Teacher ID"),
+        subject_id: headersRow.findIndex((h) => h === "Subject ID"),
+        level_id: headersRow.findIndex((h) => h === "Level ID"),
+        group_id: headersRow.findIndex((h) => h === "Group ID"),
+      };
+
+      if (
+        Object.values(colIdx).some((v) => v === -1)
+      ) {
+        toast.error("ملف Excel غير متوافق مع القالب المطلوب");
         return;
       }
 
       let successCount = 0;
       let errorCount = 0;
 
-      // Process each row (skip header row)
-      for (let i = 1; i < dataRows.length; i++) {
-        const values = dataRows[i];
+      // Process rows, skipping header(s)
+      for (let i = headerIdx + 1; i < dataRows.length; i++) {
+        const row = dataRows[i];
 
-        if (!values || values.length < 11) continue;
+        // Defensive empty row check
+        if (
+          !row ||
+          (row.length === 1 && row[0].trim() === "") ||
+          (row.length < 5)
+        ) {
+          continue;
+        }
 
-        // Map columns to our data structure based on our export format
+        // Map columns by indices
         const rowData = {
-          student_id: values[1] || "", // Student ID column
-          teacher_id: values[3] || "", // Teacher ID column
-          subject_id: values[5] || "", // Subject ID column
-          level_id: values[7] || "", // Level ID column
-          group_id: values[9] || "", // Group ID column
+          student_id: row[colIdx.student_id] || "",
+          teacher_id: row[colIdx.teacher_id] || "",
+          subject_id: row[colIdx.subject_id] || "",
+          level_id: row[colIdx.level_id] || "",
+          group_id: row[colIdx.group_id] || "",
         };
 
         // Validate required fields
