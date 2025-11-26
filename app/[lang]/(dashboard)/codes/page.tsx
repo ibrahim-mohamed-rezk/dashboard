@@ -700,6 +700,20 @@ function BasicDataTable() {
       ),
     },
     {
+      accessorKey: "student_name",
+      header: "اسم الطالب",
+      cell: ({ row }) => {
+        return row.original.student_name || "-";
+      },
+    },
+    {
+      accessorKey: "student_id",
+      header: "رقم الطالب",
+      cell: ({ row }) => {
+        return row.original.student_id || "-";
+      },
+    },
+    {
       accessorKey: "teacher_name",
       header: "اسم المعلم",
       cell: ({ row }) => {
@@ -1165,6 +1179,8 @@ function BasicDataTable() {
                           <TableHead>تاريخ النهاية</TableHead>
                           <TableHead>حالة الاستخدام</TableHead>
                           <TableHead>الحالة</TableHead>
+                          <TableHead>اسم الطالب</TableHead>
+                          <TableHead>رقم الطالب</TableHead>
                           <TableHead>اسم المعلم</TableHead>
                           <TableHead>تاريخ الإنشاء</TableHead>
                           <TableHead>الإجراءات</TableHead>
@@ -1257,6 +1273,8 @@ function BasicDataTable() {
                                 {item.status === "true" ? "نشط" : "غير نشط"}
                               </Badge>
                             </TableCell>
+                            <TableCell>{item.student_name || "-"}</TableCell>
+                            <TableCell>{item.student_id || "-"}</TableCell>
                             <TableCell>{item.teacher_name}</TableCell>
                             <TableCell>
                               {new Date(item.created_at).toLocaleDateString(

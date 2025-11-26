@@ -205,6 +205,7 @@ export interface SubscriptionCodeTypes {
   month: string;
   id: number;
   student_id: number | null;
+  student_name: string | null;
   teacher_id: string;
   code: string;
   valid_from: string;
