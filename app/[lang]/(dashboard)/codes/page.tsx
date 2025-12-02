@@ -126,6 +126,7 @@ function BasicDataTable() {
       }
 
       const worksheetData = allCodes.map((code) => ({
+        المعرف: code.id,
         الكود: code.code,
         السعر:
           code.price && Number(code.price) > 0 ? `${code.price} ج.م` : "مجاني",
@@ -135,6 +136,10 @@ function BasicDataTable() {
         "حالة الاستخدام": code.is_used === 1 ? "مستخدم" : "غير مستخدم",
         الحالة: code.status === "true" ? "نشط" : "غير نشط",
         "اسم المعلم": code.teacher_name || "-",
+        "معرف المعلم": code.teacher_id || "-",
+        "اسم الطالب": code.student_name || "-",
+        "رقم الطالب": code.student_id || "-",
+        الشهر: code.month || "-",
         "تاريخ الإنشاء": new Date(code.created_at).toLocaleDateString("ar-EG"),
         "تاريخ التحديث": new Date(code.updated_at).toLocaleDateString("ar-EG"),
       }));
@@ -176,6 +181,7 @@ function BasicDataTable() {
         .substring(0, 31); // Excel sheet names have a 31 character limit
 
       const worksheetData = group.items.map((code) => ({
+        المعرف: code.id,
         الكود: code.code,
         السعر:
           code.price && Number(code.price) > 0 ? `${code.price} ج.م` : "مجاني",
@@ -185,6 +191,10 @@ function BasicDataTable() {
         "حالة الاستخدام": code.is_used === 1 ? "مستخدم" : "غير مستخدم",
         الحالة: code.status === "true" ? "نشط" : "غير نشط",
         "اسم المعلم": code.teacher_name || "-",
+        "معرف المعلم": code.teacher_id || "-",
+        "اسم الطالب": code.student_name || "-",
+        "رقم الطالب": code.student_id || "-",
+        الشهر: code.month || "-",
         "تاريخ الإنشاء": new Date(code.created_at).toLocaleDateString("ar-EG"),
         "تاريخ التحديث": new Date(code.updated_at).toLocaleDateString("ar-EG"),
       }));
@@ -201,7 +211,7 @@ function BasicDataTable() {
 
       toast.success(`تم تصدير أكواد ${group.group_label} بنجاح`);
     } catch (error) {
-      console.error("Export error:", error); 
+      console.error("Export error:", error);
       console.error("Group data:", group);
       const errorMessage =
         error instanceof Error ? error.message : "خطأ غير معروف";
