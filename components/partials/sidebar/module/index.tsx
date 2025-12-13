@@ -34,6 +34,7 @@ import {
   Play,
   ClipboardCheck,
   ClipboardSignature,
+  Shield,
 } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -284,7 +285,8 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                 item.access === true &&
                 (item.name === "Banners" ||
                   item.name === "Blogs" ||
-                  item.name === "Books")
+                  item.name === "Books" ||
+                  item.name === "settings")
               );
             }) && (
               <div
@@ -469,7 +471,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       }) && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
-                            childItem={{  
+                            childItem={{
                               href: "/exams",
                               title: "الامتحانات",
                               icon: ClipboardListIcon,
@@ -589,6 +591,24 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                               href: "/books",
                               title: "الكتب",
                               icon: Book,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+
+                      {user.modules.some((item) => {
+                        return item.access === true && item.name === "settings";
+                      }) && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/settings",
+                              title: "الخصوصية و الدعم",
+                              icon: Shield,
                             }}
                             toggleNested={toggleNested}
                             index={1}
