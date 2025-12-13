@@ -26,7 +26,7 @@ const PrivacyPage = () => {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
-        setUser(response.data.user);
+        setUser(JSON.parse(response.data.user));
       } catch (error) {
         console.error("Error fetching token:", error);
       }
