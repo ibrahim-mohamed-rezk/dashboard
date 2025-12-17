@@ -12,9 +12,12 @@ import useAuthrization from "@/hooks/useAuthrization";
 import { User } from "@/lib/type";
 
 const PrivacyPage = () => {
-  const [activeTab, setActiveTab] = useState<"privacy" | "support">("privacy");
+  const [activeTab, setActiveTab] = useState<
+    "privacy" | "support" | "about_us"
+  >("privacy");
   const [privacyContent, setPrivacyContent] = useState("");
   const [supportContent, setSupportContent] = useState("");
+  const [aboutUsContent, setAboutUsContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [token, setToken] = useState("");
@@ -55,6 +58,9 @@ const PrivacyPage = () => {
           // Handle Support
           if (data.support) setSupportContent(data.support);
 
+          // Handle About Us
+          if (data["about_us"]) setAboutUsContent(data["about_us"]);
+
           // Handle Array format if applicable
           if (Array.isArray(data)) {
             const privacy = data.find((s: any) => s.key === "privacy");
@@ -62,11 +68,13 @@ const PrivacyPage = () => {
 
             const support = data.find((s: any) => s.key === "support");
             if (support) setSupportContent(support.value);
+
+            const aboutUs = data.find((s: any) => s.key === "about_us");
+            if (aboutUs) setAboutUsContent(aboutUs.value);
           }
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
-        toast.error("فشل في تحميل الإعدادات");
       } finally {
         setIsLoading(false);
       }
@@ -78,8 +86,18 @@ const PrivacyPage = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const key = activeTab === "privacy" ? "privacy" : "support";
-      const value = activeTab === "privacy" ? privacyContent : supportContent;
+      let key, value;
+
+      if (activeTab === "privacy") {
+        key = "privacy";
+        value = privacyContent;
+      } else if (activeTab === "support") {
+        key = "support";
+        value = supportContent;
+      } else {
+        key = "about_us";
+        value = aboutUsContent;
+      }
 
       await postData(
         "settings",
@@ -87,11 +105,13 @@ const PrivacyPage = () => {
         { Authorization: `Bearer ${token}` }
       );
 
-      toast.success(
-        `تم حفظ ${
-          activeTab === "privacy" ? "سياسة الخصوصية" : "الدعم والمساعدة"
-        } بنجاح`
-      );
+      const successMessages = {
+        privacy: "سياسة الخصوصية",
+        support: "الدعم والمساعدة",
+        "about_us": "من نحن",
+      };
+
+      toast.success(`تم حفظ ${successMessages[activeTab]} بنجاح`);
     } catch (error) {
       console.error("Error saving settings:", error);
       toast.error("حدث خطأ أثناء الحفظ");
@@ -100,16 +120,23 @@ const PrivacyPage = () => {
     }
   };
 
-   const isAuthrized = useAuthrization({ user: user as User, module: "settings" });
-    if (!isAuthrized) {
-      return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
-    }
+  const isAuthrized = useAuthrization({
+    user: user as User,
+    module: "settings",
+  });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">
-          {activeTab === "privacy" ? "سياسة الخصوصية" : "الدعم والمساعدة"}
+          {activeTab === "privacy"
+            ? "سياسة الخصوصية"
+            : activeTab === "support"
+            ? "الدعم والمساعدة"
+            : "من نحن"}
         </h2>
         <Button onClick={handleSave} disabled={isSaving || isLoading}>
           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -123,6 +150,9 @@ const PrivacyPage = () => {
         </Button>
         <Button variant={"outline"} onClick={() => setActiveTab("support")}>
           الدعم والمساعدة
+        </Button>
+        <Button variant={"outline"} onClick={() => setActiveTab("about_us")}>
+          من نحن
         </Button>
       </div>
 
@@ -140,13 +170,19 @@ const PrivacyPage = () => {
               <Editor
                 apiKey={siteConfig.tinymceApiKey}
                 value={
-                  activeTab === "privacy" ? privacyContent : supportContent
+                  activeTab === "privacy"
+                    ? privacyContent
+                    : activeTab === "support"
+                    ? supportContent
+                    : aboutUsContent
                 }
                 onEditorChange={(newContent: string) => {
                   if (activeTab === "privacy") {
                     setPrivacyContent(newContent);
-                  } else {
+                  } else if (activeTab === "support") {
                     setSupportContent(newContent);
+                  } else {
+                    setAboutUsContent(newContent);
                   }
                 }}
                 init={{
