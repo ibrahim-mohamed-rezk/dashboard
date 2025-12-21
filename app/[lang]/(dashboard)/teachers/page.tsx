@@ -112,6 +112,7 @@ type FormData = {
   levels: string;
   cover: string | File | null;
   avatar: string | File | null;
+  about: string;
   tech_no?: string;
 };
 
@@ -150,6 +151,7 @@ function BasicDataTable() {
     cover: "",
     password: "",
     avatar: "",
+    about: "",
     tech_no: "",
   });
   const [filters, setFilters] = useState({
@@ -222,6 +224,7 @@ function BasicDataTable() {
       cover: "",
       password: "",
       avatar: "",
+      about: "",
       tech_no: "",
     });
   };
@@ -378,7 +381,9 @@ function BasicDataTable() {
   }, []);
 
   // handle input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prevFormData) => ({
       ...prevFormData,
@@ -659,7 +664,8 @@ function BasicDataTable() {
   const handleImportFromExcel = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".xls,.xlsx,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel";
+    input.accept =
+      ".xls,.xlsx,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -682,7 +688,9 @@ function BasicDataTable() {
           let workbook;
           try {
             if (typeof data === "string" || data instanceof ArrayBuffer) {
-              workbook = XLSX.read(data, { type: data instanceof ArrayBuffer ? "array" : "binary" });
+              workbook = XLSX.read(data, {
+                type: data instanceof ArrayBuffer ? "array" : "binary",
+              });
             } else {
               toast.error("تعذر قراءة الملف (نوع)");
               return reject("Unknown file type");
@@ -695,7 +703,10 @@ function BasicDataTable() {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           // Sheet to JSON with headers
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1,
+            blankrows: false,
+          });
           resolve(json);
         };
 
@@ -744,9 +755,7 @@ function BasicDataTable() {
         group_id: headersRow.findIndex((h) => h === "Group ID"),
       };
 
-      if (
-        Object.values(colIdx).some((v) => v === -1)
-      ) {
+      if (Object.values(colIdx).some((v) => v === -1)) {
         toast.error("ملف Excel غير متوافق مع القالب المطلوب");
         return;
       }
@@ -762,7 +771,7 @@ function BasicDataTable() {
         if (
           !row ||
           (row.length === 1 && row[0].trim() === "") ||
-          (row.length < 5)
+          row.length < 5
         ) {
           continue;
         }
@@ -923,6 +932,7 @@ function BasicDataTable() {
       avatar: user.user.avatar,
       subject_id: user.user.subject_id?.toString() || "",
       tech_no: user.tech_no || "",
+      about: (user.user as any)?.about || "",
     });
     setShowEditModal(true);
     setEditError(null);
@@ -1478,7 +1488,10 @@ function BasicDataTable() {
     getRowId: (row) => String(row.id),
   });
 
-  const isAuthrized = useAuthrization({ user: user as UserType, module: "Teachers" });
+  const isAuthrized = useAuthrization({
+    user: user as UserType,
+    module: "Teachers",
+  });
   if (!isAuthrized) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
@@ -1680,7 +1693,7 @@ function BasicDataTable() {
                 <DialogTrigger asChild>
                   <Button variant="outline">اضافه مستخدم</Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>اضافه مستخدم</DialogTitle>
                   </DialogHeader>
@@ -1688,10 +1701,85 @@ function BasicDataTable() {
                     <div className="space-y-4">
                       <div className="space-y-2 flex items-center justify-center flex-col w-full">
                         <label
+                          htmlFor="avatar"
+                          className="block text-sm font-medium"
+                        >
+                          صورة الملف الشخصي
+                        </label>
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Input
+                              {...register("avatar")}
+                              id="avatar"
+                              type="file"
+                              accept="image/*"
+                              name="avatar"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    avatar: file,
+                                  }));
+                                }
+                              }}
+                            />
+                            {(!formData.avatar ||
+                              formData.avatar === "https://safezone-co.top/" ||
+                              formData.avatar ===
+                                "https://via.placeholder.com/150x150") && (
+                              <label
+                                htmlFor="avatar"
+                                className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
+                              >
+                                <Upload className="w-5 h-5 text-gray-600" />
+                              </label>
+                            )}
+                          </div>
+                          {formData.avatar &&
+                            formData.avatar !== "https://safezone-co.top/" &&
+                            formData.avatar !==
+                              "https://via.placeholder.com/150x150" && (
+                              <div className="relative w-20 h-20">
+                                <img
+                                  src={
+                                    typeof formData.avatar === "string"
+                                      ? formData.avatar !==
+                                          "https://safezone-co.top/" &&
+                                        formData.avatar !==
+                                          "https://via.placeholder.com/150x150"
+                                        ? formData.avatar
+                                        : DEFAULT_IMAGE
+                                      : formData.avatar instanceof File
+                                      ? URL.createObjectURL(formData.avatar)
+                                      : DEFAULT_IMAGE
+                                  }
+                                  alt="Avatar Preview"
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      avatar: null,
+                                    }))
+                                  }
+                                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                      <div className="space-y-2 flex items-center justify-center flex-col w-full">
+                        <label
                           htmlFor="cover"
                           className="block text-sm font-medium"
                         >
-                          صورة المستخدم
+                          صورة الغلاف
                         </label>
                         <div className="flex items-center gap-4">
                           <div className="relative">
@@ -1708,7 +1796,6 @@ function BasicDataTable() {
                                   setFormData((prev) => ({
                                     ...prev,
                                     cover: file,
-                                    avatar: file,
                                   }));
                                 }
                               }}
@@ -1743,7 +1830,7 @@ function BasicDataTable() {
                                       ? URL.createObjectURL(formData.cover)
                                       : DEFAULT_IMAGE
                                   }
-                                  alt="Preview"
+                                  alt="Cover Preview"
                                   className="w-full h-full object-cover rounded-lg"
                                 />
                                 <button
@@ -1872,6 +1959,18 @@ function BasicDataTable() {
                           <option value="both">الاثنين معاً</option>
                         </select>
                       </div>
+                      <div>
+                        <label htmlFor="about">نبذة عن المعلم</label>
+                        <textarea
+                          id="about"
+                          name="about"
+                          rows={4}
+                          placeholder="أدخل نبذة عن المعلم"
+                          value={formData.about}
+                          onChange={handleInputChange}
+                          className="w-full p-2 border rounded"
+                        />
+                      </div>
                     </div>
                     <div>
                       {error && (
@@ -1921,10 +2020,81 @@ function BasicDataTable() {
               </div>
               <form onSubmit={updateUser}>
                 <div className="space-y-4">
-                  {/* Image Upload */}
+                  {/* Avatar Upload */}
                   <div className="space-y-2 flex items-center justify-center flex-col w-full">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      صورة المستخدم
+                      صورة الملف الشخصي
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id="edit-avatar"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                avatar: file,
+                              }));
+                            }
+                          }}
+                        />
+                        {(!formData.avatar ||
+                          formData.avatar === "https://safezone-co.top/" ||
+                          formData.avatar ===
+                            "https://via.placeholder.com/150x150") && (
+                          <label
+                            htmlFor="edit-avatar"
+                            className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                          >
+                            <Upload className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                          </label>
+                        )}
+                      </div>
+                      {formData.avatar &&
+                        formData.avatar !== "https://safezone-co.top/" &&
+                        formData.avatar !==
+                          "https://via.placeholder.com/150x150" && (
+                          <div className="relative w-20 h-20">
+                            <img
+                              src={
+                                typeof formData.avatar === "string"
+                                  ? formData.avatar !==
+                                      "https://safezone-co.top/" &&
+                                    formData.avatar !==
+                                      "https://via.placeholder.com/150x150"
+                                    ? formData.avatar
+                                    : DEFAULT_IMAGE
+                                  : formData.avatar instanceof File
+                                  ? URL.createObjectURL(formData.avatar)
+                                  : DEFAULT_IMAGE
+                              }
+                              alt="Avatar Preview"
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  avatar: null,
+                                }))
+                              }
+                              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                  {/* Cover Photo Upload */}
+                  <div className="space-y-2 flex items-center justify-center flex-col w-full">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      صورة الغلاف
                     </label>
                     <div className="flex items-center gap-4">
                       <div className="relative">
@@ -1939,7 +2109,6 @@ function BasicDataTable() {
                               setFormData((prev) => ({
                                 ...prev,
                                 cover: file,
-                                avatar: file,
                               }));
                             }
                           }}
@@ -1974,7 +2143,7 @@ function BasicDataTable() {
                                   ? URL.createObjectURL(formData.cover)
                                   : DEFAULT_IMAGE
                               }
-                              alt="Preview"
+                              alt="Cover Preview"
                               className="w-full h-full object-cover rounded-lg"
                             />
                             <button
@@ -1983,7 +2152,6 @@ function BasicDataTable() {
                                 setFormData((prev) => ({
                                   ...prev,
                                   cover: null,
-                                  avatar: null,
                                 }))
                               }
                               className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
@@ -2125,6 +2293,19 @@ function BasicDataTable() {
                       <option value="offline">أوفلاين</option>
                       <option value="both">الاثنين معاً</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      نبذة عن المعلم
+                    </label>
+                    <textarea
+                      name="about"
+                      value={formData.about}
+                      onChange={handleInputChange}
+                      rows={4}
+                      placeholder="أدخل نبذة عن المعلم"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
                   </div>
                 </div>
                 <div>
