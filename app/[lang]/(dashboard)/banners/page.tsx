@@ -319,6 +319,13 @@ function BannerTable() {
       },
     },
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "image",
       header: "الصورة",
       cell: ({ row }) => {

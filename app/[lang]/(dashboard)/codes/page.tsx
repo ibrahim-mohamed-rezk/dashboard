@@ -625,6 +625,13 @@ function BasicDataTable() {
   const columns: ColumnDef<SubscriptionCodeTypes>[] = [
     selectionColumn, // Add selection column first
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "code",
       header: "الكود",
       cell: ({ row }) => (

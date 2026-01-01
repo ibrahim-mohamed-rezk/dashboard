@@ -329,6 +329,13 @@ function SubjectsDataTable() {
       enableHiding: false,
     },
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "name",
       header: "اسم المادة",
       cell: ({ row }) => {

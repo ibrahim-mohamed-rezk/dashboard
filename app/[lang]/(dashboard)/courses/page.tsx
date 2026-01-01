@@ -602,17 +602,15 @@ function CoursesTable() {
           <input
             type="checkbox"
             checked={
-              table.getFilteredRowModel().rows.every((row) =>
-                selectedRows.has(row.original.id)
-              ) &&
+              table
+                .getFilteredRowModel()
+                .rows.every((row) => selectedRows.has(row.original.id)) &&
               table.getFilteredRowModel().rows.length > 0
             }
             onChange={() => {
               const newSelected = new Set(selectedRows);
               const rows = table.getFilteredRowModel().rows;
-              if (
-                rows.every((row) => newSelected.has(row.original.id))
-              ) {
+              if (rows.every((row) => newSelected.has(row.original.id))) {
                 rows.forEach((row) => newSelected.delete(row.original.id));
               } else {
                 rows.forEach((row) => newSelected.add(row.original.id));
@@ -643,6 +641,13 @@ function CoursesTable() {
       ),
       enableSorting: false,
       enableHiding: false,
+    },
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
     },
     {
       accessorKey: "title",

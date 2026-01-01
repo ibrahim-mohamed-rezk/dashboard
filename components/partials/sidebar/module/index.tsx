@@ -51,6 +51,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
   const pathname = usePathname();
   const locationName = getDynamicPath(pathname);
 
+
   const toggleSubMenu = (index: number) => {
     setActiveIndex(index);
     if (menus[index].child) {
@@ -779,3 +780,6 @@ const ModuleSidebar = ({ user }: { user: User }) => {
 };
 
 export default ModuleSidebar;
+
+
+

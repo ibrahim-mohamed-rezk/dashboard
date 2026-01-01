@@ -322,6 +322,13 @@ function LevelsDataTable() {
       enableHiding: false,
     },
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "name",
       header: "اسم المستوى",
       cell: ({ row }) => {

@@ -536,6 +536,13 @@ function BasicDataTable() {
       ),
     },
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "full_name",
       header: "الاسم الكامل",
       cell: ({ row }) => {

@@ -328,6 +328,13 @@ function BasicDataTable() {
   const columns: ColumnDef<Coupon>[] = [
     selectionColumn, // Add first
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "code",
       header: "الكود",
       cell: ({ row }) => (

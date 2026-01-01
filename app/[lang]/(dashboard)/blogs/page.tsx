@@ -555,6 +555,13 @@ const handleDelete = async (id: number) => {
       ),
     },
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "image",
       header: "الصورة",
       cell: ({ row }) => {

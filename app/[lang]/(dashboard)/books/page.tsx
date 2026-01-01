@@ -408,6 +408,13 @@ function BooksDataTable() {
   // columns of table
   const columns: ColumnDef<Book>[] = [
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "name",
       header: "اسم الكتاب",
       cell: ({ row }) => {

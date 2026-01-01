@@ -714,6 +714,13 @@ function ExamsDataTable() {
       enableHiding: false,
     },
     {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
+    {
       accessorKey: "title",
       header: "عنوان الامتحان",
       cell: ({ row }) => {

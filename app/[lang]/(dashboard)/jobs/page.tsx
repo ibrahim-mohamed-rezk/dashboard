@@ -323,9 +323,15 @@ function JobsDataTable() {
     enableHiding: false,
   };
 
-  // columns of table
   const columns: ColumnDef<Job>[] = [
     selectionColumn, // Add first
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.id}</span>
+      ),
+    },
     {
       accessorKey: "title",
       header: "عنوان الوظيفة",
