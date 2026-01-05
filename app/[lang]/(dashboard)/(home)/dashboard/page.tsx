@@ -54,6 +54,7 @@ const Dashboard = async ({
 
   const trans = await getDictionary("ar");
 
+  console.log(statistics)
   return <DashboardPageView statistics={statistics} trans={trans} />;
 };
 

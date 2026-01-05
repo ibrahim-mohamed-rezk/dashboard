@@ -875,6 +875,11 @@ function BasicDataTable() {
       enableHiding: false,
     },
     {
+      accessorKey: "user.id",
+      header: "ID",
+      cell: ({ row }) => <div>{row?.original?.user?.id}</div>,
+    },
+    {
       accessorKey: "full_name",
       header: "الاسم الكامل",
       cell: ({ row }) => {
@@ -1018,11 +1023,13 @@ function BasicDataTable() {
     },
     enableRowSelection: true,
   });
-  const isAuthrized = useAuthrization({ user: user as User, module: "students" });
+  const isAuthrized = useAuthrization({
+    user: user as User,
+    module: "students",
+  });
   if (!isAuthrized) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
-  
 
   return (
     <>

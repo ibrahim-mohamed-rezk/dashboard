@@ -1031,6 +1031,7 @@ function BasicDataTable() {
     }
   }, [studentTeachersFilters]);
 
+
   // columns of table
   const columns: ColumnDef<User>[] = [
     // ✅ Select Column
@@ -1039,7 +1040,6 @@ function BasicDataTable() {
       header: ({ table }) => {
         const isAllSelected = table.getIsAllPageRowsSelected();
         const isSomeSelected = table.getIsSomePageRowsSelected();
-        const ref = useRef<HTMLButtonElement>(null);
 
         return (
           <div className="flex items-center">
@@ -1074,7 +1074,7 @@ function BasicDataTable() {
       accessorKey: "id",
       header: "ID",
       cell: ({ row }) => (
-        <span className="text-xs text-gray-500">{row.original.user.id}</span>
+        <span className="text-xs text-gray-500">{row.original.id}</span>
       ),
     },
     {
