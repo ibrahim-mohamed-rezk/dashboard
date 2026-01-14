@@ -477,6 +477,7 @@ const exportToExcel = (
 
   // Prepare data for Excel export
   const excelData = data.map((student) => ({
+    "#": student.id || "",
     "الاسم الكامل": student.user?.full_name || "",
     "كود الطالب": student.stu_no || "",
     "اسم المدرسة": student.school_name || "",
@@ -495,6 +496,7 @@ const exportToExcel = (
 
   // Set column widths
   const colWidths = [
+    { wch: 5 }, // #
     { wch: 20 }, // الاسم الكامل
     { wch: 15 }, // كود الطالب
     { wch: 25 }, // اسم المدرسة
