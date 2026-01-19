@@ -36,7 +36,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 import { toast } from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
 import { User } from "@/lib/type";
@@ -132,6 +132,26 @@ function BooksDataTable() {
     }
   };
 
+    const fetchData = async () => {
+      try {
+        const response = await getData(
+          `statistics`,
+          {
+            // start_date: startDate,
+            // end_date: endDate,
+            // filter_by: filterBy,
+          },
+          new AxiosHeaders({
+            Authorization: `Bearer ${token}`,
+          })
+        );
+        return response;
+      } catch (error) {
+        console.error("Error fetching statistics:", error);
+        throw error;
+      }
+    };
+
   // feach levels
   const feachLevelsData = async () => {
     try {
@@ -201,6 +221,7 @@ function BooksDataTable() {
     feachSubjectsData();
     feachLevelsData();
     fetchTeachers();
+    fetchData();
   }, [token]);
 
   // feach data
