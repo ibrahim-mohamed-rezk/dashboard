@@ -37,7 +37,7 @@ const ReportsArea = ({ statistics }: { statistics: Statistics }) => {
     {
       id: 4,
       name: "المواد",
-      count: statistics.subjects.total.toString(),
+      count: (statistics.subjects?.total || 0).toString(),
       rate: "30",
       isUp: true,
       icon: <Cup className="h-4 w-4" />,

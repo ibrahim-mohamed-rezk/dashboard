@@ -60,7 +60,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "all",
       series: [
         {
-          data: Object.values(statistics.users.by_month).map(Number),
+          data: Object.values(statistics.users.by_month || {}).map(Number),
         },
       ],
       color: primary,
@@ -69,7 +69,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "students",
       series: [
         {
-          data: Object.values(statistics.students.by_month).map(Number),
+          data: Object.values(statistics.students.by_month || {}).map(Number),
         },
       ],
       color: warning,
@@ -78,7 +78,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "teachers",
       series: [
         {
-          data: Object.values(statistics.teachers.by_month).map(Number),
+          data: Object.values(statistics.teachers.by_month || {}).map(Number),
         },
       ],
       color: success,
@@ -87,7 +87,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "courses",
       series: [
         {
-          data: Object.values(statistics.courses.by_month).map(Number),
+          data: Object.values(statistics.courses.by_month || {}).map(Number),
         },
       ],
       color: info,

@@ -132,26 +132,6 @@ function BooksDataTable() {
     }
   };
 
-    const fetchData = async () => {
-      try {
-        const response = await getData(
-          `statistics`,
-          {
-            // start_date: startDate,
-            // end_date: endDate,
-            // filter_by: filterBy,
-          },
-          new AxiosHeaders({
-            Authorization: `Bearer ${token}`,
-          })
-        );
-        return response;
-      } catch (error) {
-        console.error("Error fetching statistics:", error);
-        throw error;
-      }
-    };
-
   // feach levels
   const feachLevelsData = async () => {
     try {
@@ -221,7 +201,6 @@ function BooksDataTable() {
     feachSubjectsData();
     feachLevelsData();
     fetchTeachers();
-    fetchData();
   }, [token]);
 
   // feach data

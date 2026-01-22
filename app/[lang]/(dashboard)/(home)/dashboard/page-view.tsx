@@ -153,7 +153,7 @@ interface RevenueBreakdownChartProps {
   data: {
     online_revenue: number;
     offline_revenue: number;
-    book_revenue?: number;
+    books_revenue?: number;
   };
   title: string;
 }
@@ -165,7 +165,7 @@ const RevenueBreakdownChart: React.FC<RevenueBreakdownChartProps> = ({
   const series = [
     Number(data.online_revenue || 0),
     Number(data.offline_revenue || 0),
-    Number(data.book_revenue || 0),
+    Number(data.books_revenue || 0),
   ];
   const options: ApexOptions = {
     labels: ["الإيرادات الأونلاين", "الإيرادات الخارجية", "الإيرادات الكتابية"],
@@ -216,12 +216,12 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
   const totalOnlineRevenue =
     statistics.students.details?.reduce(
       (sum, s) => sum + Number(s.online_revenue),
-      0
+      0,
     ) || 0;
   const totalOfflineRevenue =
     statistics.students.details?.reduce(
       (sum, s) => sum + Number(s.offline_revenue),
-      0
+      0,
     ) || 0;
   const totalRevenue = totalOnlineRevenue + totalOfflineRevenue;
   const avgRevenuePerStudent =
@@ -230,8 +230,8 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
       : 0;
 
   const conversionRate =
-    statistics.purchases.total > 0 && statistics.users.total > 0
-      ? (statistics.purchases.total / statistics.users.total) * 100
+    statistics.financial?.total_purchases > 0 && statistics.users.total > 0
+      ? (statistics.financial.total_purchases / statistics.users.total) * 100
       : 0;
 
   return (
@@ -274,7 +274,7 @@ interface CoursePerformanceAnalysisProps {
     title: string;
     revenue: number;
     purchases_count: number;
-    price: number;
+    price: number | string;
   }>;
 }
 
@@ -326,7 +326,7 @@ const CoursePerformanceAnalysis: React.FC<CoursePerformanceAnalysisProps> = ({
     },
     xaxis: {
       categories: performanceData.map((c) =>
-        c.title.length > 20 ? c.title.substring(0, 20) + "..." : c.title
+        c.title.length > 20 ? c.title.substring(0, 20) + "..." : c.title,
       ),
     },
     yaxis: {
@@ -393,18 +393,19 @@ const StudentEngagementAnalytics: React.FC<StudentEngagementAnalyticsProps> = ({
     ...s,
     totalRevenue: Number(s.online_revenue) + Number(s.offline_revenue),
     engagementScore:
-      s.online_purchases_count * 10 + s.subscription_code_count * 5,
+      (s.online_purchases_count || 0) * 10 +
+      (s.subscription_codes_count || 0) * 5,
   }));
 
   const topEngaged = getTopN(engagementData, "engagementScore", 5);
   const topSpenders = getTopN(engagementData, "totalRevenue", 5);
 
   const scatterData = engagementData
-    .filter((s) => s.totalRevenue > 0 || s.online_purchases_count > 0)
+    .filter((s) => s.totalRevenue > 0 || (s.online_purchases_count || 0) > 0)
     .map((s) => ({
-      x: s.online_purchases_count,
+      x: s.online_purchases_count || 0,
       y: s.totalRevenue,
-      z: s.subscription_code_count,
+      z: s.subscription_codes_count || 0,
     }));
 
   const scatterOptions: ApexOptions = {
@@ -494,15 +495,15 @@ const TeacherPerformanceDashboard: React.FC<
     totalRevenue:
       Number(t.online_revenue) +
       Number(t.offline_revenue) +
-      Number(t.book_revenue),
+      Number(t.books_revenue),
     avgRevenuePerCourse:
-      t.course_count > 0
+      t.courses_count > 0
         ? (Number(t.online_revenue) + Number(t.offline_revenue)) /
-          t.course_count
+          t.courses_count
         : 0,
     efficiency:
-      t.subscription_code_count > 0
-        ? Number(t.offline_revenue) / t.subscription_code_count
+      t.subscription_codes_count > 0
+        ? Number(t.offline_revenue) / t.subscription_codes_count
         : 0,
   }));
 
@@ -518,10 +519,10 @@ const TeacherPerformanceDashboard: React.FC<
   const radarSeries = topTeachers.map((t) => ({
     name: t.full_name,
     data: [
-      Math.min((t.course_count / 10) * 100, 100),
-      Math.min((t.online_purchases_count / 5) * 100, 100),
-      Math.min((t.subscription_code_count / 100) * 100, 100),
-      Math.min((t.book_count / 5) * 100, 100),
+      Math.min((t.courses_count / 10) * 100, 100),
+      Math.min((t.online_courses_purchases / 5) * 100, 100),
+      Math.min((t.subscription_codes_count / 100) * 100, 100),
+      Math.min((t.books_count / 5) * 100, 100),
       Math.min((t.totalRevenue / 10000) * 100, 100),
     ],
   }));
@@ -565,7 +566,7 @@ const TeacherPerformanceDashboard: React.FC<
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div>
                     <p className="text-gray-600">الدورات</p>
-                    <p className="font-semibold">{teacher.course_count}</p>
+                    <p className="font-semibold">{teacher.courses_count}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">الإيرادات المتوسطة لكل دورة</p>
@@ -749,22 +750,22 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
   const totalStudents = statistics.students.total;
   const totalTeachers = statistics.teachers.total;
   const totalUsers = statistics.users.total;
-  const totalPurchases = statistics.purchases.total;
+  const totalPurchases = statistics.financial?.total_purchases || 0;
 
   const totalOnlineRevenue =
     statistics.students.details?.reduce(
       (sum, s) => sum + Number(s.online_revenue),
-      0
+      0,
     ) || 0;
   const totalOfflineRevenue =
     statistics.students.details?.reduce(
       (sum, s) => sum + Number(s.offline_revenue),
-      0
+      0,
     ) || 0;
   const totalBookRevenue =
     statistics.teachers.details?.reduce(
-      (sum, t) => sum + Number(t.book_revenue),
-      0
+      (sum, t) => sum + Number(t.books_revenue),
+      0,
     ) || 0;
   const grandTotalRevenue =
     totalOnlineRevenue + totalOfflineRevenue + totalBookRevenue;
@@ -775,7 +776,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
     return statistics.students.details.filter(
       (s) =>
         !searchTerm ||
-        s.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        s.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [statistics.students.details, searchTerm]);
 
@@ -784,7 +785,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
     return statistics.teachers.details.filter(
       (t) =>
         !searchTerm ||
-        t.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        t.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [statistics.teachers.details, searchTerm]);
 
@@ -890,7 +891,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
           </div>
 
           <CoursePerformanceAnalysis
-            courses={statistics.courses.online_course_details || []}
+            courses={statistics.courses.online_courses || []}
           />
         </TabsContent>
 
@@ -911,16 +912,17 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
             <MetricCard
               title="إجمالي الاشتراكات"
               value={filteredStudents.reduce(
-                (sum, s) => sum + s.subscription_code_count,
-                0
+                (sum, s) => sum + (s.subscription_codes_count || 0),
+                0,
               )}
               icon={<ShoppingCart className="w-6 h-6 text-purple-600" />}
             />
             <MetricCard
               title="معدل التفاعل"
               value={`${(
-                (filteredStudents.filter((s) => s.online_purchases_count > 0)
-                  .length /
+                (filteredStudents.filter(
+                  (s) => (s.online_purchases_count || 0) > 0,
+                ).length /
                   totalStudents) *
                 100
               ).toFixed(1)}%`}
@@ -957,8 +959,8 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                         Number(student.online_revenue) +
                         Number(student.offline_revenue);
                       const isActive =
-                        student.online_purchases_count > 0 ||
-                        student.subscription_code_count > 0;
+                        (student.online_purchases_count || 0) > 0 ||
+                        (student.subscription_codes_count || 0) > 0;
                       return (
                         <tr
                           key={student.student_id}
@@ -977,10 +979,10 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                             {formatCurrency(totalRev)}
                           </td>
                           <td className="p-4">
-                            {student.online_purchases_count}
+                            {student.online_purchases_count || 0}
                           </td>
                           <td className="p-4">
-                            {student.subscription_code_count}
+                            {student.subscription_codes_count || 0}
                           </td>
                           <td className="p-4">
                             <Badge variant="outline">
@@ -1008,14 +1010,17 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
             <MetricCard
               title="إجمالي الدورات"
               value={filteredTeachers.reduce(
-                (sum, t) => sum + t.course_count,
-                0
+                (sum, t) => sum + t.courses_count,
+                0,
               )}
               icon={<BookOpen className="w-6 h-6 text-green-600" />}
             />
             <MetricCard
               title="إجمالي الكتب"
-              value={filteredTeachers.reduce((sum, t) => sum + t.book_count, 0)}
+              value={filteredTeachers.reduce(
+                (sum, t) => sum + t.books_count,
+                0,
+              )}
               icon={<BookOpen className="w-6 h-6 text-purple-600" />}
             />
             <MetricCard
@@ -1054,17 +1059,17 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                       const totalRev =
                         Number(teacher.online_revenue) +
                         Number(teacher.offline_revenue) +
-                        Number(teacher.book_revenue);
+                        Number(teacher.books_revenue);
                       const efficiency =
-                        teacher.course_count > 0
-                          ? totalRev / teacher.course_count
+                        teacher.courses_count > 0
+                          ? totalRev / teacher.courses_count
                           : 0;
                       const rating =
                         efficiency > 1000
                           ? "جيد جداً"
                           : efficiency > 500
-                          ? "جيد"
-                          : "متوسط";
+                            ? "جيد"
+                            : "متوسط";
                       return (
                         <tr
                           key={teacher.teacher_id}
@@ -1073,7 +1078,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                           <td className="p-4 font-medium">
                             {teacher.full_name}
                           </td>
-                          <td className="p-4">{teacher.course_count}</td>
+                          <td className="p-4">{teacher.courses_count}</td>
                           <td className="p-4">
                             {formatCurrency(teacher.online_revenue)}
                           </td>
@@ -1081,7 +1086,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                             {formatCurrency(Number(teacher.offline_revenue))}
                           </td>
                           <td className="p-4">
-                            {formatCurrency(teacher.book_revenue)}
+                            {formatCurrency(teacher.books_revenue)}
                           </td>
                           <td className="p-4 font-semibold">
                             {formatCurrency(totalRev)}
@@ -1124,13 +1129,13 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
             />
             <MetricCard
               title="عدد زيارات الدورة"
-              value={statistics.course_views.total}
+              value={statistics.engagement?.course_views || 0}
               icon={<Eye className="w-6 h-6 text-orange-600" />}
             />
           </div>
 
           <CoursePerformanceAnalysis
-            courses={statistics.courses.online_course_details || []}
+            courses={statistics.courses.online_courses || []}
           />
 
           <div className="grid grid-cols-12 gap-6">
@@ -1140,15 +1145,14 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const courses =
-                    statistics.courses.online_course_details || [];
+                  const courses = statistics.courses.online_courses || [];
                   const priceRanges = {
                     مجاني: courses.filter((c) => Number(c.price) === 0).length,
                     "$1-$50": courses.filter(
-                      (c) => Number(c.price) > 0 && Number(c.price) <= 50
+                      (c) => Number(c.price) > 0 && Number(c.price) <= 50,
                     ).length,
                     "$51-$100": courses.filter(
-                      (c) => Number(c.price) > 50 && Number(c.price) <= 100
+                      (c) => Number(c.price) > 50 && Number(c.price) <= 100,
                     ).length,
                     "$100+": courses.filter((c) => Number(c.price) > 100)
                       .length,
@@ -1178,9 +1182,10 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const totalViews = statistics.course_views.total;
+                  const totalViews = statistics.engagement?.course_views || 0;
                   const totalCourses = statistics.courses.total;
-                  const totalPurchases = statistics.purchases.total;
+                  const totalPurchases =
+                    statistics.financial?.total_purchases || 0;
                   const funnelData = [
                     { stage: "الأطوار", value: totalViews, color: "#3B82F6" },
                     {
@@ -1214,7 +1219,11 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                           </div>
                           <div className="relative">
                             <Progress
-                              value={(item.value / funnelData[0].value) * 100}
+                              value={
+                                item.value > 0
+                                  ? (item.value / funnelData[0].value) * 100
+                                  : 0
+                              }
                               className="h-8"
                             />
                             {idx < funnelData.length - 1 && (
@@ -1289,7 +1298,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
               data={{
                 online_revenue: totalOnlineRevenue,
                 offline_revenue: totalOfflineRevenue,
-                book_revenue: totalBookRevenue,
+                books_revenue: totalBookRevenue,
               }}
               title="توزيع الإيرادات"
             />
@@ -1309,8 +1318,8 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
 
                   const projectedRevenue = months.map((_, idx) =>
                     Math.round(
-                      currentMonthlyAvg * Math.pow(growthRate, idx + 1)
-                    )
+                      currentMonthlyAvg * Math.pow(growthRate, idx + 1),
+                    ),
                   );
 
                   const series = [
@@ -1371,7 +1380,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                     {getTopN(
                       statistics.students.details || [],
                       "online_revenue",
-                      5
+                      5,
                     ).map((student, idx) => {
                       const total =
                         Number(student.online_revenue) +
@@ -1390,7 +1399,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                                 {student.full_name || "المجهول"}
                               </p>
                               <p className="text-xs text-gray-600">
-                                {student.online_purchases_count} مشتريات
+                                {student.online_purchases_count || 0} مشتريات
                               </p>
                             </div>
                           </div>
@@ -1417,12 +1426,12 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                     {getTopN(
                       statistics.teachers.details || [],
                       "offline_revenue",
-                      5
+                      5,
                     ).map((teacher, idx) => {
                       const total =
                         Number(teacher.online_revenue) +
                         Number(teacher.offline_revenue) +
-                        Number(teacher.book_revenue);
+                        Number(teacher.books_revenue);
                       return (
                         <div
                           key={teacher.teacher_id}
@@ -1435,7 +1444,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                             <div>
                               <p className="font-medium">{teacher.full_name}</p>
                               <p className="text-xs text-gray-600">
-                                {teacher.course_count} دورة
+                                {teacher.courses_count} دورة
                               </p>
                             </div>
                           </div>
@@ -1451,7 +1460,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                               <Badge variant="outline" className="text-xs">
                                 الخارجية:{" "}
                                 {formatCurrency(
-                                  Number(teacher.offline_revenue)
+                                  Number(teacher.offline_revenue),
                                 )}
                               </Badge>
                             </div>
@@ -1633,7 +1642,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                       day: dayIndex,
                       hour,
                       value: Math.floor(Math.random() * 100),
-                    }))
+                    })),
                   );
 
                   const series = days.map((day, index) => ({

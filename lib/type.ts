@@ -226,12 +226,24 @@ export interface Statistics {
     details?: Array<{
       student_id: number;
       full_name: string | null;
-      online_purchases_count: number;
+      email: string | null;
+      phone: string | null;
+      online_courses_count?: number;
       online_revenue: number;
-      subscription_code_count: number;
+      books_count?: number;
+      books_revenue?: number;
+      subscription_codes_count: number; // Changed from subscription_code_count
       offline_revenue: number;
+      total_purchases?: number;
+      total_revenue?: number;
+      registration_date?: string;
+      online_purchases_count?: number; // Optional as it might not be in JSON "students.details" but used in code
     }>;
-    by_month: {
+    top_students_by_revenue?: any[];
+    total_revenue_from_students?: number;
+    average_revenue_per_student?: number;
+    registration_trend?: any[];
+    by_month?: {
       [key: string]: number;
     };
     by_week: {
@@ -243,23 +255,32 @@ export interface Statistics {
     details?: Array<{
       teacher_id: number;
       full_name: string;
-      course_count: number;
-      online_purchases_count: number;
+      email?: string;
+      subject?: string;
+      courses_count: number; // Changed from course_count
+      online_courses_purchases: number; // Changed from online_purchases_count
       online_revenue: number;
-      subscription_code_count: number;
+      subscription_codes_count: number; // Changed from subscription_code_count
       offline_revenue: number;
-      book_count: number;
-      book_purchase_count: number;
-      book_revenue: number;
+      books_count: number; // Changed from book_count
+      book_purchases_count: number; // Changed from book_purchase_count
+      books_revenue: number; // Changed from book_revenue
+      students_count?: number;
+      total_revenue?: number;
+      registration_date?: string;
     }>;
-    by_month: {
+    top_teachers_by_revenue?: any[];
+    total_revenue_from_teachers?: number;
+    average_revenue_per_teacher?: number;
+    registration_trend?: any[];
+    by_month?: {
       [key: string]: number;
     };
-    by_week: {
+    by_week?: {
       [key: string]: number;
     };
   };
-  modules: {
+  modules?: {
     total: number;
     by_month: {
       [key: string]: number;
@@ -268,7 +289,7 @@ export interface Statistics {
       [key: string]: number;
     };
   };
-  subjects: {
+  subjects?: {
     total: number;
     by_month: {
       [key: string]: number;
@@ -281,12 +302,32 @@ export interface Statistics {
     total: number;
     online_count: number;
     offline_count?: number;
-    purchases_count: number;
-    online_course_details: any[];
-    by_month: {
+    free_count?: number;
+    paid_count?: number;
+    purchases_count?: number; // Optional in JSON
+    online_courses?: Array<{
+      id: number;
+      title: string;
+      teacher: string;
+      subject: string;
+      level: string;
+      price: string | number;
+      purchases_count: number;
+      views_count: number;
+      revenue: number;
+      created_at: string;
+    }>;
+    online_course_details?: any[]; // Keep for compatibility or remove if unused
+    top_courses_by_revenue?: any[];
+    top_courses_by_purchases?: any[];
+    total_revenue?: number;
+    total_purchases?: number;
+    average_price?: number;
+    creation_trend?: any[];
+    by_month?: {
       [key: string]: number;
     };
-    by_week: {
+    by_week?: {
       [key: string]: number;
     };
   };
@@ -300,11 +341,11 @@ export interface Statistics {
     };
   };
   course_views: {
-    total: number;
-    by_month: {
+    total: number; // Changed to number from object with by_month
+    by_month?: {
       [key: string]: number;
     };
-    by_week: {
+    by_week?: {
       [key: string]: number;
     };
   };
@@ -342,25 +383,79 @@ export interface Statistics {
     by_month?: { [key: string]: number };
     by_week?: { [key: string]: number };
   };
-  purchases: {
-    total: number;
-    by_month: {
-      [key: string]: number;
+  financial: {
+    total_purchases: number;
+    total_revenue: number;
+    subscription_revenue: number;
+    total_system_revenue: number;
+    average_purchase_value: number;
+    revenue_by_type: {
+      courses: {
+        revenue: number;
+        count: number;
+      };
+      books: {
+        revenue: number;
+        count: number;
+      };
     };
-    by_week: {
-      [key: string]: number;
-    };
+    revenue_trend: any[];
   };
-  cobons: {
+  subscription_codes: {
     total: number;
-    by_month: {
+    used: number;
+    unused: number;
+    active: number;
+    expired: number;
+    usage_rate: number;
+    total_value: number;
+    used_value: number;
+    creation_trend: any[];
+    by_month?: {
       [key: string]: number;
     };
-    by_week: {
+    by_week?: {
       [key: string]: number;
     };
   };
   users: {
+    total: number;
+    active: number;
+    blocked: number;
+    by_role: {
+      super_admin: number;
+      admin: number;
+      student: number;
+      teacher: number;
+    };
+    registration_trend: any[];
+    by_month?: {
+      [key: string]: number;
+    };
+    by_week?: {
+      [key: string]: number;
+    };
+  };
+  engagement: {
+    course_views: number;
+    blog_views: number;
+    total_views: number;
+    top_viewed_courses: any[];
+    top_viewed_blogs: any[];
+    engagement_trend: any[];
+  };
+  purchases?: {
+    // Made optional as it's missing in JSON, replaced by financial
+    total: number;
+    by_month: {
+      [key: string]: number;
+    };
+    by_week: {
+      [key: string]: number;
+    };
+  };
+  cobons?: {
+    // Made optional/kept as is just in case
     total: number;
     by_month: {
       [key: string]: number;

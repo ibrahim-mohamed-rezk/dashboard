@@ -31,12 +31,12 @@ const UsersStat = ({ statistics, trans }: UsersStatProps) => {
     {
       id: 4,
       country: translate("المواد", trans),
-      count: statistics.subjects.total.toString(),
+      count: (statistics.subjects?.total || 0).toString(),
     },
     {
       id: 5,
       country: translate("الوحدات", trans),
-      count: statistics.modules.total.toString(),
+      count: (statistics.modules?.total || 0).toString(),
     },
   ];
 

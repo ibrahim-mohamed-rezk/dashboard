@@ -13,16 +13,11 @@ const Dashboard = async ({
   const token = cookiesData.get("token")?.value;
   const paramsData = await searchParams;
 
-  // Format date as "YYYY-MM-DDTHH:mm:ss.sssZ"
-  const formatDate = (date: Date) => date.toISOString();
-
-  // Use params date if available, otherwise use current date in ISO format
   const startDate =
     paramsData.from && typeof paramsData.from === "string"
       ? new Date(paramsData.from).toISOString().slice(0, 10)
       : null;
 
-  // Use params end date if available, otherwise use current date + 1 month in ISO format
   const endDate =
     paramsData.to && typeof paramsData.to === "string"
       ? new Date(paramsData.to).toISOString().slice(0, 10)
@@ -41,7 +36,7 @@ const Dashboard = async ({
         },
         new AxiosHeaders({
           Authorization: `Bearer ${token}`,
-        })
+        }),
       );
       return response;
     } catch (error) {
@@ -54,7 +49,7 @@ const Dashboard = async ({
 
   const trans = await getDictionary("ar");
 
-  console.log(statistics)
+  console.log(statistics);
   return <DashboardPageView statistics={statistics} trans={trans} />;
 };
 
