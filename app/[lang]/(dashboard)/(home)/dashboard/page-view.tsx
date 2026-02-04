@@ -23,14 +23,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ReportsSnapshot from "./components/reports-snapshot";
-import CountryMap from "./components/country-map";
-import UserDeviceReport from "./components/user-device-report";
-import UserStats from "./components/user-stats-chart";
 import UsersStat from "./components/users-stat";
-import ReportsArea from "./components/reports-area";
 import DashboardSelect from "@/components/dasboard-select";
-import TopTen from "./components/top-ten";
-import TopPage from "./components/top-page";
 import DatePickerWithRange from "@/components/date-picker-with-range";
 import { Statistics } from "@/lib/type";
 import { ApexOptions } from "apexcharts";
@@ -46,13 +40,10 @@ import {
   Eye,
   Award,
   Target,
-  BarChart3,
-  PieChart,
   Activity,
   Zap,
   AlertCircle,
   CheckCircle2,
-  XCircle,
   Clock,
   Calendar,
   Filter,
@@ -78,7 +69,7 @@ function calculateGrowth(current: number, previous: number): number {
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "EGP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value);
@@ -110,14 +101,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
     trend === "up"
       ? "text-green-600"
       : trend === "down"
-      ? "text-red-600"
-      : "text-gray-600";
+        ? "text-red-600"
+        : "text-gray-600";
   const bgColor =
     trend === "up"
       ? "bg-green-50"
       : trend === "down"
-      ? "bg-red-50"
-      : "bg-gray-50";
+        ? "bg-red-50"
+        : "bg-gray-50";
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-200">
@@ -418,7 +409,7 @@ const StudentEngagementAnalytics: React.FC<StudentEngagementAnalyticsProps> = ({
       tickAmount: 10,
     },
     yaxis: {
-      title: { text: "الإيرادات الإجمالية ($)" },
+      title: { text: "الإيرادات الإجمالية (EGP)" },
       tickAmount: 7,
     },
     grid: {
@@ -698,7 +689,7 @@ const RevenueTimeline: React.FC<RevenueTimelineProps> = ({ statistics }) => {
     },
     xaxis: { categories: months },
     yaxis: {
-      title: { text: "الإيرادات ($)" },
+      title: { text: "الإيرادات (EGP)" },
       labels: {
         formatter: (val) => formatCurrency(val),
       },
@@ -1148,13 +1139,13 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                   const courses = statistics.courses.online_courses || [];
                   const priceRanges = {
                     مجاني: courses.filter((c) => Number(c.price) === 0).length,
-                    "$1-$50": courses.filter(
+                    "EGP 1-50": courses.filter(
                       (c) => Number(c.price) > 0 && Number(c.price) <= 50,
                     ).length,
-                    "$51-$100": courses.filter(
+                    "EGP 51-100": courses.filter(
                       (c) => Number(c.price) > 50 && Number(c.price) <= 100,
                     ).length,
-                    "$100+": courses.filter((c) => Number(c.price) > 100)
+                    "EGP 100+": courses.filter((c) => Number(c.price) > 100)
                       .length,
                   };
                   const series = Object.values(priceRanges);

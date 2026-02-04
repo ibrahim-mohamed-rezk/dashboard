@@ -93,22 +93,41 @@ const ProjectBudget: React.FC<ProjectBudgetProps> = ({ height = 200 }) => {
                 stroke="none"
               >
                 {data.map((entry, index) => (
-                  <Cell key={`project-budget-key-${index}`} fill={entry.color} />
+                  <Cell
+                    key={`project-budget-key-${index}`}
+                    fill={entry.color}
+                  />
                 ))}
               </Pie>
-              {needle({ value, data, cx, cy, iR, oR, color: `hsl(${theme?.cssVars[mode === "dark" ? "dark" : "light"].warning})` })}
+              {needle({
+                value,
+                data,
+                cx,
+                cy,
+                iR,
+                oR,
+                color: `hsl(${theme?.cssVars[mode === "dark" ? "dark" : "light"].warning})`,
+              })}
             </PieChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
       <CardFooter className="justify-center gap-12 pt-0 mt-11">
         <div>
-          <div className="text-sm font-medium text-default-600 mb-1.5">Project Budget</div>
-          <div className="text-lg font-semibold text-default-900">$96,321</div>
+          <div className="text-sm font-medium text-default-600 mb-1.5">
+            Project Budget
+          </div>
+          <div className="text-lg font-semibold text-default-900">
+            EGP 96,321
+          </div>
         </div>
         <div>
-          <div className="text-sm font-medium text-default-600 mb-1.5">Estimated Cost</div>
-          <div className="text-lg font-semibold text-default-900">$42,321</div>
+          <div className="text-sm font-medium text-default-600 mb-1.5">
+            Estimated Cost
+          </div>
+          <div className="text-lg font-semibold text-default-900">
+            EGP 42,321
+          </div>
         </div>
       </CardFooter>
     </Card>

@@ -371,7 +371,7 @@ const TimelineWithCard = () => {
                 </div>
               </div>
               <span className="text-sm font-semibold text-default-700 ">
-                $20
+                EGP 20
               </span>
             </div>
           </TimelineContent>

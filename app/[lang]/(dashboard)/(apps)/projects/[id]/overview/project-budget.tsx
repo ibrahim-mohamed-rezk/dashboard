@@ -82,8 +82,9 @@ const ProjectBudget = ({ height = 250 }: { height?: number }) => {
               cy={cy}
               innerRadius={iR}
               outerRadius={oR}
-              fill={`hsl(${theme?.cssVars[mode === "dark" ? "dark" : "light"].primary
-                })`}
+              fill={`hsl(${
+                theme?.cssVars[mode === "dark" ? "dark" : "light"].primary
+              })`}
               stroke="none"
             >
               {data.map((entry, index) => (
@@ -97,8 +98,9 @@ const ProjectBudget = ({ height = 250 }: { height?: number }) => {
               cy,
               iR,
               oR,
-              `hsl(${theme?.cssVars[mode === "dark" ? "dark" : "light"].warning
-              })`
+              `hsl(${
+                theme?.cssVars[mode === "dark" ? "dark" : "light"].warning
+              })`,
             )}
           </PieChart>
         </ResponsiveContainer>
@@ -108,13 +110,17 @@ const ProjectBudget = ({ height = 250 }: { height?: number }) => {
           <div className="text-sm font-medium text-default-600 mb-1.5">
             Project Budget
           </div>
-          <div className="text-lg font-semibold text-default-900">$96,321</div>
+          <div className="text-lg font-semibold text-default-900">
+            EGP 96,321
+          </div>
         </div>
         <div>
           <div className="text-sm font-medium text-default-600 mb-1.5">
             Estimated Cost
           </div>
-          <div className="text-lg font-semibold text-default-900">$42,321</div>
+          <div className="text-lg font-semibold text-default-900">
+            EGP 42,321
+          </div>
         </div>
       </CardFooter>
     </Card>

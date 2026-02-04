@@ -251,8 +251,8 @@ const AdvancedTimeline = () => {
               </div>
             </div>
             <p className="text-sm text-default-500  mt-1">
-              Lorem ipsum, dolor sit amet consectetur adipisicing elit.
-              Possimus quos, voluptates voluptas rem veniam expedita.
+              Lorem ipsum, dolor sit amet consectetur adipisicing elit. Possimus
+              quos, voluptates voluptas rem veniam expedita.
             </p>
             <hr className="my-3" />
             <div className="flex flex-col sm:flex-row  sm:items-center gap-4">
@@ -297,8 +297,8 @@ const AdvancedTimeline = () => {
               </div>
             </div>
             <p className="text-sm text-default-500  mt-2">
-              Lorem ipsum, dolor sit amet consectetur adipisicing elit.
-              Possimus quos, voluptates voluptas rem veniam expedita.
+              Lorem ipsum, dolor sit amet consectetur adipisicing elit. Possimus
+              quos, voluptates voluptas rem veniam expedita.
             </p>
             <hr className="my-3" />
             {/* comment list */}
@@ -370,7 +370,7 @@ const AdvancedTimeline = () => {
                 </div>
               </div>
               <span className="flex-none text-sm font-semibold text-default-700">
-                $20
+                EGP 20
               </span>
             </div>
           </TimelineContent>

@@ -284,9 +284,8 @@ function PurchasesDataTable() {
         }
         return (
           <div className="flex flex-col">
-            <span className="font-medium">{purchastable.title}</span>
             <span className="text-sm text-gray-500">
-              ${parseFloat(purchastable.price).toLocaleString()}
+              EGP {parseFloat(purchastable.price).toLocaleString()}
             </span>
           </div>
         );

@@ -71,7 +71,7 @@ const CounterDialog = () => {
                 Price Per Seat
               </span>{" "}
               <span className="text-sm font-semibold text-default-700">
-                $100
+                EGP 100
               </span>{" "}
             </li>
             <li className="flex justify-between">
@@ -79,7 +79,7 @@ const CounterDialog = () => {
                 Total
               </span>{" "}
               <span className="text-sm font-semibold text-default-700">
-                $1900
+                EGP 1900
               </span>{" "}
             </li>
           </ul>

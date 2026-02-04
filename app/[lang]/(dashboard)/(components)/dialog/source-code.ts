@@ -514,7 +514,7 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
@@ -548,7 +548,7 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
@@ -582,7 +582,7 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
@@ -616,7 +616,7 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
@@ -650,7 +650,7 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
@@ -686,7 +686,7 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
@@ -1301,7 +1301,7 @@ const DialogAutoDestroyable = () => {
                 </div>
                 <div className="mt-1">
                   <h3 className="text-base font-semibold text-default-950 dark:text-primary-foreground">
-                    $40/User
+                    EGP 40/User
                   </h3>
                   <p className="text-[10px] text-default-500">
                     Includes 20GB individual data
@@ -1349,7 +1349,7 @@ const DialogAutoDestroyable = () => {
                 </div>
                 <div className="mt-1">
                   <h3 className="text-base font-semibold text-default-950 dark:text-primary-foreground">
-                    $40/User
+                    EGP 40/User
                   </h3>
                   <p className="text-[10px] text-default-500">
                     Includes 20GB individual data

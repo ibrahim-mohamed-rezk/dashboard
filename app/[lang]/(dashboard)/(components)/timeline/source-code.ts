@@ -1595,7 +1595,7 @@ const TimelineWithCard = () => {
                         Micheal Jr. Scott
                       </td>
                       <td className="text-sm text-default-400 text-center">
-                        $320.00
+                        EGP 320.00
                       </td>
                       <td className="text-sm text-default-400 text-center">
                         1
@@ -1745,7 +1745,7 @@ const TimelineWithCard = () => {
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-default-700 ">
-                  $20
+                  EGP 20
                 </span>
               </div>
             </TimelineContent>

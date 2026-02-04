@@ -32,49 +32,46 @@ const ProfileInfo = ({ user }: { user: User }) => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild className="cursor-pointer">
         <div className="flex  items-center">
-          {user.avatar && (
-            <Image
-              src={
-                user.avatar &&
-                (user.avatar.startsWith("http") &&
-                  user.avatar.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i))
-                  ? user.avatar
-                  : avatar
-              }
-              alt={user.full_name}
-              width={36}
-              height={36}
-              className="rounded-full"
-            />
-          )}
+          <Image
+            src={
+              user.avatar &&
+              user.avatar.startsWith("http") &&
+              user.avatar.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
+                ? user.avatar
+                : avatar
+            }
+            alt={user.full_name ?? "User"}
+            width={36}
+            height={36}
+            className="rounded-full"
+          />
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 p-0" align="end">
         <DropdownMenuLabel className="flex gap-2 items-center mb-1 p-3">
-          {user.avatar && (
-            <Image
-              src={
-                user.avatar &&
-                (user.avatar.startsWith("http") &&
-                  user.avatar.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i))
-                  ? user.avatar
-                  : avatar
-              }
-              alt={user.full_name}
-              width={40}
-              height={10}
-              className="rounded-lg"
-            />
-          )}
+          <Image
+            src={
+              user.avatar &&
+              user.avatar.startsWith("http") &&
+              user.avatar.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
+                ? user.avatar
+                : avatar
+            }
+            alt={user.full_name ?? "User"}
+            width={40}
+            height={10}
+            className="rounded-lg"
+          />
+
           <div>
             <div className="text-sm font-medium text-default-800 capitalize">
-              {user.full_name}
+              {user.full_name || "User"}
             </div>
             <Link
               href="/dashboard"
               className="text-xs text-default-600 hover:text-primary"
             >
-              {user.email}
+              {user.email || "No Email"}
             </Link>
           </div>
         </DropdownMenuLabel>

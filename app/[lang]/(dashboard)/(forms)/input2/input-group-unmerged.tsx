@@ -39,7 +39,7 @@ const InputGroupUnmerged = () => {
         <Input type="text" placeholder="Recient’s username" />
       </InputGroup>
       <InputGroup>
-        <InputGroupText>$10</InputGroupText>
+        <InputGroupText>EGP 10</InputGroupText>
         <Input type="text" placeholder="Recient’s username" />
         <InputGroupText>00.</InputGroupText>
       </InputGroup>

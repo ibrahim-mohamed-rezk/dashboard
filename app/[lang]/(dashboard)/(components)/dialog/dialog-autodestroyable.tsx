@@ -18,15 +18,23 @@ const DialogAutoDestroyable = () => {
   }, [open])
   return (
     <Dialog open={open}>
-      <Button type="button" onClick={() => setOpen(true)}>Open Modal Close in 5s</Button>
-      <DialogContent >
+      <Button type="button" onClick={() => setOpen(true)}>
+        Open Modal Close in 5s
+      </Button>
+      <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-sm border border-border grid place-content-center">
-              <Icon icon="heroicons:square-3-stack-3d" className="w-5 h-5 text-default-500" />
+              <Icon
+                icon="heroicons:square-3-stack-3d"
+                className="w-5 h-5 text-default-500"
+              />
             </div>
             <div>
-              <h4 className="text-base font-semibold text-default-700  mb-1"> Select Plan</h4>
+              <h4 className="text-base font-semibold text-default-700  mb-1">
+                {" "}
+                Select Plan
+              </h4>
               <p className="text-xs text-default-500 ">
                 This modal will be destroyed after 5 second.
               </p>
@@ -35,7 +43,10 @@ const DialogAutoDestroyable = () => {
         </DialogHeader>
         <RadioGroup defaultValue="1" className="cursor-pointer">
           <div className="sm:grid sm:grid-cols-2 mt-5 sm:gap-5">
-            <Label htmlFor="basic" className="border-2 rounded-sm border-border p-3">
+            <Label
+              htmlFor="basic"
+              className="border-2 rounded-sm border-border p-3"
+            >
               <div className="flex justify-between items-center">
                 <h3 className="grow text-xs font-semibold text-default-700 ">
                   Basic Plan
@@ -44,7 +55,7 @@ const DialogAutoDestroyable = () => {
               </div>
               <div className="mt-1">
                 <h3 className="text-base font-semibold text-default-950 dark:text-primary-foreground">
-                  $40/User
+                  EGP 40/User
                 </h3>
                 <p className="text-[10px] text-default-500">
                   Includes 20GB individual data
@@ -83,7 +94,10 @@ const DialogAutoDestroyable = () => {
                 </li>
               </ul>
             </Label>
-            <Label htmlFor="standard" className="border-2 rounded-sm border-border p-3">
+            <Label
+              htmlFor="standard"
+              className="border-2 rounded-sm border-border p-3"
+            >
               <div className="flex justify-between items-center">
                 <h3 className="grow text-xs font-semibold text-default-700 ">
                   Standard Plan
@@ -92,7 +106,7 @@ const DialogAutoDestroyable = () => {
               </div>
               <div className="mt-1">
                 <h3 className="text-base font-semibold text-default-950 dark:text-primary-foreground">
-                  $40/User
+                  EGP 40/User
                 </h3>
                 <p className="text-[10px] text-default-500">
                   Includes 20GB individual data
@@ -145,7 +159,6 @@ const DialogAutoDestroyable = () => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-
   );
 };
 

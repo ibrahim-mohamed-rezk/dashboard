@@ -15,8 +15,9 @@ const ECommerceCard = () => {
   const [count, setCount] = useState<number>(5);
   return (
     <div className="p-5 space-y-5 bg-background rounded-md shadow-sm">
-
-      <div className="text-base font-medium text-default-900 mb-1 py-2">Ecommerce Card</div>
+      <div className="text-base font-medium text-default-900 mb-1 py-2">
+        Ecommerce Card
+      </div>
 
       <div className="grid xl:grid-cols-4 md:grid-cols-2 grid-cols-1 gap-5">
         <Card className="p-4 rounded-md group">
@@ -28,12 +29,14 @@ const ECommerceCard = () => {
                   className=" h-full w-full  object-contain p-6   transition-all duration-300 group-hover:scale-105"
                   src={ecard1}
                 />
-                <Badge color="destructive" className="absolute top-3 ltr:left-3 rtl:right-3">
+                <Badge
+                  color="destructive"
+                  className="absolute top-3 ltr:left-3 rtl:right-3"
+                >
                   -50%
                 </Badge>
 
                 <div className="hover-box flex flex-col invisible absolute top-3 ltr:right-2 rtl:left-2 opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-300 space-y-[6px]">
-
                   <button className="rounded-full bg-background p-2 ">
                     <Icon
                       icon="ph:heart-fill"
@@ -52,7 +55,6 @@ const ECommerceCard = () => {
                       className="text-muted-foreground hover:text-destructive  h-4 w-4"
                     />
                   </button>
-
                 </div>
               </div>
             </div>
@@ -60,7 +62,10 @@ const ECommerceCard = () => {
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <p className="text-xs	text-secondary-foreground uppercase font-normal"> Men</p>
+              <p className="text-xs	text-secondary-foreground uppercase font-normal">
+                {" "}
+                Men
+              </p>
               <span className="flex items-center text-secondary-foreground  font-normal text-xs gap-x-1  ">
                 <Icon icon="ph:star-fill" className="text-yellow-400" />
                 <span>4.8</span>
@@ -74,14 +79,17 @@ const ECommerceCard = () => {
             </p>
             <p className="mb-4 space-x-4">
               <span className="text-secondary-foreground text-base	font-medium mt-2">
-                $489
+                EGP 489
               </span>
               <del className="text-default-500 dark:text-default-500  font-normal text-base">
-                $700
+                EGP 700
               </del>
             </p>
             <Button className="w-full" variant="outline">
-              <Icon icon="heroicons:shopping-bag" className="w-4 h-4 ltr:mr-2 rtl:ml-2 " />
+              <Icon
+                icon="heroicons:shopping-bag"
+                className="w-4 h-4 ltr:mr-2 rtl:ml-2 "
+              />
               Add to Cart
             </Button>
           </div>
@@ -97,7 +105,10 @@ const ECommerceCard = () => {
                   src={ecard2}
                 />
 
-                <Badge color="destructive" className="absolute top-3 ltr:left-3 rtl:right-3">
+                <Badge
+                  color="destructive"
+                  className="absolute top-3 ltr:left-3 rtl:right-3"
+                >
                   -35%
                 </Badge>
 
@@ -145,14 +156,17 @@ const ECommerceCard = () => {
             </p>
             <p className="mb-4 space-x-4">
               <span className="text-secondary-foreground text-base	font-medium mt-2">
-                $489
+                EGP 489
               </span>
               <del className="text-default-500  font-normal text-base">
-                $700
+                EGP 700
               </del>
             </p>
             <Button className="w-full">
-              <Icon icon="heroicons:shopping-bag" className="w-4 h-4 ltr:mr-2 rtl:ml-2 " />
+              <Icon
+                icon="heroicons:shopping-bag"
+                className="w-4 h-4 ltr:mr-2 rtl:ml-2 "
+              />
               Add to Cart
             </Button>
           </div>
@@ -167,7 +181,10 @@ const ECommerceCard = () => {
                   src={ecard3}
                 />
 
-                <Badge color="destructive" className="absolute top-3 ltr:left-3 rtl:right-3">
+                <Badge
+                  color="destructive"
+                  className="absolute top-3 ltr:left-3 rtl:right-3"
+                >
                   -40%
                 </Badge>
 
@@ -213,10 +230,10 @@ const ECommerceCard = () => {
             </p>
             <p className="mb-4 space-x-4 rtl:space-x-reverse">
               <span className="text-secondary-foreground text-base	font-medium mt-2">
-                $489
+                EGP 489
               </span>
               <del className="text-default-500   font-normal text-base">
-                $700
+                EGP 700
               </del>
             </p>
             <div className="flex flex-wrap gap-4">
@@ -225,7 +242,7 @@ const ECommerceCard = () => {
                   <button
                     type="button"
                     className="flex-none px-4 text-primary hover:bg-primary hover:text-primary-300  disabled:cursor-not-allowed disabled:opacity-50 "
-                    onClick={() => setCount(prevCount => prevCount - 1)}
+                    onClick={() => setCount((prevCount) => prevCount - 1)}
                   >
                     <Icon icon="eva:minus-fill" />
                   </button>
@@ -236,7 +253,7 @@ const ECommerceCard = () => {
                   <button
                     type="button"
                     className="flex-none px-4 text-primary hover:bg-primary hover:text-primary-300  disabled:cursor-not-allowed disabled:opacity-50 "
-                    onClick={() => setCount(prevCount => prevCount + 1)}
+                    onClick={() => setCount((prevCount) => prevCount + 1)}
                   >
                     <Icon icon="eva:plus-fill" />
                   </button>
@@ -258,7 +275,10 @@ const ECommerceCard = () => {
                   src={ecard1}
                 />
 
-                <Badge color="destructive" className="absolute top-3 ltr:left-3 rtl:right-3">
+                <Badge
+                  color="destructive"
+                  className="absolute top-3 ltr:left-3 rtl:right-3"
+                >
                   -40%
                 </Badge>
 
@@ -306,15 +326,18 @@ const ECommerceCard = () => {
             </p>
             <p className="mb-4 ltr:space-x-4 rtl:space-x-reverse">
               <span className="text-secondary-foreground text-base	font-medium mt-2">
-                $489
+                EGP 489
               </span>
               <del className="text-default-500 font-normal text-base">
-                $700
+                EGP 700
               </del>
             </p>
 
             <Button className="w-full" variant="outline">
-              <Icon icon="heroicons:shopping-bag" className="w-4 h-4 ltr:mr-2 rtl:ml-2 " />
+              <Icon
+                icon="heroicons:shopping-bag"
+                className="w-4 h-4 ltr:mr-2 rtl:ml-2 "
+              />
               Add to Cart
             </Button>
           </div>
@@ -331,7 +354,10 @@ const ECommerceCard = () => {
                   src={ecard1}
                 />
 
-                <Badge color="destructive" className="absolute top-3 ltr:left-3 rtl:right-3">
+                <Badge
+                  color="destructive"
+                  className="absolute top-3 ltr:left-3 rtl:right-3"
+                >
                   -42%
                 </Badge>
 
@@ -373,10 +399,10 @@ const ECommerceCard = () => {
             </p>
             <p className="mb-[5px] ltr:space-x-4 rtl:space-x-reverse">
               <span className="text-foreground text-lg	font-semibold mt-2">
-                $489
+                EGP 489
               </span>
               <del className="text-muted-foreground  font-normal text-base">
-                $700
+                EGP 700
               </del>
             </p>
             <div className="flex items-center mb-[9px] text-secondary-foreground  font-normal text-base gap-x-2">
@@ -411,7 +437,10 @@ const ECommerceCard = () => {
                 </div>
               </div>
               <Button className="flex-auto">
-                <Icon icon="heroicons:shopping-bag" className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                <Icon
+                  icon="heroicons:shopping-bag"
+                  className="w-4 h-4 ltr:mr-2 rtl:ml-2"
+                />
                 Add to Cart
               </Button>
             </div>
@@ -428,7 +457,10 @@ const ECommerceCard = () => {
                   src={ecard1}
                 />
 
-                <Badge color="destructive" className="absolute top-3 ltr:left-3 rtl:right-3">
+                <Badge
+                  color="destructive"
+                  className="absolute top-3 ltr:left-3 rtl:right-3"
+                >
                   -40%
                 </Badge>
 
@@ -470,10 +502,10 @@ const ECommerceCard = () => {
             </p>
             <p className="mb-[5px] ltr:space-x-4 rtl:space-x-reverse">
               <span className="text-foreground text-lg	font-semibold mt-2">
-                $489
+                EGP 489
               </span>
               <del className="text-muted-foreground  font-normal text-base">
-                $700
+                EGP 700
               </del>
             </p>
             <div className="flex items-center mb-[9px] text-secondary-foreground  font-normal text-base gap-x-2">
@@ -510,15 +542,16 @@ const ECommerceCard = () => {
                 </div>
               </div>
               <Button className="flex-auto" variant="outline">
-                <Icon icon="heroicons:shopping-bag" className="w-4 h-4 ltr:mr-2 rtl:ml-2 " />
+                <Icon
+                  icon="heroicons:shopping-bag"
+                  className="w-4 h-4 ltr:mr-2 rtl:ml-2 "
+                />
                 Add to Cart
               </Button>
             </div>
           </div>
         </Card>
       </div>
-
-
     </div>
   );
 };

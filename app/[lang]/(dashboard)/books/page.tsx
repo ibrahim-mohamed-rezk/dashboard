@@ -458,7 +458,7 @@ function BooksDataTable() {
       header: "السعر",
       cell: ({ row }) => (
         <Badge variant={"outline"}>
-          {row.original.price > 0 ? `$${row.original.price}` : "مجاني"}
+          {row.original.price > 0 ? `EGP ${row.original.price}` : "مجاني"}
         </Badge>
       ),
     },

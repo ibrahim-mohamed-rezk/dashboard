@@ -20,16 +20,16 @@ const DataCard = () => {
       name: "today visit",
       count: "29,103",
       color: "success",
-      icon: "mdi:user"
+      icon: "mdi:user",
     },
     {
       id: 2,
       name: "TODAY TOTAL SALE",
-      count: "$89,346.5",
+      count: "EGP 89,346.5",
       color: "primary",
-      icon: "mdi:cart"
-    }
-  ]
+      icon: "mdi:cart",
+    },
+  ];
   return (
     <>
       {data.map(item => (

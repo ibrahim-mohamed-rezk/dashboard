@@ -32,18 +32,16 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
               <DialogClose asChild>
-                <Button  variant="outline" color="warning">
+                <Button variant="outline" color="warning">
                   close
                 </Button>
               </DialogClose>
-              <Button  >
-                Save
-              </Button>
+              <Button>Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -66,18 +64,16 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
               <DialogClose asChild>
-                <Button  variant="outline" color="warning">
+                <Button variant="outline" color="warning">
                   close
                 </Button>
               </DialogClose>
-              <Button  >
-                Save
-              </Button>
+              <Button>Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -100,18 +96,16 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
               <DialogClose asChild>
-                <Button  variant="outline" color="warning">
+                <Button variant="outline" color="warning">
                   close
                 </Button>
               </DialogClose>
-              <Button  color="success">
-                Save
-              </Button>
+              <Button color="success">Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -134,18 +128,16 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
               <DialogClose asChild>
-                <Button  variant="outline" color="warning">
+                <Button variant="outline" color="warning">
                   close
                 </Button>
               </DialogClose>
-              <Button  color="warning">
-                Save
-              </Button>
+              <Button color="warning">Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -168,18 +160,16 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
               <DialogClose asChild>
-                <Button  variant="outline" color="warning">
+                <Button variant="outline" color="warning">
                   close
                 </Button>
               </DialogClose>
-              <Button  color="destructive">
-                Save
-              </Button>
+              <Button color="destructive">Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -202,18 +192,16 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
               <DialogClose asChild>
-                <Button  variant="outline" color="warning">
+                <Button variant="outline" color="warning">
                   close
                 </Button>
               </DialogClose>
-              <Button  color="info">
-                Save
-              </Button>
+              <Button color="info">Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -238,18 +226,16 @@ const DialogColors = () => {
                 Bangkok as the most visited city in the world, with
                 approximately 22 million international visitors. More detailed
                 studies reveal visitor patterns, such as an average of 4.7
-                nights stay and an average spending of USD $173 daily.
+                nights stay and an average spending of EGP 173 daily.
               </p>
             </div>
             <DialogFooter className="mt-8">
               <DialogClose asChild>
-                <Button  variant="outline" color="warning">
+                <Button variant="outline" color="warning">
                   close
                 </Button>
               </DialogClose>
-              <Button  color="dark">
-                Save
-              </Button>
+              <Button color="dark">Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
