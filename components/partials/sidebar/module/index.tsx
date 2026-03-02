@@ -218,7 +218,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
           </div>
           <ScrollArea className=" pt-6 grow ">
             {/* الاحصائيات Section Icon */}
-            {user.modules.some((item) => {
+            {user?.modules?.some((item) => {
               return (
                 item.access === true &&
                 (item.name === "ExamsStatistics" ||
@@ -249,7 +249,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
             )}
 
             {/* التشغيل Section Icon */}
-            {user.modules.some((item) => {
+            {user?.modules?.some((item) => {
               return (
                 item.access === true &&
                 (item.name === "Courses" ||
@@ -281,7 +281,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
             )}
 
             {/* الاون لاين Section Icon */}
-            {user.modules.some((item) => {
+            {user?.modules?.some((item) => {
               return (
                 item.access === true &&
                 (item.name === "Banners" ||
@@ -313,7 +313,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
             )}
 
             {/* الاعدادات Section Icon */}
-            {user.modules.some((item) => {
+            {user?.modules?.some((item) => {
               return (
                 item.access === true &&
                 (item.name === "Teachers" ||
@@ -376,7 +376,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاحصائيات</span>
                     </div>
                     <ul className="mr-4">
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return (
                           item.access === true &&
                           item.name === "ExamsStatistics"
@@ -397,7 +397,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return (
                           item.access === true &&
                           item.name === "questions_statistics"
@@ -418,7 +418,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return (
                           item.access === true &&
                           item.name === "questions_statistics_teacher"
@@ -450,7 +450,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>التشغيل</span>
                     </div>
                     <ul className="mr-4">
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Courses";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -467,7 +467,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Exams";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -484,7 +484,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Banks";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -501,7 +501,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "students";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -518,7 +518,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                           />
                         </li>
                       )}
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "codes";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -547,7 +547,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاون لاين</span>
                     </div>
                     <ul className="mr-4">
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Blogs";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -565,7 +565,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Banners";
                       }) && (
                         <li>
@@ -583,7 +583,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Books";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -601,7 +601,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "settings";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -630,7 +630,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاعدادات</span>
                     </div>
                     <ul className="mr-4">
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Teachers";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -648,7 +648,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Admins";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -666,7 +666,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "Places";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -684,7 +684,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "levels";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -702,7 +702,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "jobs";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -720,7 +720,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "coupons";
                       }) && (
                         <li className="mb-1.5 last:mb-0">
@@ -738,7 +738,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {user.modules.some((item) => {
+                      {user?.modules?.some((item) => {
                         return item.access === true && item.name === "subjects";
                       }) && (
                         <li className="mb-1.5 last:mb-0">

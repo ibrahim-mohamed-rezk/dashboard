@@ -1,0 +1,30 @@
+{
+  "id": 86,
+  "full_name": "ibrahim",
+  "avatar": null,
+  "phone": "12345678112",
+  "gender": null,
+  "email": "ibrahim@admin.com",
+  "role": "admin",
+  "teachers": [],
+  "modules": [
+    { "id": 1, "name": "Books", "access": true },
+    { "id": 2, "name": "Exams", "access": true },
+    { "id": 3, "name": "Courses", "access": true },
+    { "id": 4, "name": "Banks", "access": true },
+    { "id": 5, "name": "Banners", "access": true },
+    { "id": 6, "name": "Blogs", "access": true },
+    { "id": 7, "name": "Teachers", "access": true },
+    { "id": 8, "name": "Admins", "access": true },
+    { "id": 9, "name": "levels", "access": true },
+    { "id": 10, "name": "jobs", "access": true },
+    { "id": 11, "name": "coupons", "access": true },
+    { "id": 12, "name": "subjects", "access": true },
+    { "id": 13, "name": "students", "access": true },
+    { "id": 14, "name": "codes", "access": true },
+    { "id": 15, "name": "questions_statistics", "access": true },
+    { "id": 16, "name": "questions_statistics_teacher", "access": true },
+    { "id": 17, "name": "ExamsStatistics", "access": true },
+    { "id": 18, "name": "settings", "access": true }
+  ]
+}

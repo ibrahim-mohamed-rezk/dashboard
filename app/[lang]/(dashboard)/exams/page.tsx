@@ -69,7 +69,7 @@ interface Event {
   start_at: string;
   end_at: string;
   group_id: string;
-  day: string;
+  duration: string;
 }
 
 interface Group {
@@ -164,7 +164,7 @@ function ExamsDataTable() {
       start_at: "",
       end_at: "",
       group_id: "",
-      day: "",
+      duration: "",
     },
   ]);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -199,7 +199,7 @@ function ExamsDataTable() {
         {},
         {
           Authorization: `Bearer ${token}`,
-        }
+        },
       );
       setData(response.data);
       setTotalPages(response.meta.last_page);
@@ -219,7 +219,7 @@ function ExamsDataTable() {
         {},
         {
           Authorization: `Bearer ${token}`,
-        }
+        },
       );
       setTeachers(teachersResponse.data || teachersResponse);
 
@@ -229,7 +229,7 @@ function ExamsDataTable() {
         {},
         {
           Authorization: `Bearer ${token}`,
-        }
+        },
       );
       setLevels(levelsResponse.data || levelsResponse);
 
@@ -239,7 +239,7 @@ function ExamsDataTable() {
         {},
         {
           Authorization: `Bearer ${token}`,
-        }
+        },
       );
       setSubjects(subjectsResponse.data || subjectsResponse);
 
@@ -249,13 +249,13 @@ function ExamsDataTable() {
         {},
         {
           Authorization: `Bearer ${token}`,
-        }
+        },
       );
       setGroups(groupsResponse.data || groupsResponse);
     } catch (error) {
       console.log(
         "Error fetching teachers, levels, subjects, or groups:",
-        error
+        error,
       );
     }
   };
@@ -275,7 +275,7 @@ function ExamsDataTable() {
 
     // Filter groups by teacher ID
     const teacherGroups = groups.groups.filter(
-      (group: any) => `${group.teacher}` === teacherId
+      (group: any) => `${group.teacher}` === teacherId,
     );
 
     console.log("Filtered groups:", teacherGroups);
@@ -301,7 +301,7 @@ function ExamsDataTable() {
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prevFormData) => ({
@@ -386,14 +386,19 @@ function ExamsDataTable() {
       events.length === 0
     ) {
       setError(
-        "يرجى ملء جميع الحقول المطلوبة: العنوان، المعلم، الصورة، الأسئلة، والأحداث"
+        "يرجى ملء جميع الحقول المطلوبة: العنوان، المعلم، الصورة، الأسئلة، والأحداث",
       );
       return;
     }
 
     // Validate events
     for (const event of events) {
-      if (!event.start_at || !event.end_at || !event.group_id || !event.day) {
+      if (
+        !event.start_at ||
+        !event.end_at ||
+        !event.group_id ||
+        !event.duration
+      ) {
         setError("يرجى ملء جميع بيانات الأحداث");
         return;
       }
@@ -410,14 +415,14 @@ function ExamsDataTable() {
       events.forEach((event, index) => {
         formDataToSend.append(
           `events[${index}][start_at]`,
-          toYMDHIS(event.start_at)
+          toYMDHIS(event.start_at),
         );
         formDataToSend.append(
           `events[${index}][end_at]`,
-          toYMDHIS(event.end_at)
+          toYMDHIS(event.end_at),
         );
         formDataToSend.append(`events[${index}][group_id]`, event.group_id);
-        formDataToSend.append(`events[${index}][day]`, event.day);
+        formDataToSend.append(`events[${index}][duration]`, event.duration);
       });
 
       // Add questions
@@ -425,30 +430,30 @@ function ExamsDataTable() {
         const questionNumber = index + 1;
         formDataToSend.append(
           `questions[${questionNumber}][question]`,
-          question.question
+          question.question,
         );
         formDataToSend.append(
           `questions[${questionNumber}][questionType]`,
-          question.questionType || "text"
+          question.questionType || "text",
         );
         formDataToSend.append(
           `questions[${questionNumber}][degree]`,
-          (question.degree || 1).toString()
+          (question.degree || 1).toString(),
         );
 
         question.options.forEach((option: any, optIndex: number) => {
           formDataToSend.append(
             `questions[${questionNumber}][${optIndex + 1}]`,
-            option.answer
+            option.answer,
           );
         });
 
         const correctAnswerIndex = question.options.findIndex(
-          (opt: any) => opt.is_correct
+          (opt: any) => opt.is_correct,
         );
         formDataToSend.append(
           `questions[${questionNumber}][answer]`,
-          (correctAnswerIndex + 1).toString()
+          (correctAnswerIndex + 1).toString(),
         );
       });
 
@@ -472,7 +477,7 @@ function ExamsDataTable() {
           start_at: "",
           end_at: "",
           group_id: "",
-          day: "",
+          duration: "",
         },
       ]);
       setExamImage(null);
@@ -507,7 +512,7 @@ function ExamsDataTable() {
         {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-        }
+        },
       );
       reset();
       setEditingExam(null);
@@ -647,7 +652,7 @@ function ExamsDataTable() {
         start_at: "",
         end_at: "",
         group_id: "",
-        day: "",
+        duration: "",
       },
     ]);
     setExamImage(null);
@@ -948,7 +953,7 @@ function ExamsDataTable() {
                             start_at: "",
                             end_at: "",
                             group_id: "",
-                            day: "",
+                            duration: "",
                           },
                         ]);
                       }}
@@ -962,26 +967,72 @@ function ExamsDataTable() {
                       className="grid gap-3 mb-3 p-3 bg-gray-50 rounded"
                     >
                       <div>
-                        <label className="block text-xs mb-1">اليوم *</label>
-                        <select
-                          value={event.day}
-                          onChange={(e) => {
-                            const newEvents = [...events];
-                            newEvents[index].day = e.target.value;
-                            setEvents(newEvents);
-                          }}
-                          required
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        >
-                          <option value="">اختر اليوم</option>
-                          <option value="saturday">السبت</option>
-                          <option value="sunday">الأحد</option>
-                          <option value="monday">الإثنين</option>
-                          <option value="tuesday">الثلاثاء</option>
-                          <option value="wednesday">الأربعاء</option>
-                          <option value="thursday">الخميس</option>
-                          <option value="friday">الجمعة</option>
-                        </select>
+                        <label className="block text-xs mb-1">المدة *</label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 max-w-[100px]">
+                            <label className="block text-xs mb-1 text-gray-500">
+                              دقائق
+                            </label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={59}
+                              placeholder="00"
+                              value={
+                                event.duration
+                                  ? parseInt(event.duration.split(":")[1]) || 0
+                                  : 0
+                              }
+                              onChange={(e) => {
+                                const newEvents = [...events];
+                                const mins = Math.max(
+                                  0,
+                                  Math.min(59, parseInt(e.target.value) || 0),
+                                );
+                                const currentHours = event.duration
+                                  ? parseInt(event.duration.split(":")[0]) || 0
+                                  : 0;
+                                newEvents[index].duration =
+                                  `${String(currentHours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+                                setEvents(newEvents);
+                              }}
+                              required
+                            />
+                          </div>
+
+                          <span className="text-lg font-bold mt-4">:</span>
+
+                          <div className="flex-1 max-w-[100px]">
+                            <label className="block text-xs mb-1 text-gray-500">
+                              ساعات
+                            </label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={23}
+                              placeholder="00"
+                              value={
+                                event.duration
+                                  ? parseInt(event.duration.split(":")[0]) || 0
+                                  : 0
+                              }
+                              onChange={(e) => {
+                                const newEvents = [...events];
+                                const hours = Math.max(
+                                  0,
+                                  Math.min(23, parseInt(e.target.value) || 0),
+                                );
+                                const currentMins = event.duration
+                                  ? parseInt(event.duration.split(":")[1]) || 0
+                                  : 0;
+                                newEvents[index].duration =
+                                  `${String(hours).padStart(2, "0")}:${String(currentMins).padStart(2, "0")}`;
+                                setEvents(newEvents);
+                              }}
+                              required
+                            />
+                          </div>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-nowrap text-xs mb-1">
@@ -1105,7 +1156,7 @@ function ExamsDataTable() {
                               size="sm"
                               onClick={() =>
                                 setQuestions(
-                                  questions.filter((_, i) => i !== index)
+                                  questions.filter((_, i) => i !== index),
                                 )
                               }
                               className="text-red-500 hover:bg-red-50"
@@ -1265,7 +1316,7 @@ function ExamsDataTable() {
                                 (opt, i) => ({
                                   ...opt,
                                   is_correct: i === index,
-                                })
+                                }),
                               );
                               setCurrentQuestion({
                                 ...currentQuestion,
@@ -1615,7 +1666,7 @@ function ExamsDataTable() {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -1630,7 +1681,7 @@ function ExamsDataTable() {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
@@ -1674,7 +1725,7 @@ function ExamsDataTable() {
                   >
                     {pageNumber}
                   </Button>
-                )
+                ),
               )}
             </div>
             <Button
