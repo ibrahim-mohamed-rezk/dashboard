@@ -45,6 +45,7 @@ export type Radius = "none" | "sm" | "md" | "lg" | "xl";
 export interface User {
   id: number;
   full_name: string;
+  teacher_id?: number;
   avatar: string;
   phone: string;
   gender: string | null;

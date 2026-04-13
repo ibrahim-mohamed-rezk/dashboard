@@ -422,15 +422,23 @@ function BannerTable() {
   });
 
   const watchType = watch("type");
+  const isTeacherUser = user?.role === "teacher";
 
   // FIXED: Better handling of type changes
   useEffect(() => {
+    // Teachers are always offline banners and bound to themselves.
+    if (isTeacherUser) {
+      setValue("type", "offline");
+      setValue("teacher", user?.teacher_id ? String(user.teacher_id) : "");
+      return;
+    }
+
     if (watchType === "online") {
       setValue("teacher", null);
     } else if (watchType === "offline" && !editingBanner) {
       setValue("teacher", "");
     }
-  }, [watchType, setValue, editingBanner]);
+  }, [watchType, setValue, editingBanner, isTeacherUser, user?.teacher_id]);
 
   // Enhanced token fetching with error handling
   useEffect(() => {
@@ -544,11 +552,16 @@ function BannerTable() {
       setLoading((prev) => ({ ...prev, submitting: true }));
       setError(null);
 
+      // Teachers: force offline + current teacher id from auth user.
+      const finalType = isTeacherUser ? "offline" : formData.type;
+      const finalTeacher = isTeacherUser
+        ? user?.teacher_id
+          ? String(user.teacher_id)
+          : ""
+        : formData.teacher;
+
       // Additional validation for offline banners
-      if (
-        formData.type === "offline" &&
-        (!formData.teacher || formData.teacher === "")
-      ) {
+      if (finalType === "offline" && (!finalTeacher || finalTeacher === "")) {
         toast.error("يرجى اختيار المدرس للبانر الاوفلاين");
         return;
       }
@@ -560,15 +573,15 @@ function BannerTable() {
         formDataToSend.append("image", formData.image);
       }
 
-      formDataToSend.append("type", formData.type);
+      formDataToSend.append("type", finalType);
       formDataToSend.append("status", "banner");
 
       // FIXED: Handle teacher data for offline banners
-      if (formData.type === "offline" && formData.teacher) {
+      if (finalType === "offline" && finalTeacher) {
         const teacherId =
-          typeof formData.teacher === "string"
-            ? parseInt(formData.teacher, 10)
-            : formData.teacher;
+          typeof finalTeacher === "string"
+            ? parseInt(finalTeacher, 10)
+            : finalTeacher;
 
         if (!isNaN(teacherId) && teacherId > 0) {
           formDataToSend.append("teacher_id", teacherId.toString());
@@ -580,8 +593,8 @@ function BannerTable() {
       }
 
       console.log("Form data being sent:", {
-        type: formData.type,
-        teacher: formData.teacher,
+        type: finalType,
+        teacher: finalTeacher,
         hasImage: !!formData.image,
       });
 
@@ -864,6 +877,10 @@ function BannerTable() {
                 setEditingBanner(null);
                 reset();
                 setImagePreview(null);
+                if (isTeacherUser && user?.teacher_id) {
+                  setValue("type", "offline");
+                  setValue("teacher", String(user.teacher_id));
+                }
               }}
               disabled={loading.submitting}
             >
@@ -908,9 +925,9 @@ function BannerTable() {
                   <select
                     {...register("type")}
                     className="w-full p-2 border rounded"
-                    disabled={loading.submitting}
+                    disabled={loading.submitting || isTeacherUser}
                   >
-                    <option value="online">اونلاين</option>
+                    {!isTeacherUser && <option value="online">اونلاين</option>}
                     <option value="offline">اوفلاين</option>
                   </select>
                   {errors.type && (
@@ -919,7 +936,7 @@ function BannerTable() {
                     </p>
                   )}
                 </div>
-                {watchType === "offline" && (
+                {watchType === "offline" && !isTeacherUser && (
                   <div>
                     <select
                       {...register("teacher")}

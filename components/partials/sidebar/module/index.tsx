@@ -221,7 +221,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
           </div>
           <ScrollArea className=" pt-6 grow "> 
             {/* الاحصائيات Section Icon */}
-            {(hasModule("ExamsStatistics", "statistics") ||
+            {(hasModule("ExamsStatistics") ||
               hasModule("questions_statistics", "QuestionsStatistics") ||
               hasModule("questions_statistics_teacher")) && (
               <div
@@ -359,7 +359,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                       <span>الاحصائيات</span>
                     </div>
                     <ul className="mr-4">
-                      {hasModule("ExamsStatistics", "statistics") && (
+                      {hasModule("ExamsStatistics") && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{

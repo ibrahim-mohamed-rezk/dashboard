@@ -436,7 +436,7 @@ function ExamStatisticsTable() {
 
   const isAuthrized = useAuthrization({
     user: user as User,
-    module: ["ExamsStatistics", "statistics"],
+    module: ["ExamsStatistics"],
   });
   if (!isAuthrized) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;

@@ -727,8 +727,8 @@ function CoursesTable() {
         return position === "online"
           ? "أونلاين"
           : position === "offline"
-          ? "أوفلاين"
-          : "غير محدد";
+            ? "أوفلاين"
+            : "غير محدد";
       },
     },
     {
@@ -847,25 +847,54 @@ function CoursesTable() {
                   <X className="w-4 h-4" />
                 </button>
               </>
-            ) : 
-            /* Show existing image when editing and no new image is selected */
-            editingCourse && editingCourse.cover && showExistingImage ? (
-              <>
-                <img
-                  src={editingCourse.cover}
-                  alt="Current cover"
-                  className="w-full h-full object-cover rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowExistingImage(false);
-                  }}
-                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="absolute bottom-2 left-2">
+            ) :
+              /* Show existing image when editing and no new image is selected */
+              editingCourse && editingCourse.cover && showExistingImage ? (
+                <>
+                  <img
+                    src={editingCourse.cover}
+                    alt="Current cover"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowExistingImage(false);
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="absolute bottom-2 left-2">
+                    <label className="cursor-pointer">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                      >
+                        تغيير الصورة
+                      </Button>
+                    </label>
+                  </div>
+                </>
+              ) : (
+                /* Show upload area when no image */
+                <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                  <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
+                    <Upload className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    قم بسحب وإفلات الصورة هنا أو
+                  </p>
                   <label className="cursor-pointer">
                     <input
                       ref={fileInputRef}
@@ -878,45 +907,16 @@ function CoursesTable() {
                       onClick={() => fileInputRef.current?.click()}
                       type="button"
                       variant="outline"
-                      size="sm"
-                      className="text-xs"
+                      className="text-sm"
                     >
-                      تغيير الصورة
+                      اختر صورة
                     </Button>
                   </label>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                    PNG, JPG أو GIF حتى 5MB
+                  </p>
                 </div>
-              </>
-            ) : (
-              /* Show upload area when no image */
-              <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full mb-2">
-                  <Upload className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                  قم بسحب وإفلات الصورة هنا أو
-                </p>
-                <label className="cursor-pointer">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <Button
-                    onClick={() => fileInputRef.current?.click()}
-                    type="button"
-                    variant="outline"
-                    className="text-sm"
-                  >
-                    اختر صورة
-                  </Button>
-                </label>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                  PNG, JPG أو GIF حتى 5MB
-                </p>
-              </div>
-            )}
+              )}
           </div>
         </div>
       </div>
@@ -1429,36 +1429,35 @@ function CoursesTable() {
           )}
 
           <Dialog open={addCourse} onOpenChange={setAddCourse}>
-            {userRole === "admin" && (
-              <DialogTrigger asChild>
-                <Button
-                  className="flex items-center gap-2 h-10 w-full sm:w-auto"
-                  onClick={() => {
-                    setAddCourse(true);
-                    setEditingCourse(null);
-                    setShowExistingImage(true);
-                    setFormData({
-                      teacher_id: 0,
-                      subject_id: 0,
-                      level_id: 0,
-                      title: "",
-                      slug: "",
-                      description: "",
-                      type: "free",
-                      position: "online",
-                      meta_description: "",
-                      meta_keywords: "",
-                      status: "active",
-                      price: "0",
-                      cover: undefined,
-                    });
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  إضافة كورس
-                </Button>
-              </DialogTrigger>
-            )}
+
+            <DialogTrigger asChild>
+              <Button
+                className="flex items-center gap-2 h-10 w-full sm:w-auto"
+                onClick={() => {
+                  setAddCourse(true);
+                  setEditingCourse(null);
+                  setShowExistingImage(true);
+                  setFormData({
+                    teacher_id: 0,
+                    subject_id: 0,
+                    level_id: 0,
+                    title: "",
+                    slug: "",
+                    description: "",
+                    type: "free",
+                    position: "online",
+                    meta_description: "",
+                    meta_keywords: "",
+                    status: "active",
+                    price: "0",
+                    cover: undefined,
+                  });
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                إضافة كورس
+              </Button>
+            </DialogTrigger>
             <DialogContent
               className="w-full !max-w-7xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
               onPointerDownOutside={(e) => e.preventDefault()}
@@ -1762,9 +1761,9 @@ function CoursesTable() {
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -1837,7 +1836,7 @@ function CoursesTable() {
                 const page = idx + 1;
                 const currentPage = paginationMeta.current_page;
                 const lastPage = paginationMeta.last_page;
-                
+
                 // Show first page, last page, current page and surrounding pages
                 if (
                   page === 1 ||
