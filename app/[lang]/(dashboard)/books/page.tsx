@@ -113,6 +113,8 @@ function BooksDataTable() {
   const [teachers, setTeachers] = useState<
     { id: number; user: { full_name: string } }[]
   >([]);
+  const isTeacherUser = user?.role === "teacher";
+  const loggedInTeacherId = (user as any)?.teacher_id || 0;
 
   // refetch books
   const refetchBooks = async () => {
@@ -196,6 +198,16 @@ function BooksDataTable() {
     fetchData();
   }, []);
 
+  // Force teacher_id for teacher users.
+  useEffect(() => {
+    if (isTeacherUser && loggedInTeacherId) {
+      setFormData((prev) => ({
+        ...prev,
+        teacher_id: loggedInTeacherId,
+      }));
+    }
+  }, [isTeacherUser, loggedInTeacherId]);
+
   // feach filters data
   useEffect(() => {
     feachSubjectsData();
@@ -265,7 +277,15 @@ function BooksDataTable() {
     e.preventDefault();
     try {
       const formDataToSend = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
+      const payloadData: FormData = {
+        ...formData,
+        teacher_id:
+          isTeacherUser && loggedInTeacherId
+            ? loggedInTeacherId
+            : formData.teacher_id,
+      };
+
+      Object.entries(payloadData).forEach(([key, value]) => {
         if (value !== null) {
           if (value instanceof File) {
             formDataToSend.append(key, value);
@@ -286,7 +306,8 @@ function BooksDataTable() {
         author: "",
         subject_id: 0,
         level_id: 0,
-        teacher_id: 0,
+        teacher_id:
+          isTeacherUser && loggedInTeacherId ? loggedInTeacherId : 0,
         description: "",
         type: "free",
         price: 0,
@@ -583,8 +604,9 @@ function BooksDataTable() {
               value={formData.teacher_id}
               onChange={handleSelectChange}
               className="w-full p-2 border rounded"
+              disabled={isTeacherUser}
             >
-              <option value={0}>اختر المعلم</option>
+              {!isTeacherUser && <option value={0}>اختر المعلم</option>}
               {teachers.map(
                 (teacher: { id: number; user: { full_name: string } }) => (
                   <option key={teacher.id} value={teacher.id}>

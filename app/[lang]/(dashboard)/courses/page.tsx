@@ -192,6 +192,8 @@ function CoursesTable() {
   );
   const [statistics, setStatistics] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loggedInTeacherId = Number((user as any)?.teacher_id || 0);
+  const teacherOfflineOnly = userRole === "teacher";
 
   // ✅ Multi-select state
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
@@ -224,15 +226,22 @@ function CoursesTable() {
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
+      const finalTeacherId =
+        userRole === "teacher" && loggedInTeacherId > 0
+          ? loggedInTeacherId
+          : formData.teacher_id;
       // Add all form fields
-      formDataToSend.append("teacher_id", formData.teacher_id.toString());
+      formDataToSend.append("teacher_id", finalTeacherId.toString());
       formDataToSend.append("subject_id", formData.subject_id.toString());
       formDataToSend.append("level_id", formData.level_id.toString());
       formDataToSend.append("title", formData.title);
       formDataToSend.append("slug", generateSlug(formData.title));
       formDataToSend.append("description", formData.description);
       formDataToSend.append("type", formData.type);
-      formDataToSend.append("position", formData.position);
+      formDataToSend.append(
+        "position",
+        teacherOfflineOnly ? "offline" : formData.position
+      );
       formDataToSend.append("meta_description", formData.meta_description);
       formDataToSend.append("meta_keywords", formData.meta_keywords);
       formDataToSend.append("status", formData.status);
@@ -248,14 +257,17 @@ function CoursesTable() {
       toast.success("تم إضافة الكورس بنجاح");
       setAddCourse(false);
       setFormData({
-        teacher_id: 0,
+        teacher_id:
+          userRole === "teacher" && loggedInTeacherId > 0
+            ? loggedInTeacherId
+            : 0,
         subject_id: 0,
         level_id: 0,
         title: "",
         slug: "",
         description: "",
         type: "free",
-        position: "online",
+        position: teacherOfflineOnly ? "offline" : "online",
         meta_description: "",
         meta_keywords: "",
         status: "active",
@@ -278,7 +290,7 @@ function CoursesTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
-        setUserId(JSON.parse(response.data.user).id);
+        setUserId(JSON.parse(response.data.user).teacher_id || 0);
         setUserRole(JSON.parse(response.data.user).role);
         const userData = JSON.parse(response.data.user);
         setUser(userData);
@@ -335,10 +347,11 @@ function CoursesTable() {
     if (userRole === "teacher") {
       setFormData((prev) => ({
         ...prev,
-        teacher_id: userId,
+        teacher_id: userId || loggedInTeacherId,
+        position: "offline",
       }));
     }
-  }, [userRole, userId]);
+  }, [userRole, userId, loggedInTeacherId]);
 
   // fetch courses form api
   const fetchData = async (page: number = 1) => {
@@ -427,7 +440,10 @@ function CoursesTable() {
       slug: course.slug || generateSlug(course.title),
       description: course.description || "",
       type: (course.type as "paid" | "free") || "free",
-      position: (course.position as "online" | "offline") || "online",
+      position:
+        userRole === "teacher"
+          ? "offline"
+          : ((course.position as "online" | "offline") || "online"),
       meta_description: course.meta_description || "",
       meta_keywords: course.meta_keywords || "",
       status: course.status || "active",
@@ -584,7 +600,7 @@ function CoursesTable() {
       slug: "",
       description: "",
       type: "free",
-      position: "online",
+      position: teacherOfflineOnly ? "offline" : "online",
       meta_description: "",
       meta_keywords: "",
       status: "active",
@@ -1082,7 +1098,10 @@ function CoursesTable() {
           id="position"
           name="position"
           className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-          value={formData.position || ""}
+          value={
+            teacherOfflineOnly ? "offline" : formData.position || ""
+          }
+          disabled={teacherOfflineOnly}
           onChange={(e) => {
             setFormData((prev) => ({
               ...prev,
@@ -1090,12 +1109,16 @@ function CoursesTable() {
             }));
           }}
         >
-          <option value="" className="dark:bg-gray-800 dark:!text-white">
-            اختر الموقع
-          </option>
-          <option value="online" className="dark:bg-gray-800 dark:!text-white">
-            أونلاين
-          </option>
+          {!teacherOfflineOnly && (
+            <option value="" className="dark:bg-gray-800 dark:!text-white">
+              اختر الموقع
+            </option>
+          )}
+          {!teacherOfflineOnly && (
+            <option value="online" className="dark:bg-gray-800 dark:!text-white">
+              أونلاين
+            </option>
+          )}
           <option value="offline" className="dark:bg-gray-800 dark:!text-white">
             أوفلاين
           </option>
@@ -1177,15 +1200,22 @@ function CoursesTable() {
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
+      const finalTeacherId =
+        userRole === "teacher" && loggedInTeacherId > 0
+          ? loggedInTeacherId
+          : formData.teacher_id;
       // Add all form fields
-      formDataToSend.append("teacher_id", formData.teacher_id.toString());
+      formDataToSend.append("teacher_id", finalTeacherId.toString());
       formDataToSend.append("subject_id", formData.subject_id.toString());
       formDataToSend.append("level_id", formData.level_id.toString());
       formDataToSend.append("title", formData.title);
       formDataToSend.append("slug", generateSlug(formData.title));
       formDataToSend.append("description", formData.description);
       formDataToSend.append("type", formData.type);
-      formDataToSend.append("position", formData.position);
+      formDataToSend.append(
+        "position",
+        teacherOfflineOnly ? "offline" : formData.position
+      );
       formDataToSend.append("meta_description", formData.meta_description);
       formDataToSend.append("meta_keywords", formData.meta_keywords);
       formDataToSend.append("status", formData.status);
@@ -1204,14 +1234,17 @@ function CoursesTable() {
       handleCloseEditDialog();
       setEditingCourse(null);
       setFormData({
-        teacher_id: 0,
+        teacher_id:
+          userRole === "teacher" && loggedInTeacherId > 0
+            ? loggedInTeacherId
+            : 0,
         subject_id: 0,
         level_id: 0,
         title: "",
         slug: "",
         description: "",
         type: "free",
-        position: "online",
+        position: teacherOfflineOnly ? "offline" : "online",
         meta_description: "",
         meta_keywords: "",
         status: "active",
@@ -1438,14 +1471,18 @@ function CoursesTable() {
                   setEditingCourse(null);
                   setShowExistingImage(true);
                   setFormData({
-                    teacher_id: 0,
+                      teacher_id:
+                        userRole === "teacher" && loggedInTeacherId > 0
+                          ? loggedInTeacherId
+                          : 0,
                     subject_id: 0,
                     level_id: 0,
                     title: "",
                     slug: "",
                     description: "",
                     type: "free",
-                    position: "online",
+                    position:
+                      userRole === "teacher" ? "offline" : "online",
                     meta_description: "",
                     meta_keywords: "",
                     status: "active",
