@@ -23,11 +23,24 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   };
   const courseData = await feachData();
 
-  if (
-    !user.modules.some((item: any) => {
-      return item.name === "Courses" && item.access === true;
-    })
-  ) {
+  const canAccessCourses = Array.isArray(user?.modules)
+    ? user.modules.some((item: any) => {
+        const accessValue = item?.access;
+        const hasAccess =
+          accessValue === true ||
+          accessValue === 1 ||
+          accessValue === "1" ||
+          accessValue === "true";
+
+        return (
+          hasAccess &&
+          (item?.name?.toLowerCase?.() === "courses" ||
+            item?.path?.toLowerCase?.() === "courses")
+        );
+      })
+    : false;
+
+  if (!canAccessCourses) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
 
