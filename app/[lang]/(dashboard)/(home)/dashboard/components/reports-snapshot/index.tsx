@@ -10,7 +10,7 @@ import DashboardSelect from "@/components/dasboard-select";
 import { cn } from "@/lib/utils";
 import { Statistics } from "@/lib/type";
 
-const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
+const ReportsSnapshot = ({ statistics }: { statistics: Statistics | null }) => {
   const { theme: config, setTheme: setConfig } = useThemeStore();
   const { theme: mode } = useTheme();
   const theme = themes.find((theme) => theme.name === config);

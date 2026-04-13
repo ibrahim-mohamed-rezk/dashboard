@@ -7,7 +7,7 @@ import { Statistics } from "@/lib/type";
 import { translate } from "@/lib/utils";
 
 interface UsersStatProps {
-  statistics: Statistics;
+  statistics: Statistics | null;
   trans: { [key: string]: string };
 }
 

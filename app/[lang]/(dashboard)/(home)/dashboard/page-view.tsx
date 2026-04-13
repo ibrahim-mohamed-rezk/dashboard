@@ -198,7 +198,7 @@ const RevenueBreakdownChart: React.FC<RevenueBreakdownChartProps> = ({
 };
 
 interface PerformanceMetricsProps {
-  statistics: Statistics;
+  statistics: Statistics | null;
 }
 
 const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
@@ -582,7 +582,7 @@ const TeacherPerformanceDashboard: React.FC<
 };
 
 interface ContentAnalyticsProps {
-  statistics: Statistics;
+  statistics: Statistics | null;
 }
 
 const ContentAnalytics: React.FC<ContentAnalyticsProps> = ({ statistics }) => {
@@ -667,7 +667,7 @@ const ContentAnalytics: React.FC<ContentAnalyticsProps> = ({ statistics }) => {
 };
 
 interface RevenueTimelineProps {
-  statistics: Statistics;
+  statistics: Statistics | null;
 }
 
 const RevenueTimeline: React.FC<RevenueTimelineProps> = ({ statistics }) => {
@@ -1401,7 +1401,8 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
               value={statistics?.courses?.online_count ?? 0}
               icon={<Zap className="w-6 h-6 text-green-600" />}
               subtitle={`${(
-                (statistics?.courses?.online_count / statistics?.courses?.total) *
+                ((statistics?.courses?.online_count ?? 0) /
+                  Math.max(statistics?.courses?.total ?? 0, 1)) *
                 100
               ).toFixed(0)}% من الإجمالي`}
             />

@@ -58,6 +58,7 @@ export interface Module {
   id: number;
   name: string;
   access: boolean;
+  path?: string;
 }
 
 export interface Teacher {
