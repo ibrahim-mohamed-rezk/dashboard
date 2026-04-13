@@ -1,5 +1,5 @@
 import Credentials from "next-auth/providers/credentials";
-
+import { AuthOptions } from "next-auth";
 import {User as UserType, user} from "@/app/api/user/data";
 import GoogleProvider from "next-auth/providers/google";
 import GithubProvider from "next-auth/providers/github";
@@ -52,9 +52,24 @@ export const authOptions = {
     }),
   ],
   secret: process.env.AUTH_SECRET,
-
   session: {
     strategy: "jwt",
   },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = (user as any).role || "user";
+        token.modules = (user as any).modules || [];
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session?.user) {
+        (session.user as any).role = token.role;
+        (session.user as any).modules = token.modules;
+      }
+      return session;
+    },
+  },
   debug: process.env.NODE_ENV !== "production",
-};
+} satisfies AuthOptions;

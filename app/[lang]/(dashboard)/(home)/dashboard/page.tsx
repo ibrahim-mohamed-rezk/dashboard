@@ -49,8 +49,26 @@ const Dashboard = async ({
 
   const trans = await getDictionary("ar");
 
-  console.log(statistics);
-  return <DashboardPageView statistics={statistics} trans={trans} />;
+  const { getServerSession } = await import("next-auth/next");
+  const { authOptions } = await import("@/lib/auth");
+  const session = await getServerSession(authOptions);
+  const sessionRole = (session?.user as any)?.role || "user";
+
+  // Detect whether the API returned teacher-specific stats
+  // The teacher endpoint returns { message: "Teacher statistics", data: { ... } }
+  const isTeacherStats = statistics?.message === "Teacher statistics";
+  const role = isTeacherStats ? "teacher" : sessionRole;
+
+  console.log("Dashboard Loaded", { role, isTeacherStats });
+
+  return (
+    <DashboardPageView
+      statistics={isTeacherStats ? null : statistics}
+      teacherStatistics={isTeacherStats ? statistics?.data : null}
+      trans={trans}
+      role={role}
+    />
+  );
 };
 
 export default Dashboard;

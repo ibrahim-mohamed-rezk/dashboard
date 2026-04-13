@@ -26,7 +26,7 @@ import ReportsSnapshot from "./components/reports-snapshot";
 import UsersStat from "./components/users-stat";
 import DashboardSelect from "@/components/dasboard-select";
 import DatePickerWithRange from "@/components/date-picker-with-range";
-import { Statistics } from "@/lib/type";
+import { Statistics, TeacherStatistics } from "@/lib/type";
 import { ApexOptions } from "apexcharts";
 import {
   TrendingUp,
@@ -172,7 +172,7 @@ const RevenueBreakdownChart: React.FC<RevenueBreakdownChartProps> = ({
               show: true,
               label: "إجمالي الإيرادات",
               formatter: () =>
-                formatCurrency(series.reduce((a, b) => a + b, 0)),
+                formatCurrency(series?.reduce((a, b) => a + b, 0)),
             },
           },
         },
@@ -205,24 +205,24 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
   statistics,
 }) => {
   const totalOnlineRevenue =
-    statistics.students.details?.reduce(
-      (sum, s) => sum + Number(s.online_revenue),
+    statistics?.students?.details?.reduce(
+      (sum, s) => sum + Number(s?.online_revenue),
       0,
     ) || 0;
   const totalOfflineRevenue =
-    statistics.students.details?.reduce(
-      (sum, s) => sum + Number(s.offline_revenue),
+    statistics?.students?.details?.reduce(
+      (sum, s) => sum + Number(s?.offline_revenue),
       0,
     ) || 0;
   const totalRevenue = totalOnlineRevenue + totalOfflineRevenue;
   const avgRevenuePerStudent =
-    statistics.students.total > 0
-      ? totalRevenue / statistics.students.total
+    (statistics?.students?.total || 0) > 0
+      ? totalRevenue / (statistics?.students?.total || 1)
       : 0;
 
   const conversionRate =
-    statistics.financial?.total_purchases > 0 && statistics.users.total > 0
-      ? (statistics.financial.total_purchases / statistics.users.total) * 100
+    (statistics?.financial?.total_purchases || 0) > 0 && (statistics?.users?.total || 0) > 0
+      ? ((statistics?.financial?.total_purchases || 0) / (statistics?.users?.total || 1)) * 100
       : 0;
 
   return (
@@ -251,9 +251,9 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({
       />
       <MetricCard
         title="الدورات النشطة"
-        value={statistics.courses.online_count ?? 0}
+        value={statistics?.courses?.online_count || 0}
         icon={<BookOpen className="w-6 h-6 text-orange-600" />}
-        subtitle={`${statistics.courses.total} دورة إجمالية`}
+        subtitle={`${statistics?.courses?.total || 0} دورة إجمالية`}
       />
     </div>
   );
@@ -273,9 +273,9 @@ const CoursePerformanceAnalysis: React.FC<CoursePerformanceAnalysisProps> = ({
   courses,
 }) => {
   const topCourses = getTopN(courses, "revenue", 10);
-  const totalRevenue = courses.reduce((sum, c) => sum + c.revenue, 0);
+  const totalRevenue = courses?.reduce((sum, c) => sum + c.revenue, 0);
 
-  const performanceData = topCourses.map((course) => ({
+  const performanceData = topCourses?.map((course) => ({
     ...course,
     revenuePercentage:
       totalRevenue > 0 ? (course.revenue / totalRevenue) * 100 : 0,
@@ -380,23 +380,23 @@ interface StudentEngagementAnalyticsProps {
 const StudentEngagementAnalytics: React.FC<StudentEngagementAnalyticsProps> = ({
   students = [],
 }) => {
-  const engagementData = students.map((s) => ({
+  const engagementData = students?.map((s) => ({
     ...s,
-    totalRevenue: Number(s.online_revenue) + Number(s.offline_revenue),
+    totalRevenue: Number(s?.online_revenue) + Number(s?.offline_revenue),
     engagementScore:
-      (s.online_purchases_count || 0) * 10 +
-      (s.subscription_codes_count || 0) * 5,
+      (s?.online_purchases_count || 0) * 10 +
+      (s?.subscription_codes_count || 0) * 5,
   }));
 
   const topEngaged = getTopN(engagementData, "engagementScore", 5);
   const topSpenders = getTopN(engagementData, "totalRevenue", 5);
 
   const scatterData = engagementData
-    .filter((s) => s.totalRevenue > 0 || (s.online_purchases_count || 0) > 0)
+    .filter((s) => s?.totalRevenue > 0 || (s?.online_purchases_count || 0) > 0)
     .map((s) => ({
-      x: s.online_purchases_count || 0,
-      y: s.totalRevenue,
-      z: s.subscription_codes_count || 0,
+      x: s?.online_purchases_count || 0,
+      y: s?.totalRevenue,
+      z: s?.subscription_codes_count || 0,
     }));
 
   const scatterOptions: ApexOptions = {
@@ -463,7 +463,7 @@ const StudentEngagementAnalytics: React.FC<StudentEngagementAnalyticsProps> = ({
                   </div>
                 </div>
                 <Badge variant="outline">
-                  {formatCurrency(student.totalRevenue)}
+                  {formatCurrency(student?.totalRevenue)}
                 </Badge>
               </div>
             ))}
@@ -481,20 +481,20 @@ interface TeacherPerformanceDashboardProps {
 const TeacherPerformanceDashboard: React.FC<
   TeacherPerformanceDashboardProps
 > = ({ teachers = [] }) => {
-  const performanceMetrics = teachers.map((t) => ({
+  const performanceMetrics = teachers?.map((t) => ({
     ...t,
     totalRevenue:
       Number(t.online_revenue) +
       Number(t.offline_revenue) +
       Number(t.books_revenue),
     avgRevenuePerCourse:
-      t.courses_count > 0
+     t?.courses_count > 0
         ? (Number(t.online_revenue) + Number(t.offline_revenue)) /
-          t.courses_count
+         t?.courses_count
         : 0,
     efficiency:
-      t.subscription_codes_count > 0
-        ? Number(t.offline_revenue) / t.subscription_codes_count
+     t?.subscription_codes_count > 0
+        ? Number(t.offline_revenue) /t?.subscription_codes_count
         : 0,
   }));
 
@@ -507,14 +507,14 @@ const TeacherPerformanceDashboard: React.FC<
   ];
   const topTeachers = getTopN(performanceMetrics, "totalRevenue", 3);
 
-  const radarSeries = topTeachers.map((t) => ({
-    name: t.full_name,
+  const radarSeries = topTeachers?.map((t) => ({
+    name:t?.full_name,
     data: [
       Math.min((t.courses_count / 10) * 100, 100),
       Math.min((t.online_courses_purchases / 5) * 100, 100),
       Math.min((t.subscription_codes_count / 100) * 100, 100),
       Math.min((t.books_count / 5) * 100, 100),
-      Math.min((t.totalRevenue / 10000) * 100, 100),
+      Math.min((t?.totalRevenue / 10000) * 100, 100),
     ],
   }));
 
@@ -548,7 +548,7 @@ const TeacherPerformanceDashboard: React.FC<
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {performanceMetrics.map((teacher) => (
+            {performanceMetrics?.map((teacher) => (
               <div key={teacher.teacher_id} className="p-4 border rounded-lg">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-medium">{teacher.full_name}</h4>
@@ -589,25 +589,25 @@ const ContentAnalytics: React.FC<ContentAnalyticsProps> = ({ statistics }) => {
   const contentData = [
     {
       category: "الدورات",
-      count: statistics.courses.total,
+      count: statistics?.courses?.total || 0,
       icon: <BookOpen className="w-5 h-5" />,
       color: "bg-blue-500",
     },
     {
       category: "الفيديوهات",
-      count: statistics.videos.total,
+      count: statistics?.videos?.total || 0,
       icon: <Video className="w-5 h-5" />,
       color: "bg-purple-500",
     },
     {
       category: "الاختبارات",
-      count: statistics.exams.total,
+      count: statistics?.exams?.total || 0,
       icon: <GraduationCap className="w-5 h-5" />,
       color: "bg-green-500",
     },
     {
       category: "المدونات",
-      count: statistics.blogs.total,
+      count: statistics?.blogs?.total || 0,
       icon: <BookOpen className="w-5 h-5" />,
       color: "bg-orange-500",
     },
@@ -723,38 +723,321 @@ const RevenueTimeline: React.FC<RevenueTimelineProps> = ({ statistics }) => {
   );
 };
 
+/* ──────────────────────────────────────────────────────────────
+   Teacher Dashboard
+────────────────────────────────────────────────────────────── */
+interface TeacherDashboardViewProps {
+  data: TeacherStatistics;
+  trans: { [key: string]: string };
+}
+
+const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({ data }) => {
+  const fs = data.financial_summary;
+  const grandTotal = fs.total_revenue || 0;
+
+  // Revenue donut
+  const revSeries = [
+    Number(fs.online_revenue || 0),
+    Number(fs.offline_revenue || 0),
+    Number(fs.books_revenue || 0),
+  ];
+  const revOptions: ApexOptions = {
+    labels: ["أونلاين", "اشتراكات", "كتب"],
+    chart: { type: "donut", toolbar: { show: false } },
+    legend: { position: "bottom" },
+    colors: ["#3B82F6", "#10B981", "#F59E0B"],
+    plotOptions: {
+      pie: {
+        donut: {
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: "الإجمالي",
+              formatter: () => formatCurrency(grandTotal),
+            },
+          },
+        },
+      },
+    },
+    tooltip: { y: { formatter: (v) => formatCurrency(v) } },
+  };
+
+  // Subscription codes radial
+  const usageRate = Math.round(data.subscription_codes.usage_rate * 100) / 100;
+  const radialOptions: ApexOptions = {
+    chart: { type: "radialBar" },
+    plotOptions: {
+      radialBar: {
+        hollow: { size: "60%" },
+        dataLabels: {
+          show: true,
+          name: { show: true, fontSize: "12px" },
+          value: { show: true, fontSize: "20px", fontWeight: "bold", formatter: (v) => `${v}%` },
+        },
+      },
+    },
+    labels: ["نسبة الاستخدام"],
+    colors: ["#8B5CF6"],
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center flex-wrap justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">لوحة تحكم المعلم</h1>
+          <p className="text-gray-600 mt-1">
+            مرحباً، <span className="font-semibold text-blue-600">{data.teacher_info.name}</span>
+            {" — "}{data.teacher_info.email}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePickerWithRange />
+          <DashboardSelect />
+        </div>
+      </div>
+
+      {/* Key Metrics Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <MetricCard
+          title="إجمالي الطلاب"
+          value={formatNumber(data.students.total)}
+          icon={<Users className="w-6 h-6 text-blue-600" />}
+          trend="neutral"
+        />
+        <MetricCard
+          title="إجمالي الدورات"
+          value={formatNumber(data.courses.total)}
+          icon={<BookOpen className="w-6 h-6 text-green-600" />}
+          subtitle={`${data.courses.online} أونلاين · ${data.courses.offline} خارجي`}
+        />
+        <MetricCard
+          title="إجمالي الإيرادات"
+          value={formatCurrency(grandTotal)}
+          icon={<DollarSign className="w-6 h-6 text-emerald-600" />}
+          trend="up"
+        />
+        <MetricCard
+          title="كودات الاشتراك"
+          value={formatNumber(data.subscription_codes.total)}
+          icon={<Zap className="w-6 h-6 text-purple-600" />}
+          subtitle={`${data.subscription_codes.used} مستخدم · ${data.subscription_codes.unused} متاح`}
+        />
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Revenue Breakdown */}
+        <Card className="col-span-12 md:col-span-5">
+          <CardHeader>
+            <CardTitle>توزيع الإيرادات</CardTitle>
+            <CardDescription>إجمالي {formatCurrency(grandTotal)}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Chart options={revOptions} series={revSeries} type="donut" height={280} />
+          </CardContent>
+        </Card>
+
+        {/* Subscription usage */}
+        <Card className="col-span-12 md:col-span-3">
+          <CardHeader>
+            <CardTitle>استخدام الاشتراكات</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <Chart options={radialOptions} series={[usageRate]} type="radialBar" height={220} />
+            <div className="w-full grid grid-cols-2 gap-3 text-sm">
+              <div className="p-3 bg-green-50 rounded-lg text-center">
+                <p className="text-gray-500">مستخدم</p>
+                <p className="font-bold text-green-700">{data.subscription_codes.used}</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-lg text-center">
+                <p className="text-gray-500">متاح</p>
+                <p className="font-bold text-purple-700">{data.subscription_codes.unused}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Exams + Financial summary */}
+        <div className="col-span-12 md:col-span-4 flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-orange-500" />
+                الاختبارات المجدولة
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-gray-500">الإجمالي</p>
+                  <p className="text-xl font-bold text-blue-700">{data.scheduled_exams.total}</p>
+                </div>
+                <div className="p-3 bg-yellow-50 rounded-lg">
+                  <p className="text-gray-500">القادمة</p>
+                  <p className="text-xl font-bold text-yellow-700">{data.scheduled_exams.upcoming}</p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <p className="text-gray-500">مكتملة</p>
+                  <p className="text-xl font-bold text-green-700">{data.scheduled_exams.completed}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-emerald-500" />
+                ملخص الإيرادات
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                { label: "الإيرادات الأونلاين", value: fs.online_revenue, color: "bg-blue-500" },
+                { label: "إيرادات الاشتراكات", value: fs.offline_revenue, color: "bg-green-500" },
+                { label: "إيرادات الكتب", value: fs.books_revenue, color: "bg-yellow-500" },
+              ].map((item) => {
+                const pct = grandTotal > 0 ? (item.value / grandTotal) * 100 : 0;
+                return (
+                  <div key={item.label}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">{item.label}</span>
+                      <span className="font-semibold">{formatCurrency(item.value)}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div
+                        className={`${item.color} h-2 rounded-full transition-all duration-500`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Courses + Books row */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Courses detail */}
+        <Card className="col-span-12 md:col-span-6">
+          <CardHeader>
+            <CardTitle>تفاصيل الدورات</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "دورات أونلاين", count: data.courses.online, color: "text-blue-600", bg: "bg-blue-50" },
+                { label: "دورات خارجية", count: data.courses.offline, color: "text-green-600", bg: "bg-green-50" },
+                { label: "مشتريات أونلاين", count: data.courses.online_purchases, color: "text-purple-600", bg: "bg-purple-50" },
+                { label: "إيرادات أونلاين", count: formatCurrency(data.courses.online_revenue), color: "text-emerald-600", bg: "bg-emerald-50" },
+              ].map((item) => (
+                <div key={item.label} className={`${item.bg} rounded-xl p-4 text-center`}>
+                  <p className={`text-2xl font-bold ${item.color}`}>{item.count}</p>
+                  <p className="text-sm text-gray-600 mt-1">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Books */}
+        <Card className="col-span-12 md:col-span-6">
+          <CardHeader>
+            <CardTitle>الكتب</CardTitle>
+            <CardDescription>
+              {data.books.total} كتاب · {data.books.purchases} مبيعات · {formatCurrency(data.books.revenue)} إيرادات
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.books.top_selling_books.length > 0 ? (
+              <div className="space-y-3">
+                {data.books.top_selling_books.map((book, idx) => (
+                  <div key={book.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        {idx + 1}
+                      </div>
+                      <p className="font-medium text-sm">{book.title}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{formatCurrency(book.revenue)}</p>
+                      <p className="text-xs text-gray-500">{book.purchases} مبيعات</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <BookOpen className="w-10 h-10 mb-2" />
+                <p className="text-sm">لا توجد بيانات كتب حالياً</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Footer */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>آخر تحديث: {new Date().toLocaleString()}</span>
+            <Badge variant="outline" className="bg-green-50">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              حي
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────
+   Admin Dashboard
+────────────────────────────────────────────────────────────── */
 interface DashboardPageViewProps {
   trans: { [key: string]: string };
-  statistics: Statistics;
+  statistics: Statistics | null;
+  teacherStatistics?: TeacherStatistics | null;
+  role?: string;
 }
 
 const DashboardPageView: React.FC<DashboardPageViewProps> = ({
   trans,
   statistics,
+  teacherStatistics,
+  role = "admin",
 }) => {
+  const isAdmin = role === "admin" || role === "super_admin";
+
+  // ── All hooks must come before any conditional return ─────────
   const [entityTab, setEntityTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
 
   // Calculate key metrics
-  const totalStudents = statistics.students.total;
-  const totalTeachers = statistics.teachers.total;
-  const totalUsers = statistics.users.total;
-  const totalPurchases = statistics.financial?.total_purchases || 0;
+  const totalStudents = statistics?.students?.total || 0;
+  const totalTeachers = statistics?.teachers?.total || 0;
+  const totalUsers = statistics?.users?.total || 0;
+  const totalPurchases = statistics?.financial?.total_purchases || 0;
 
   const totalOnlineRevenue =
-    statistics.students.details?.reduce(
-      (sum, s) => sum + Number(s.online_revenue),
+    statistics?.students?.details?.reduce(
+      (sum, s) => sum + Number(s?.online_revenue),
       0,
     ) || 0;
   const totalOfflineRevenue =
-    statistics.students.details?.reduce(
-      (sum, s) => sum + Number(s.offline_revenue),
+    statistics?.students?.details?.reduce(
+      (sum, s) => sum + Number(s?.offline_revenue),
       0,
     ) || 0;
   const totalBookRevenue =
-    statistics.teachers.details?.reduce(
+    statistics?.teachers?.details?.reduce(
       (sum, t) => sum + Number(t.books_revenue),
       0,
     ) || 0;
@@ -763,22 +1046,27 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
 
   // Prepare filtered data
   const filteredStudents = useMemo(() => {
-    if (!statistics.students.details) return [];
-    return statistics.students.details.filter(
+    if (!statistics?.students?.details) return [];
+    return statistics?.students?.details?.filter(
       (s) =>
         !searchTerm ||
-        s.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
+        s?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-  }, [statistics.students.details, searchTerm]);
+  }, [statistics?.students?.details, searchTerm]);
 
   const filteredTeachers = useMemo(() => {
-    if (!statistics.teachers.details) return [];
-    return statistics.teachers.details.filter(
+    if (!statistics?.teachers?.details) return [];
+    return statistics?.teachers?.details?.filter(
       (t) =>
         !searchTerm ||
-        t.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
+       t?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-  }, [statistics.teachers.details, searchTerm]);
+  }, [statistics?.teachers?.details, searchTerm]);
+
+  // ── Teacher early return (after all hooks) ────────────────────
+  if (role === "teacher" && teacherStatistics) {
+    return <TeacherDashboardView data={teacherStatistics} trans={trans} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -854,10 +1142,10 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
 
       {/* Main Navigation Tabs */}
       <Tabs value={entityTab} onValueChange={setEntityTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-6" : "grid-cols-5"}`}>
           <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
           <TabsTrigger value="students">الطلاب</TabsTrigger>
-          <TabsTrigger value="teachers">المعلمون</TabsTrigger>
+          {isAdmin && <TabsTrigger value="teachers">المعلمون</TabsTrigger>}
           <TabsTrigger value="courses">الدورات</TabsTrigger>
           <TabsTrigger value="revenue">الإيرادات</TabsTrigger>
           <TabsTrigger value="analytics">التحليلات</TabsTrigger>
@@ -868,12 +1156,14 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
           <PerformanceMetrics statistics={statistics} />
 
           <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 lg:col-span-8">
+            <div className={`col-span-12 ${isAdmin ? "lg:col-span-8" : ""}`}>
               <ReportsSnapshot statistics={statistics} />
             </div>
-            <div className="col-span-12 lg:col-span-4">
-              <UsersStat statistics={statistics} trans={trans} />
-            </div>
+            {isAdmin && (
+              <div className="col-span-12 lg:col-span-4">
+                <UsersStat statistics={statistics} trans={trans} />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-12 gap-6">
@@ -882,7 +1172,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
           </div>
 
           <CoursePerformanceAnalysis
-            courses={statistics.courses.online_courses || []}
+            courses={statistics?.courses?.online_courses || []}
           />
         </TabsContent>
 
@@ -902,8 +1192,8 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
             />
             <MetricCard
               title="إجمالي الاشتراكات"
-              value={filteredStudents.reduce(
-                (sum, s) => sum + (s.subscription_codes_count || 0),
+              value={filteredStudents?.reduce(
+                (sum, s) => sum + (s?.subscription_codes_count || 0),
                 0,
               )}
               icon={<ShoppingCart className="w-6 h-6 text-purple-600" />}
@@ -911,8 +1201,8 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
             <MetricCard
               title="معدل التفاعل"
               value={`${(
-                (filteredStudents.filter(
-                  (s) => (s.online_purchases_count || 0) > 0,
+                (filteredStudents?.filter(
+                  (s) => (s?.online_purchases_count || 0) > 0,
                 ).length /
                   totalStudents) *
                 100
@@ -945,7 +1235,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStudents.map((student) => {
+                    {filteredStudents?.map((student) => {
                       const totalRev =
                         Number(student.online_revenue) +
                         Number(student.offline_revenue);
@@ -991,142 +1281,144 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
         </TabsContent>
 
         {/* Teachers Tab */}
-        <TabsContent value="teachers" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <MetricCard
-              title="إجمالي المعلمون"
-              value={totalTeachers}
-              icon={<GraduationCap className="w-6 h-6 text-blue-600" />}
-            />
-            <MetricCard
-              title="إجمالي الدورات"
-              value={filteredTeachers.reduce(
-                (sum, t) => sum + t.courses_count,
-                0,
-              )}
-              icon={<BookOpen className="w-6 h-6 text-green-600" />}
-            />
-            <MetricCard
-              title="إجمالي الكتب"
-              value={filteredTeachers.reduce(
-                (sum, t) => sum + t.books_count,
-                0,
-              )}
-              icon={<BookOpen className="w-6 h-6 text-purple-600" />}
-            />
-            <MetricCard
-              title="الإيرادات المتوسطة لكل معلم"
-              value={formatCurrency(grandTotalRevenue / totalTeachers)}
-              icon={<DollarSign className="w-6 h-6 text-orange-600" />}
-            />
-          </div>
+        {isAdmin && (
+          <TabsContent value="teachers" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <MetricCard
+                title="إجمالي المعلمون"
+                value={totalTeachers}
+                icon={<GraduationCap className="w-6 h-6 text-blue-600" />}
+              />
+              <MetricCard
+                title="إجمالي الدورات"
+                value={filteredTeachers?.reduce(
+                  (sum, t) => sum +t?.courses_count,
+                  0,
+                )}
+                icon={<BookOpen className="w-6 h-6 text-green-600" />}
+              />
+              <MetricCard
+                title="إجمالي الكتب"
+                value={filteredTeachers?.reduce(
+                  (sum, t) => sum +t?.books_count,
+                  0,
+                )}
+                icon={<BookOpen className="w-6 h-6 text-purple-600" />}
+              />
+              <MetricCard
+                title="الإيرادات المتوسطة لكل معلم"
+                value={formatCurrency(grandTotalRevenue / (totalTeachers || 1))}
+                icon={<DollarSign className="w-6 h-6 text-orange-600" />}
+              />
+            </div>
 
-          <TeacherPerformanceDashboard teachers={filteredTeachers} />
+            <TeacherPerformanceDashboard teachers={filteredTeachers} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>جدول أداء المعلمين</CardTitle>
-              <CardDescription>
-                المقاييس وتفاصيل الإيرادات للمعلمين
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-4">اسم المعلم</th>
-                      <th className="text-left p-4">الدورات</th>
-                      <th className="text-left p-4">الإيرادات الأونلاين</th>
-                      <th className="text-left p-4">الإيرادات الخارجية</th>
-                      <th className="text-left p-4">الإيرادات الكتابية</th>
-                      <th className="text-left p-4">الإيرادات الإجمالية</th>
-                      <th className="text-left p-4">الكفاءة</th>
-                      <th className="text-left p-4">التقييم</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTeachers.map((teacher) => {
-                      const totalRev =
-                        Number(teacher.online_revenue) +
-                        Number(teacher.offline_revenue) +
-                        Number(teacher.books_revenue);
-                      const efficiency =
-                        teacher.courses_count > 0
-                          ? totalRev / teacher.courses_count
-                          : 0;
-                      const rating =
-                        efficiency > 1000
-                          ? "جيد جداً"
-                          : efficiency > 500
-                            ? "جيد"
-                            : "متوسط";
-                      return (
-                        <tr
-                          key={teacher.teacher_id}
-                          className="border-b hover:bg-gray-50"
-                        >
-                          <td className="p-4 font-medium">
-                            {teacher.full_name}
-                          </td>
-                          <td className="p-4">{teacher.courses_count}</td>
-                          <td className="p-4">
-                            {formatCurrency(teacher.online_revenue)}
-                          </td>
-                          <td className="p-4">
-                            {formatCurrency(Number(teacher.offline_revenue))}
-                          </td>
-                          <td className="p-4">
-                            {formatCurrency(teacher.books_revenue)}
-                          </td>
-                          <td className="p-4 font-semibold">
-                            {formatCurrency(totalRev)}
-                          </td>
-                          <td className="p-4">{formatCurrency(efficiency)}</td>
-                          <td className="p-4">
-                            <Badge variant={"outline"}>{rating}</Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>جدول أداء المعلمين</CardTitle>
+                <CardDescription>
+                  المقاييس وتفاصيل الإيرادات للمعلمين
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-4">اسم المعلم</th>
+                        <th className="text-left p-4">الدورات</th>
+                        <th className="text-left p-4">الإيرادات الأونلاين</th>
+                        <th className="text-left p-4">الإيرادات الخارجية</th>
+                        <th className="text-left p-4">الإيرادات الكتابية</th>
+                        <th className="text-left p-4">الإيرادات الإجمالية</th>
+                        <th className="text-left p-4">الكفاءة</th>
+                        <th className="text-left p-4">التقييم</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTeachers?.map((teacher) => {
+                        const totalRev =
+                          Number(teacher.online_revenue) +
+                          Number(teacher.offline_revenue) +
+                          Number(teacher.books_revenue);
+                        const efficiency =
+                          teacher.courses_count > 0
+                            ? totalRev / teacher.courses_count
+                            : 0;
+                        const rating =
+                          efficiency > 1000
+                            ? "جيد جداً"
+                            : efficiency > 500
+                              ? "جيد"
+                              : "متوسط";
+                        return (
+                          <tr
+                            key={teacher.teacher_id}
+                            className="border-b hover:bg-gray-50"
+                          >
+                            <td className="p-4 font-medium">
+                              {teacher.full_name}
+                            </td>
+                            <td className="p-4">{teacher.courses_count}</td>
+                            <td className="p-4">
+                              {formatCurrency(teacher.online_revenue)}
+                            </td>
+                            <td className="p-4">
+                              {formatCurrency(Number(teacher.offline_revenue))}
+                            </td>
+                            <td className="p-4">
+                              {formatCurrency(teacher.books_revenue)}
+                            </td>
+                            <td className="p-4 font-semibold">
+                              {formatCurrency(totalRev)}
+                            </td>
+                            <td className="p-4">{formatCurrency(efficiency)}</td>
+                            <td className="p-4">
+                              <Badge variant={"outline"}>{rating}</Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* Courses Tab */}
         <TabsContent value="courses" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <MetricCard
               title="إجمالي الدورات"
-              value={statistics.courses.total}
+              value={statistics?.courses?.total || 0}
               icon={<BookOpen className="w-6 h-6 text-blue-600" />}
             />
             <MetricCard
               title="الدورات الأونلاين"
-              value={statistics.courses.online_count ?? 0}
+              value={statistics?.courses?.online_count ?? 0}
               icon={<Zap className="w-6 h-6 text-green-600" />}
               subtitle={`${(
-                (statistics.courses.online_count / statistics.courses.total) *
+                (statistics?.courses?.online_count / statistics?.courses?.total) *
                 100
               ).toFixed(0)}% من الإجمالي`}
             />
             <MetricCard
               title="الدورات الخارجية"
-              value={statistics.courses.offline_count ?? 0}
+              value={statistics?.courses?.offline_count ?? 0}
               icon={<BookOpen className="w-6 h-6 text-purple-600" />}
             />
             <MetricCard
               title="عدد زيارات الدورة"
-              value={statistics.engagement?.course_views || 0}
+              value={statistics?.engagement?.course_views || 0}
               icon={<Eye className="w-6 h-6 text-orange-600" />}
             />
           </div>
 
           <CoursePerformanceAnalysis
-            courses={statistics.courses.online_courses || []}
+            courses={statistics?.courses?.online_courses || []}
           />
 
           <div className="grid grid-cols-12 gap-6">
@@ -1136,16 +1428,16 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const courses = statistics.courses.online_courses || [];
+                  const courses = statistics?.courses?.online_courses || [];
                   const priceRanges = {
-                    مجاني: courses.filter((c) => Number(c.price) === 0).length,
-                    "EGP 1-50": courses.filter(
+                    مجاني: courses?.filter((c) => Number(c.price) === 0).length,
+                    "EGP 1-50": courses?.filter(
                       (c) => Number(c.price) > 0 && Number(c.price) <= 50,
                     ).length,
-                    "EGP 51-100": courses.filter(
+                    "EGP 51-100": courses?.filter(
                       (c) => Number(c.price) > 50 && Number(c.price) <= 100,
                     ).length,
-                    "EGP 100+": courses.filter((c) => Number(c.price) > 100)
+                    "EGP 100+": courses?.filter((c) => Number(c.price) > 100)
                       .length,
                   };
                   const series = Object.values(priceRanges);
@@ -1173,10 +1465,10 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const totalViews = statistics.engagement?.course_views || 0;
-                  const totalCourses = statistics.courses.total;
+                  const totalViews = statistics?.engagement?.course_views || 0;
+                  const totalCourses = statistics?.courses?.total;
                   const totalPurchases =
-                    statistics.financial?.total_purchases || 0;
+                    statistics?.financial?.total_purchases || 0;
                   const funnelData = [
                     { stage: "الأطوار", value: totalViews, color: "#3B82F6" },
                     {
@@ -1307,7 +1599,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                   const currentMonthlyAvg = grandTotalRevenue / 6;
                   const growthRate = 1.15; // 15% monthly growth
 
-                  const projectedRevenue = months.map((_, idx) =>
+                  const projectedRevenue = months?.map((_, idx) =>
                     Math.round(
                       currentMonthlyAvg * Math.pow(growthRate, idx + 1),
                     ),
@@ -1369,7 +1661,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                   </h4>
                   <div className="space-y-2">
                     {getTopN(
-                      statistics.students.details || [],
+                      statistics?.students?.details || [],
                       "online_revenue",
                       5,
                     ).map((student, idx) => {
@@ -1409,60 +1701,62 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-medium mb-3">
-                    أفضل المعلمون الإيرادات الأعلى
-                  </h4>
-                  <div className="space-y-2">
-                    {getTopN(
-                      statistics.teachers.details || [],
-                      "offline_revenue",
-                      5,
-                    ).map((teacher, idx) => {
-                      const total =
-                        Number(teacher.online_revenue) +
-                        Number(teacher.offline_revenue) +
-                        Number(teacher.books_revenue);
-                      return (
-                        <div
-                          key={teacher.teacher_id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                              {idx + 1}
+                  {isAdmin && (
+                    <div>
+                      <h4 className="font-medium mb-3">
+                        أفضل المعلمون الإيرادات الأعلى
+                      </h4>
+                      <div className="space-y-2">
+                        {getTopN(
+                          statistics?.teachers?.details || [],
+                          "offline_revenue",
+                          5,
+                        ).map((teacher, idx) => {
+                          const total =
+                            Number(teacher.online_revenue) +
+                            Number(teacher.offline_revenue) +
+                            Number(teacher.books_revenue);
+                          return (
+                            <div
+                              key={teacher.teacher_id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                  {idx + 1}
+                                </div>
+                                <div>
+                                  <p className="font-medium">{teacher.full_name}</p>
+                                  <p className="text-xs text-gray-600">
+                                    {teacher.courses_count} دورة
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold">
+                                  {formatCurrency(total)}
+                                </p>
+                                <div className="flex space-x-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    الأونلاين:{" "}
+                                    {formatCurrency(teacher.online_revenue)}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    الخارجية:{" "}
+                                    {formatCurrency(
+                                      Number(teacher.offline_revenue),
+                                    )}
+                                  </Badge>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium">{teacher.full_name}</p>
-                              <p className="text-xs text-gray-600">
-                                {teacher.courses_count} دورة
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold">
-                              {formatCurrency(total)}
-                            </p>
-                            <div className="flex space-x-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                الأونلاين:{" "}
-                                {formatCurrency(teacher.online_revenue)}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                الخارجية:{" "}
-                                {formatCurrency(
-                                  Number(teacher.offline_revenue),
-                                )}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
           </Card>
         </TabsContent>
 
@@ -1628,15 +1922,15 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                   const hours = Array.from({ length: 24 }, (_, i) => i);
 
                   // Generate sample heatmap data
-                  const heatmapData = days.flatMap((day, dayIndex) =>
-                    hours.map((hour) => ({
+                  const heatmapData = days?.flatMap((day, dayIndex) =>
+                    hours?.map((hour) => ({
                       day: dayIndex,
                       hour,
                       value: Math.floor(Math.random() * 100),
                     })),
                   );
 
-                  const series = days.map((day, index) => ({
+                  const series = days?.map((day, index) => ({
                     name: day,
                     data: heatmapData
                       .filter((d) => d.day === index)
@@ -1648,7 +1942,7 @@ const DashboardPageView: React.FC<DashboardPageViewProps> = ({
                     dataLabels: { enabled: false },
                     colors: ["#3B82F6"],
                     xaxis: {
-                      categories: hours.map((h) => `${h}:00`),
+                      categories: hours?.map((h) => `${h}:00`),
                       labels: { show: false },
                     },
                   };

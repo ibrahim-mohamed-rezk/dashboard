@@ -9,6 +9,8 @@ export const user = [
     resetToken: null,
     resetTokenExpiry: null,
     profile: null,
+    role: "admin",
+    modules: ["courses", "books", "users", "statistics"], // Example assigned modules
   },
 ];
 

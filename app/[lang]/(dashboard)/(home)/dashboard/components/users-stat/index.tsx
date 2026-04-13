@@ -16,27 +16,27 @@ const UsersStat = ({ statistics, trans }: UsersStatProps) => {
     {
       id: 1,
       country: translate("الطلاب", trans),
-      count: statistics.students.total.toString(),
+      count: (statistics?.students?.total || 0).toString(),
     },
     {
       id: 2,
       country: translate("المعلمون", trans),
-      count: statistics.teachers.total.toString(),
+      count: (statistics?.teachers?.total || 0).toString(),
     },
     {
       id: 3,
       country: translate("الدورات", trans),
-      count: statistics.courses.total.toString(),
+      count: (statistics?.courses?.total || 0).toString(),
     },
     {
       id: 4,
       country: translate("المواد", trans),
-      count: (statistics.subjects?.total || 0).toString(),
+      count: (statistics?.subjects?.total || 0).toString(),
     },
     {
       id: 5,
       country: translate("الوحدات", trans),
-      count: (statistics.modules?.total || 0).toString(),
+      count: (statistics?.modules?.total || 0).toString(),
     },
   ];
 
@@ -54,7 +54,7 @@ const UsersStat = ({ statistics, trans }: UsersStatProps) => {
           </div>
           <div className="flex-none flex items-center gap-1">
             <span className="text-4xl font-semibold text-primary">
-              {statistics.users.total}
+              {statistics?.users?.total || 0}
             </span>
             <span className="text-2xl text-success">
               <Icon icon="heroicons:arrow-trending-up-16-solid" />

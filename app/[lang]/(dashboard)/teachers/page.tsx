@@ -920,19 +920,31 @@ function BasicDataTable() {
       if (hasOffline) return "offline";
       return "";
     })();
+    const derivedSubjectId = (() => {
+      const explicitId = user?.user?.subject_id?.toString() || (user as any)?.subject_id?.toString() || (user?.user as any)?.subject?.id?.toString() || (user as any)?.subject?.id?.toString();
+      if (explicitId) return explicitId;
+      
+      const subjectName = (user as any)?.subject || (user?.user as any)?.subject;
+      if (typeof subjectName === 'string') {
+        const matched = subjects?.find(s => s.name === subjectName);
+        if (matched) return matched.id.toString();
+      }
+      return "";
+    })();
+
     setFormData({
-      full_name: user.user.full_name,
-      email: user.user.email,
-      phone: user.user.phone,
-      role: user.user.role,
-      type: (user.user as any)?.type || (user as any)?.type || derivedType,
-      levels: (user.user.levels && String(user.user.levels)) || ("" as string),
-      cover: user.user.avatar,
+      full_name: user?.user?.full_name || "",
+      email: user?.user?.email || "",
+      phone: user?.user?.phone || "",
+      role: user?.user?.role || "teacher",
+      type: (user?.user as any)?.type || (user as any)?.type || derivedType || "",
+      levels: ((user?.user as any)?.levels && String((user?.user as any)?.levels)) || ((user as any)?.levels && String((user as any)?.levels)) || ((user?.user as any)?.level_id && String((user?.user as any)?.level_id)) || ("" as string),
+      cover: user?.user?.avatar || "",
       password: "",
-      avatar: user.user.avatar,
-      subject_id: user.user.subject_id?.toString() || "",
-      tech_no: user.tech_no || "",
-      about: (user.user as any)?.about || "",
+      avatar: user?.user?.avatar || "",
+      subject_id: derivedSubjectId,
+      tech_no: user?.tech_no || "",
+      about: (user?.user as any)?.about || (user as any)?.about || (user?.user as any)?.description || (user as any)?.description || (user?.user as any)?.bio || (user as any)?.bio || "",
     });
     setShowEditModal(true);
     setEditError(null);

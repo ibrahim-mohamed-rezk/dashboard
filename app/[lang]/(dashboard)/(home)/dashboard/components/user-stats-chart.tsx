@@ -13,10 +13,10 @@ const UserStats = ({ statistics }: { statistics: Statistics }) => {
   const theme = themes.find((theme) => theme.name === config);
 
   const series = [
-    statistics.students.total,
-    statistics.teachers.total,
-    statistics.users.total -
-      (statistics.students.total + statistics.teachers.total),
+    statistics?.students?.total || 0,
+    statistics?.teachers?.total || 0,
+    (statistics?.users?.total || 0) -
+      ((statistics?.students?.total || 0) + (statistics?.teachers?.total || 0)),
   ];
 
   const options: any = {

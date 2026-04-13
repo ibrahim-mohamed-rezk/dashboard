@@ -32,25 +32,25 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
     {
       value: "all",
       text: "جميع المستخدمين",
-      total: statistics.users.total.toString(),
+      total: (statistics?.users?.total || 0).toString(),
       color: "primary",
     },
     {
       value: "students",
       text: "الطلاب",
-      total: statistics.students.total.toString(),
+      total: (statistics?.students?.total || 0).toString(),
       color: "warning",
     },
     {
       value: "teachers",
       text: "المعلمين",
-      total: statistics.teachers.total.toString(),
+      total: (statistics?.teachers?.total || 0).toString(),
       color: "success",
     },
     {
       value: "courses",
       text: "الدورات",
-      total: statistics.courses.total.toString(),
+      total: (statistics?.courses?.total || 0).toString(),
       color: "info",
     },
   ];
@@ -60,7 +60,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "all",
       series: [
         {
-          data: Object.values(statistics.users.by_month || {}).map(Number),
+          data: Object.values(statistics?.users?.by_month || {}).map(Number),
         },
       ],
       color: primary,
@@ -69,7 +69,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "students",
       series: [
         {
-          data: Object.values(statistics.students.by_month || {}).map(Number),
+          data: Object.values(statistics?.students?.by_month || {}).map(Number),
         },
       ],
       color: warning,
@@ -78,7 +78,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "teachers",
       series: [
         {
-          data: Object.values(statistics.teachers.by_month || {}).map(Number),
+          data: Object.values(statistics?.teachers?.by_month || {}).map(Number),
         },
       ],
       color: success,
@@ -87,7 +87,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
       value: "courses",
       series: [
         {
-          data: Object.values(statistics.courses.by_month || {}).map(Number),
+          data: Object.values(statistics?.courses?.by_month || {}).map(Number),
         },
       ],
       color: info,
@@ -150,7 +150,7 @@ const ReportsSnapshot = ({ statistics }: { statistics: Statistics }) => {
                 <span
                   className={`text-lg font-semibold text-${item.color}/80 dark:text-primary-foreground`}
                 >
-                  {item.total}
+                  {item?.total}
                 </span>
               </TabsTrigger>
             ))}

@@ -10,7 +10,7 @@ const ReportsArea = ({ statistics }: { statistics: Statistics }) => {
     {
       id: 1,
       name: "الطلاب",
-      count: statistics.students.total.toString(),
+      count: (statistics?.students?.total || 0).toString(),
       rate: "150",
       isUp: true,
       icon: <Session className="h-4 w-4" />,
@@ -19,7 +19,7 @@ const ReportsArea = ({ statistics }: { statistics: Statistics }) => {
     {
       id: 2,
       name: "المعلمين",
-      count: statistics.teachers.total.toString(),
+      count: (statistics?.teachers?.total || 0).toString(),
       rate: "202",
       isUp: true,
       icon: <Eye className="h-4 w-4" />,
@@ -28,7 +28,7 @@ const ReportsArea = ({ statistics }: { statistics: Statistics }) => {
     {
       id: 3,
       name: "الدورات",
-      count: statistics.courses.total.toString(),
+      count: (statistics?.courses?.total || 0).toString(),
       rate: "22",
       isUp: true,
       icon: <Increase className="h-4 w-4" />,
@@ -37,7 +37,7 @@ const ReportsArea = ({ statistics }: { statistics: Statistics }) => {
     {
       id: 4,
       name: "المواد",
-      count: (statistics.subjects?.total || 0).toString(),
+      count: (statistics?.subjects?.total || 0).toString(),
       rate: "30",
       isUp: true,
       icon: <Cup className="h-4 w-4" />,

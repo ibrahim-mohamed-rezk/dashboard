@@ -8,23 +8,38 @@
   "role": "admin",
   "teachers": [],
   "modules": [
-    { "id": 1, "name": "Books", "access": true },
-    { "id": 2, "name": "Exams", "access": true },
-    { "id": 3, "name": "Courses", "access": true },
-    { "id": 4, "name": "Banks", "access": true },
-    { "id": 5, "name": "Banners", "access": true },
-    { "id": 6, "name": "Blogs", "access": true },
-    { "id": 7, "name": "Teachers", "access": true },
-    { "id": 8, "name": "Admins", "access": true },
-    { "id": 9, "name": "levels", "access": true },
-    { "id": 10, "name": "jobs", "access": true },
-    { "id": 11, "name": "coupons", "access": true },
-    { "id": 12, "name": "subjects", "access": true },
-    { "id": 13, "name": "students", "access": true },
-    { "id": 14, "name": "codes", "access": true },
-    { "id": 15, "name": "questions_statistics", "access": true },
-    { "id": 16, "name": "questions_statistics_teacher", "access": true },
-    { "id": 17, "name": "ExamsStatistics", "access": true },
-    { "id": 18, "name": "settings", "access": true }
+    { "id": 1, "name": "الكتب", "path": "books", "access": true },
+    { "id": 2, "name": "الامتحانات", "path": "exams", "access": true },
+    { "id": 3, "name": "الكورسات", "path": "courses", "access": true },
+    { "id": 4, "name": "بنوك الأسئلة", "path": "banks", "access": true },
+    { "id": 5, "name": "البنرات", "path": "banners", "access": true },
+    { "id": 6, "name": "المدونة", "path": "blogs", "access": true },
+    { "id": 7, "name": "المدرسين", "path": "teachers", "access": true },
+    { "id": 8, "name": "الأدمن", "path": "admins", "access": true },
+    { "id": 9, "name": "المراحل الدراسية", "path": "levels", "access": true },
+    { "id": 10, "name": "jobs", "path": "jobs", "access": true },
+    { "id": 11, "name": "coupons", "path": "coupons", "access": true },
+    { "id": 12, "name": "المواد الدراسية", "path": "subjects", "access": true },
+    { "id": 13, "name": "الطلاب", "path": "students", "access": true },
+    { "id": 14, "name": "codes", "path": "codes", "access": true },
+    {
+      "id": 15,
+      "name": "questions_statistics",
+      "path": "questions_statistics",
+      "access": true
+    },
+    {
+      "id": 16,
+      "name": "questions_statistics_teacher",
+      "path": "questions_statistics_teacher",
+      "access": true
+    },
+    {
+      "id": 17,
+      "name": "ExamsStatistics",
+      "path": "ExamsStatistics",
+      "access": true
+    },
+    { "id": 18, "name": "الإعدادات", "path": "settings", "access": true }
   ]
 }

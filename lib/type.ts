@@ -466,6 +466,64 @@ export interface Statistics {
   };
 }
 
+export interface TeacherStatistics {
+  teacher_info: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    teach_no: string;
+    subject?: string;
+    cover?: string;
+    avatar?: string;
+  };
+  students: {
+    total: number;
+  };
+  courses: {
+    total: number;
+    online: number;
+    offline: number;
+    online_purchases: number;
+    online_revenue: number;
+    offline_revenue?: number;
+  };
+  books: {
+    total: number;
+    purchases: number;
+    revenue: number;
+    top_selling_books: Array<{
+      id: number;
+      title: string;
+      purchases: number;
+      revenue: number;
+    }>;
+  };
+  subscription_codes: {
+    total: number;
+    used: number;
+    unused: number;
+    usage_rate: number;
+    offline_revenue: number;
+  };
+  scheduled_exams: {
+    total: number;
+    upcoming: number;
+    completed: number;
+  };
+  financial_summary: {
+    online_revenue: number;
+    books_revenue: number;
+    offline_revenue: number;
+    total_revenue: number;
+    revenue_breakdown?: { [key: string]: number };
+  };
+  trends: {
+    courses_trend: Array<{ period: string; count: number }>;
+    books_trend: Array<{ period: string; count: number }>;
+  };
+}
+
 
 export interface VideoTypes {
   id: number;
