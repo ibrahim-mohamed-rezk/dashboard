@@ -1,45 +1,102 @@
 {
-  "id": 86,
+  "id": 609,
   "full_name": "ibrahim",
-  "avatar": null,
-  "phone": "12345678112",
+  "avatar": "https://safezone-co.top/storage/files/users/987561775375901.webp",
+  "phone": "01014789895",
   "gender": null,
-  "email": "ibrahim@admin.com",
-  "role": "admin",
+  "email": "ibrahimmo989800@gmail.com",
+  "role": "teacher",
   "teachers": [],
   "modules": [
-    { "id": 1, "name": "الكتب", "path": "books", "access": true },
-    { "id": 2, "name": "الامتحانات", "path": "exams", "access": true },
-    { "id": 3, "name": "الكورسات", "path": "courses", "access": true },
-    { "id": 4, "name": "بنوك الأسئلة", "path": "banks", "access": true },
-    { "id": 5, "name": "البنرات", "path": "banners", "access": true },
-    { "id": 6, "name": "المدونة", "path": "blogs", "access": true },
-    { "id": 7, "name": "المدرسين", "path": "teachers", "access": true },
-    { "id": 8, "name": "الأدمن", "path": "admins", "access": true },
-    { "id": 9, "name": "المراحل الدراسية", "path": "levels", "access": true },
-    { "id": 10, "name": "jobs", "path": "jobs", "access": true },
-    { "id": 11, "name": "coupons", "path": "coupons", "access": true },
-    { "id": 12, "name": "المواد الدراسية", "path": "subjects", "access": true },
-    { "id": 13, "name": "الطلاب", "path": "students", "access": true },
-    { "id": 14, "name": "codes", "path": "codes", "access": true },
     {
-      "id": 15,
-      "name": "questions_statistics",
-      "path": "questions_statistics",
+      "id": 1,
+      "name": "الكتب",
+      "path": "books",
       "access": true
     },
     {
-      "id": 16,
-      "name": "questions_statistics_teacher",
-      "path": "questions_statistics_teacher",
+      "id": 2,
+      "name": "الامتحانات",
+      "path": "exams",
       "access": true
     },
     {
-      "id": 17,
-      "name": "ExamsStatistics",
-      "path": "ExamsStatistics",
+      "id": 3,
+      "name": "الكورسات",
+      "path": "courses",
       "access": true
     },
-    { "id": 18, "name": "الإعدادات", "path": "settings", "access": true }
+    {
+      "id": 4,
+      "name": "بنوك الأسئلة",
+      "path": "banks",
+      "access": true
+    },
+    {
+      "id": 5,
+      "name": "البنرات",
+      "path": "banners",
+      "access": true
+    },
+    {
+      "id": 13,
+      "name": "الطلاب",
+      "path": "students",
+      "access": true
+    },
+    {
+      "id": 20,
+      "name": "مجموعات المدرسين",
+      "path": "teacher-groups",
+      "access": true
+    },
+    {
+      "id": 21,
+      "name": "أجزاء البنك",
+      "path": "bank-sections",
+      "access": true
+    },
+    {
+      "id": 24,
+      "name": "أجزاء الكورس",
+      "path": "course-sections",
+      "access": true
+    },
+    {
+      "id": 26,
+      "name": "الامتحانات المجدولة",
+      "path": "scheduled-exams",
+      "access": true
+    },
+    {
+      "id": 27,
+      "name": "أجزاء الامتحان",
+      "path": "exam-sections",
+      "access": true
+    },
+    {
+      "id": 28,
+      "name": "الفيديوهات",
+      "path": "videos",
+      "access": true
+    },
+    {
+      "id": 29,
+      "name": "الواجبات",
+      "path": "works",
+      "access": true
+    },
+    {
+      "id": 31,
+      "name": "الإحصائيات",
+      "path": "statistics",
+      "access": true
+    },
+    {
+      "id": 32,
+      "name": "أكواد الاشتراك",
+      "path": "subscription_codes",
+      "access": true
+    }
   ]
 }

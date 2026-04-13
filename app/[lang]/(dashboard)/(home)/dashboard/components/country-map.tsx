@@ -7,9 +7,6 @@ import img3 from "@/public/images/country/india.png";
 import img4 from "@/public/images/country/spain.png";
 import img5 from "@/public/images/country/bangladesh.png";
 import img6 from "@/public/images/country/brazil.png";
-
-import world from "../../../(map)/maps-vector/worldmap.json";
-import { VectorMap } from "@south-paw/react-vector-maps";
 import Link from "next/link";
 
 const CountryMap = () => {
@@ -25,11 +22,8 @@ const CountryMap = () => {
   return (
     <div className="grid grid-cols-12 sm:gap-6 gap-4">
       <div className="col-span-12 md:col-span-8">
-        <div className={`w-[full] h-[329px]`}>
-          <VectorMap
-            {...world}
-            className="h-full w-full object-fill dashtail-codeVmapWhite"
-          />
+        <div className="w-full h-[329px] rounded-md border border-dashed border-default-300 bg-default-100/40 flex items-center justify-center text-sm text-default-600">
+          World map data is unavailable.
         </div>
       </div>
       <div className="col-span-12 md:col-span-4 mt-9 md:mt-0">

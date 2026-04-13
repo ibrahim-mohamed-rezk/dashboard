@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import BankModulesComponent from "./components/BankModulesComponent";
 import { redirect } from "next/navigation";
+import { canAccessModule } from "@/lib/permissions";
 
 const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const cookiesData = await cookies();
@@ -12,11 +13,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     return redirect("/auth/login");
   }
 
-  if (
-    !user.modules.some((item: any) => {
-      return item.name === "Courses" && item.access === true;
-    })
-  ) {
+  if (!canAccessModule(user?.modules, ["Banks", "banks"])) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
 

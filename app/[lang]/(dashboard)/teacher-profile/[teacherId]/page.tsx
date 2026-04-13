@@ -3,6 +3,8 @@ import { Phone, User } from "@/components/svg";
 import Header from "./components/header";
 import { getData } from "@/lib/axios/server";
 import { cookies } from "next/headers";
+import { canAccessModule } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 const Overview = async ({
   params,
 }: {
@@ -11,6 +13,16 @@ const Overview = async ({
   const paramsData = await params;
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
+  const userCookie = JSON.parse(cookiesData.get("user")?.value || "{}");
+
+  if (!token) {
+    redirect("/auth/login");
+  }
+
+  if (!canAccessModule(userCookie?.modules, ["Teachers", "teachers"])) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
+
   const feachData = async () => {
     try {
       const response = await getData(

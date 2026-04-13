@@ -852,7 +852,10 @@ function BasicDataTable() {
     return selectedCount > 0 && selectedCount < groupItems.length;
   };
 
-  const isAuthrized = useAuthrization({ user: user as User, module: "Codes" });
+  const isAuthrized = useAuthrization({
+    user: user as User,
+    module: ["Codes", "codes", "subscription_codes"],
+  });
   if (!isAuthrized) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }

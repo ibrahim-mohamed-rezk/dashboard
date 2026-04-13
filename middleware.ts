@@ -31,31 +31,11 @@ export async function middleware(request: any) {
     response = NextResponse.next();
   }
 
-  // --- Auth & RBAC Logic ---
+  // --- Auth Logic ---
   const token = await getToken({ req: request, secret: process.env.AUTH_SECRET as string });
-  
-  if (token) {
-    const role = token.role as string;
-    const userModules = (token.modules as string[]) || [];
-
-    if (role !== "admin") {
-      // Very basic generic RBAC checking.
-      // If a route includes a module name (e.g. /courses, /books), ensure they have access.
-      const segments = pathname.split('/').filter(Boolean);
-      
-      const restrictedModulesToCheck = ["users", "courses", "books", "videos", "students"]; 
-      // In a real app we'd import PermissionService.getModulesList() here or match against defined route configs.
-
-      for (const segment of segments) {
-        if (restrictedModulesToCheck.includes(segment)) {
-            if (!userModules.includes(segment)) {
-              // Redirect to unauthorized / home
-              return NextResponse.redirect(new URL(`/${urlParamsLocale}/unauthorized`, request.url));
-            }
-        }
-      }
-    }
-  }
+  // NOTE: Module permission checks are enforced inside app pages/hooks
+  // via shared `canAccessModule` logic to keep backend-driven behavior
+  // consistent for all roles.
 
   // ✅ Set x-url so you can access it in server components
   response.headers.set("x-url", request.nextUrl.href);

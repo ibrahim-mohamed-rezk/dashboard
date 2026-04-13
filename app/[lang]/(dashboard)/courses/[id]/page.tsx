@@ -1,12 +1,19 @@
 import { getData } from "@/lib/axios/server";
 import { cookies } from "next/headers";
 import CourseModules from "./components/CourseModules";
+import { canAccessModule } from "@/lib/permissions";
 
 const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
   const user = JSON.parse(cookiesData.get("user")?.value || "{}");
   const paramsData = await params;
+  const canAccessCourses = canAccessModule(user?.modules, ["Courses", "courses"]);
+
+  if (!canAccessCourses) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
+
   const feachData = async () => {
     try {
       const response = await getData(
@@ -22,27 +29,6 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     }
   };
   const courseData = await feachData();
-
-  const canAccessCourses = Array.isArray(user?.modules)
-    ? user.modules.some((item: any) => {
-        const accessValue = item?.access;
-        const hasAccess =
-          accessValue === true ||
-          accessValue === 1 ||
-          accessValue === "1" ||
-          accessValue === "true";
-
-        return (
-          hasAccess &&
-          (item?.name?.toLowerCase?.() === "courses" ||
-            item?.path?.toLowerCase?.() === "courses")
-        );
-      })
-    : false;
-
-  if (!canAccessCourses) {
-    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
-  }
 
   return (
     <div className="w-full">

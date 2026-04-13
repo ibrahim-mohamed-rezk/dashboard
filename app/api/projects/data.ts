@@ -132,8 +132,8 @@ export const projects = [
       { image: avatar3, label: "Bob Johnson", value: "bob.johnson" },
       { image: avatar4, label: "Alice Lee", value: "alice.lee" },
     ],
-    assignDate:  formatDate(faker.date.past(1, new Date())),
-    dueDate: formatDate(faker.date.future(1, new Date())),
+    assignDate: formatDate(faker.date.past({ years: 1, refDate: new Date() })),
+    dueDate: formatDate(faker.date.future({ years: 1, refDate: new Date() })),
 
     isFavorite: true,
   },
@@ -175,8 +175,12 @@ export const projects = [
       { image: avatar9, label: "John Doe", value: "john.doe" },
       { image: avatar10, label: "Jane Smith", value: "jane.smith" },
     ],
-  assignDate:  formatDate(faker.date.past(1, new Date())),
-    dueDate: formatDate(faker.date.future(1, new Date())),
+    assignDate: formatDate(
+      faker.date.past({ years: 1, refDate: new Date() }),
+    ),
+    dueDate: formatDate(
+      faker.date.future({ years: 1, refDate: new Date() }),
+    ),
     logo: uradvisor,
     isFavorite: false,
   },
@@ -219,8 +223,12 @@ export const projects = [
       { image: avatar4, label: "Bob Johnson", value: "bob.johnson" },
       { image: avatar5, label: "Alice Lee", value: "alice.lee" },
     ],
-     assignDate:  formatDate(faker.date.past(1, new Date())),
-    dueDate: formatDate(faker.date.future(1, new Date())),
+    assignDate: formatDate(
+      faker.date.past({ years: 1, refDate: new Date() }),
+    ),
+    dueDate: formatDate(
+      faker.date.future({ years: 1, refDate: new Date() }),
+    ),
 
     isFavorite: false,
   },
@@ -241,8 +249,12 @@ export const projects = [
       { image: avatar8, label: "Bob Johnson", value: "bob.johnson" },
       { image: avatar9, label: "Alice Lee", value: "alice.lee" },
     ],
-     assignDate:  formatDate(faker.date.past(1, new Date())),
-    dueDate: formatDate(faker.date.future(1, new Date())),
+    assignDate: formatDate(
+      faker.date.past({ years: 1, refDate: new Date() }),
+    ),
+    dueDate: formatDate(
+      faker.date.future({ years: 1, refDate: new Date() }),
+    ),
     logo: ass,
     isFavorite: false,
   },

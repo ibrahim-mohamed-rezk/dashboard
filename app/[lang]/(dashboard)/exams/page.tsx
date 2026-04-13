@@ -833,7 +833,10 @@ function ExamsDataTable() {
     enableRowSelection: true, // Enable multi-select
   });
 
-  const isAuthrized = useAuthrization({ user: user as User, module: "Exams" });
+  const isAuthrized = useAuthrization({
+    user: user as User,
+    module: ["Exams", "exams"],
+  });
   if (!isAuthrized) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }

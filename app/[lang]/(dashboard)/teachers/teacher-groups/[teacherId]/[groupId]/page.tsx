@@ -34,6 +34,8 @@ import { useParams } from "next/navigation";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import useAuthrization from "@/hooks/useAuthrization";
+import { User as UserType } from "@/lib/type";
 
 interface GroupStudent {
   id: number;
@@ -91,6 +93,7 @@ function GroupStudentsManager() {
   const [currentPage, setCurrentPage] = useState(1);
   const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
   const [token, setToken] = useState("");
+  const [user, setUser] = useState<UserType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -164,6 +167,7 @@ function GroupStudentsManager() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
+        setUser(JSON.parse(response.data.user));
       } catch (error) {
         console.error("Error fetching token:", error);
       }
@@ -350,6 +354,14 @@ function GroupStudentsManager() {
     manualPagination: true,
     pageCount: pagination?.last_page || 1,
   });
+
+  const isAuthrized = useAuthrization({
+    user: user as UserType,
+    module: ["Teachers", "teachers"],
+  });
+  if (!isAuthrized) {
+    return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
+  }
 
   return (
     <div className="space-y-4">
