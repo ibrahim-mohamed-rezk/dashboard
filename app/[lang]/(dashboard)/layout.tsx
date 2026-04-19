@@ -1,4 +1,4 @@
-import DashBoardLayoutProvider from "@/provider/dashboard.layout.provider";
+import DashboardLayoutWrapper from "@/provider/dashboard.layout.wrapper";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -11,15 +11,12 @@ const layout = async ({
 }) => {
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
-  const user = JSON.parse(cookiesData.get("user")?.value || "{}");
 
   if (!token) {
     return redirect("/auth/login");
   }
 
-  return (
-    <DashBoardLayoutProvider user={user}>{children}</DashBoardLayoutProvider>
-  );
+  return <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>;
 };
 
 export default layout;

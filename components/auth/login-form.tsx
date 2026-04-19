@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,9 +30,15 @@ const LogInForm = () => {
         Authorization: `Bearer token`,
       });
 
+      // Store user data in localStorage (client-side only)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user", JSON.stringify(response.data));
+      }
+
+      // Only store token in cookie (via API route)
       await axios.post(
         "/api/auth/setToken",
-        { token: response.token, user: JSON.stringify(response.data) },
+        { token: response.token },
         {
           headers: { "Content-Type": "application/json" },
         }
