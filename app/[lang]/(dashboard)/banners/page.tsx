@@ -454,11 +454,16 @@ function BannerTable() {
         }
 
         setToken(response.data.token);
-        const userData = JSON.parse(response.data.user);
-        setUser(userData);
+        
+        // Get user from localStorage
+        const userDataString = localStorage.getItem("user");
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          setUser(userData);
 
-        if (userData.role === "admin") {
-          await fetchTeachers(response.data.token);
+          if (userData.role === "admin") {
+            await fetchTeachers(response.data.token);
+          }
         }
       } catch (error) {
         const errorState = handleApiError(error);

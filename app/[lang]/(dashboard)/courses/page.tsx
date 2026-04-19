@@ -290,10 +290,15 @@ function CoursesTable() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
-        setUserId(JSON.parse(response.data.user).teacher_id || 0);
-        setUserRole(JSON.parse(response.data.user).role);
-        const userData = JSON.parse(response.data.user);
-        setUser(userData);
+        
+        // Get user from localStorage
+        const userDataString = localStorage.getItem("user");
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          setUserId(userData.teacher_id || 0);
+          setUserRole(userData.role);
+          setUser(userData);
+        }
       } catch (error) {
         toast.error("Failed to get authentication token");
       }

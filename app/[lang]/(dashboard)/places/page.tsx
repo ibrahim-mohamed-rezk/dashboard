@@ -176,8 +176,13 @@ function GovernoratesAreasManagement() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
-        const userData = JSON.parse(response.data.user);
-        setUser(userData);
+        
+        // Get user from localStorage
+        const userDataString = localStorage.getItem("user");
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          setUser(userData);
+        }
       } catch (error) {
         console.error("Error fetching token:", error);
       }

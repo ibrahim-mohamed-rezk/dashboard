@@ -167,7 +167,12 @@ function GroupStudentsManager() {
       try {
         const response = await axios.get("/api/auth/getToken");
         setToken(response.data.token);
-        setUser(JSON.parse(response.data.user));
+        
+        // Get user from localStorage
+        const userDataString = localStorage.getItem("user");
+        if (userDataString) {
+          setUser(JSON.parse(userDataString));
+        }
       } catch (error) {
         console.error("Error fetching token:", error);
       }
