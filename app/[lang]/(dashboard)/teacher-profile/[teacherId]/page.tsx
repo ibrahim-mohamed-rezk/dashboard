@@ -1,48 +1,88 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, User } from "@/components/svg";
 import Header from "./components/header";
 import { getData } from "@/lib/axios/server";
-import { cookies } from "next/headers";
 import { canAccessModule } from "@/lib/permissions";
-import { redirect } from "next/navigation";
-const Overview = async ({
-  params,
-}: {
-  params: Promise<{ teacherId: string }>;
-}) => {
-  const paramsData = await params;
-  const cookiesData = await cookies();
-  const token = cookiesData.get("token")?.value;
-  const userCookie = JSON.parse(cookiesData.get("user")?.value || "{}");
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { User as UserType } from "@/lib/type";
+import axios from "axios";
 
-  if (!token) {
-    redirect("/auth/login");
+const Overview = () => {
+  const [token, setToken] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+  const [teacherData, setTeacherData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const router = useRouter();
+  const teacherId = params.teacherId as string;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Get token from API
+        const authResponse = await axios.get("/api/auth/getToken");
+        const tokenValue = authResponse.data.token;
+        setToken(tokenValue);
+
+        // Get user from localStorage
+        const userDataString = localStorage.getItem("user");
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          setCurrentUser(userData);
+
+          // Check permissions
+          if (!canAccessModule(userData?.modules, ["Teachers", "teachers"])) {
+            return; // Will show permission error
+          }
+
+          // Fetch teacher data
+          const response = await getData(
+            `teachers/${teacherId}`,
+            {},
+            {
+              Authorization: `Bearer ${tokenValue}`,
+            }
+          );
+          setTeacherData(response.data);
+        } else {
+          router.push("/auth/login");
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [teacherId, router]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
-  if (!canAccessModule(userCookie?.modules, ["Teachers", "teachers"])) {
+  if (!token) {
+    return null; // Will redirect to login
+  }
+
+  if (!canAccessModule(currentUser?.modules, ["Teachers", "teachers"])) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
 
-  const feachData = async () => {
-    try {
-      const response = await getData(
-        `teachers/${paramsData.teacherId}`,
-        {},
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const user = await feachData();
+  if (!teacherData) {
+    return <div>لم يتم العثور على بيانات المعلم</div>;
+  }
 
   return (
     <>
-      <Header user={user?.user} teacherId={paramsData.teacherId} />
+      <Header user={teacherData?.user} teacherId={teacherId} />
       <div className="py-5">
         <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
@@ -58,14 +98,14 @@ const Overview = async ({
                 <span className="font-medium text-default-800 w-32">
                   الاسم:{" "}
                 </span>
-                <span className="">{user?.user.full_name}</span>
+                <span className="">{teacherData?.user.full_name}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <Phone className="w-5 h-5 text-primary mr-3" />
                 <span className="font-medium text-default-800 w-32">
                   رقم الهاتف:
                 </span>
-                <span className="">{user?.user.phone}</span>
+                <span className="">{teacherData?.user.phone}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <svg
@@ -84,7 +124,7 @@ const Overview = async ({
                 <span className="font-medium text-default-800 w-32">
                   البريد الإلكتروني:
                 </span>
-                <span className="">{user.user?.email}</span>
+                <span className="">{teacherData.user?.email}</span>
               </li>
               <li className="flex gap-2 items-center p-2 rounded-md hover:bg-slate-700">
                 <svg
@@ -103,7 +143,7 @@ const Overview = async ({
                 <span className="font-medium text-default-800 w-32">
                   الدور:
                 </span>
-                <span className="">{user?.user.role}</span>
+                <span className="">{teacherData?.user.role}</span>
               </li>
             </ul>
           </CardContent>

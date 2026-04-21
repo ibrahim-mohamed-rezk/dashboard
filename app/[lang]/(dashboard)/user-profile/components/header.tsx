@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent } from "@/components/ui/card";
 import coverImage from "@/public/images/all-img/user-cover.png";
 import Image from "next/image";
@@ -5,11 +7,20 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import User from "@/public/images/avatar/user.png";
 import { cn } from "@/lib/utils";
-import { Fragment } from "react";
-import { cookies } from "next/headers";
-const Header = async () => {
-  const cookiesData = await cookies();
-  const user = JSON.parse(cookiesData.get("user")?.value || "{}");
+import { Fragment, useEffect, useState } from "react";
+import { User as UserType } from "@/lib/type";
+
+const Header = () => {
+  const [user, setUser] = useState<UserType | null>(null);
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userDataString = localStorage.getItem("user");
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      setUser(userData);
+    }
+  }, []);
 
   return (
     <Fragment>
@@ -23,7 +34,7 @@ const Header = async () => {
               <div>
                 <Image
                   src={
-                    /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(user?.avatar)
+                    user?.avatar && /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(user.avatar)
                       ? user.avatar
                       : User
                   }

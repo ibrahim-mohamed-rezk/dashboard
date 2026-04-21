@@ -1,33 +1,57 @@
+"use client";
+
 import UserMeta from "./user-meta";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PersonalDetails from "./personal-details";
 import ChangePassword from "./change-password";
-import { cookies } from "next/headers";
 import Header from "../components/header";
 import { getData } from "@/lib/axios/server";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { User } from "@/lib/type";
+import axios from "axios";
 
-const Settings = async ({ params }: { params: Promise<{ teacherId: string }> }) => {
-  const cookiesData = await cookies();
-  const token = cookiesData.get("token")?.value;
-  const { teacherId } = await params;
-  const currentUser = JSON.parse(cookiesData.get("user")?.value || "{}");
+const Settings = () => {
+  const [token, setToken] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [teacherData, setTeacherData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const teacherId = params.teacherId as string;
 
-    const feachData = async () => {
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const response = await getData( 
-          `teachers/${teacherId}`,
-          {},
-          {
-            Authorization: `Bearer ${token}`,
-          }
-        );
-        return response.data;
+        // Get token from API
+        const authResponse = await axios.get("/api/auth/getToken");
+        const tokenValue = authResponse.data.token;
+        setToken(tokenValue);
+
+        // Get user from localStorage
+        const userDataString = localStorage.getItem("user");
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          setCurrentUser(userData);
+
+          // Fetch teacher data
+          const response = await getData(
+            `teachers/${teacherId}`,
+            {},
+            {
+              Authorization: `Bearer ${tokenValue}`,
+            }
+          );
+          setTeacherData(response.data);
+        }
       } catch (error) {
-        throw error;
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-  const user = await feachData();
+    fetchData();
+  }, [teacherId]);
 
   const tabs: {
     label: string;
@@ -43,17 +67,31 @@ const Settings = async ({ params }: { params: Promise<{ teacherId: string }> }) 
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (!teacherData) {
+    return <div>لم يتم العثور على بيانات المعلم</div>;
+  }
+
   return (
     <>
-      <Header user={user.user} teacherId={teacherId} />
+      <Header user={teacherData.user} teacherId={teacherId} />
       <div className="grid grid-cols-12 gap-6 mt-6">
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <UserMeta
-            token={token as string}
-            user={user.user}
-            id={teacherId}
-            currentUser={currentUser}
-          />
+          {currentUser && (
+            <UserMeta
+              token={token}
+              user={teacherData.user}
+              id={teacherId}
+              currentUser={currentUser}
+            />
+          )}
         </div>
         <div className="col-span-12 lg:col-span-8">
           <Tabs defaultValue="personal" className="p-0 px-1">
@@ -69,7 +107,7 @@ const Settings = async ({ params }: { params: Promise<{ teacherId: string }> }) 
               ))}
             </TabsList>
             <TabsContent value="personal" className="mt-0">
-              <PersonalDetails token={token as string} user={user} />
+              <PersonalDetails token={token} user={teacherData} />
             </TabsContent>
             <TabsContent value="password" className="mt-0">
               <ChangePassword />

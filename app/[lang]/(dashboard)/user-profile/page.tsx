@@ -1,10 +1,32 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, User } from "@/components/svg";
-import { cookies } from "next/headers";
 import Header from "./components/header";
-const Overview = async () => {
-  const cookiesData = await cookies();
-  const user = JSON.parse(cookiesData.get("user")?.value || "{}");
+import { useEffect, useState } from "react";
+import { User as UserType } from "@/lib/type";
+
+const Overview = () => {
+  const [user, setUser] = useState<UserType | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userDataString = localStorage.getItem("user");
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      setUser(userData);
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -44,7 +66,7 @@ const Overview = async () => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
                 <span className="font-medium text-default-800 w-32">

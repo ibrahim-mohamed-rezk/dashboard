@@ -1,34 +1,78 @@
+"use client";
+
 import { getData } from "@/lib/axios/server";
-import { cookies } from "next/headers";
 import CourseModules from "./components/CourseModules";
 import { canAccessModule } from "@/lib/permissions";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { User } from "@/lib/type";
+import axios from "axios";
 
-const page = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const cookiesData = await cookies();
-  const token = cookiesData.get("token")?.value;
-  const user = JSON.parse(cookiesData.get("user")?.value || "{}");
-  const paramsData = await params;
-  const canAccessCourses = canAccessModule(user?.modules, ["Courses", "courses"]);
+const CoursePage = () => {
+  const [courseData, setCourseData] = useState<any>(null);
+  const [token, setToken] = useState<string>("");
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const courseId = params.id as string;
+
+  useEffect(() => {
+    const fetchAuthAndCourse = async () => {
+      try {
+        // Get token from API
+        const authResponse = await axios.get("/api/auth/getToken");
+        const tokenValue = authResponse.data.token;
+        setToken(tokenValue);
+
+        // Get user from localStorage
+        const userDataString = localStorage.getItem("user");
+        if (userDataString) {
+          const userData = JSON.parse(userDataString);
+          setUser(userData);
+
+          // Check permissions
+          const canAccessCourses = canAccessModule(userData?.modules, ["Courses", "courses"]);
+          if (!canAccessCourses) {
+            return; // Will show permission error
+          }
+
+          // Fetch course data
+          const courseResponse = await getData(
+            `courses/${courseId}`,
+            {},
+            {
+              Authorization: `Bearer ${tokenValue}`,
+            }
+          );
+          setCourseData(courseResponse.data);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAuthAndCourse();
+  }, [courseId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  const canAccessCourses = user ? canAccessModule(user?.modules, ["Courses", "courses"]) : false;
 
   if (!canAccessCourses) {
     return <div>ليس لديك صلاحية لعرض هذه الصفحة</div>;
   }
 
-  const feachData = async () => {
-    try {
-      const response = await getData(
-        `courses/${paramsData.id}`,
-        {},
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  };
-  const courseData = await feachData();
+  if (!courseData) {
+    return <div>لم يتم العثور على الكورس</div>;
+  }
 
   return (
     <div className="w-full">
@@ -36,7 +80,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
         <div className="relative h-64">
           <img
             src={
-              courseData.cover.startsWith("http") &&
+              courseData.cover?.startsWith("http") &&
               courseData.cover.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
                 ? courseData.cover
                 : "/images/all-img/user-cover.png"
@@ -77,7 +121,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
             <div>
               <p className="text-gray-600 dark:text-gray-400">عدد الدروس</p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {courseData.modules.length}{" "}
+                {courseData.modules?.length || 0}{" "}
               </p>
             </div>
           </div>
@@ -90,10 +134,10 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </p>
           </div>
         </div>
-        <CourseModules token={token as string} courseId={paramsData.id} />
+        {token && <CourseModules token={token} courseId={courseId} />}
       </div>
     </div>
   );
 };
 
-export default page;
+export default CoursePage;
