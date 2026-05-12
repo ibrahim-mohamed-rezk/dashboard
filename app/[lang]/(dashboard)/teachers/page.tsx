@@ -74,6 +74,8 @@ interface User {
   online_courses_count?: number;
   has_offline_courses?: boolean;
   tech_no?: string;
+  /** Teacher banner/cover image URL from API (not the same as user.avatar) */
+  cover?: string;
 }
 
 interface PaginationMeta {
@@ -117,6 +119,93 @@ type FormData = {
 };
 
 const DEFAULT_IMAGE = "https://via.placeholder.com/150x150";
+const PLACEHOLDER_AVATAR_HOST = "https://safezone-co.top/";
+
+/** Laravel often wraps the resource in `{ data: { ... } }`. */
+function unwrapTeacherFromGetResponse(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  if (
+    "data" in o &&
+    o.data !== undefined &&
+    typeof o.data === "object" &&
+    !Array.isArray(o.data)
+  ) {
+    return o.data;
+  }
+  return raw;
+}
+
+/**
+ * Pick a cover image URL from a teacher row or detail payload.
+ * Ignores placeholders and URLs identical to the profile avatar (API often duplicates).
+ */
+function pickTeacherCoverUrl(
+  entity: unknown,
+  avatarUrl: string
+): string {
+  if (!entity || typeof entity !== "object") return "";
+  const o = entity as Record<string, unknown>;
+  const nestedUser =
+    o.user && typeof o.user === "object"
+      ? (o.user as Record<string, unknown>)
+      : null;
+
+  const candidates: unknown[] = [
+    o.cover,
+    o.cover_url,
+    o.cover_image,
+    nestedUser?.cover,
+    nestedUser?.cover_url,
+    nestedUser?.cover_image,
+  ];
+
+  const normalizedAvatar = (avatarUrl || "").trim();
+
+  for (const raw of candidates) {
+    if (typeof raw !== "string") continue;
+    const url = raw.trim();
+    if (!url) continue;
+    if (url === PLACEHOLDER_AVATAR_HOST || url === DEFAULT_IMAGE) continue;
+    if (normalizedAvatar && url === normalizedAvatar) continue;
+    return url;
+  }
+  return "";
+}
+
+const MISSING_IMAGE_AR = "الصورة غير موجودة";
+
+function isPlaceholderImageUrl(url: string): boolean {
+  const t = (url || "").trim();
+  return (
+    !t ||
+    t === PLACEHOLDER_AVATAR_HOST ||
+    t === DEFAULT_IMAGE ||
+    t === "https://via.placeholder.com/150x150"
+  );
+}
+
+function hasValidAvatarPreview(
+  avatar: string | File | null | undefined
+): boolean {
+  if (avatar == null || avatar === "") return false;
+  if (avatar instanceof File) return true;
+  return typeof avatar === "string" && !isPlaceholderImageUrl(avatar);
+}
+
+/** Cover preview only if real file/URL and never the same URL as the profile avatar. */
+function hasValidCoverPreview(
+  cover: string | File | null | undefined,
+  avatarUrlForCompare: string
+): boolean {
+  if (cover == null || cover === "") return false;
+  if (cover instanceof File) return true;
+  if (typeof cover !== "string") return false;
+  if (isPlaceholderImageUrl(cover)) return false;
+  const a = (avatarUrlForCompare || "").trim();
+  if (a && cover.trim() === a) return false;
+  return true;
+}
 
 function BasicDataTable() {
   const router = useRouter();
@@ -484,6 +573,9 @@ function BasicDataTable() {
       // Do not send avatar unless it's a File (new upload)
       if (payload.avatar && !(payload.avatar instanceof File)) {
         delete payload.avatar;
+      }
+      if (payload.cover && !(payload.cover instanceof File)) {
+        delete payload.cover;
       }
       await postData(`teachers/${editingUser.user.id}`, payload, {
         Authorization: `Bearer ${token}`,
@@ -903,9 +995,11 @@ function BasicDataTable() {
     }
   };
 
-  // Handle edit user click
-  const handleEditUser = (user: User) => {
+  // Handle edit user click — fetch full teacher so cover is correct (list rows often omit or mirror avatar)
+  const handleEditUser = async (user: User) => {
     setEditingUser(user);
+    const avatarUrl = user?.user?.avatar || "";
+
     // derive type from data if not present
     const derivedType = (() => {
       const onlineCount =
@@ -937,6 +1031,22 @@ function BasicDataTable() {
       return "";
     })();
 
+    let coverUrl = pickTeacherCoverUrl(user, avatarUrl);
+    if (token) {
+      try {
+        const res = await getData(
+          `teachers/${user.id}`,
+          {},
+          { Authorization: `Bearer ${token}` }
+        );
+        const detail = unwrapTeacherFromGetResponse(res);
+        const fromDetail = pickTeacherCoverUrl(detail, avatarUrl);
+        if (fromDetail) coverUrl = fromDetail;
+      } catch (e) {
+        console.error("Failed to load teacher for cover preview:", e);
+      }
+    }
+
     setFormData({
       full_name: user?.user?.full_name || "",
       email: user?.user?.email || "",
@@ -944,9 +1054,9 @@ function BasicDataTable() {
       role: user?.user?.role || "teacher",
       type: (user?.user as any)?.type || (user as any)?.type || derivedType || "",
       levels: ((user?.user as any)?.levels && String((user?.user as any)?.levels)) || ((user as any)?.levels && String((user as any)?.levels)) || ((user?.user as any)?.level_id && String((user?.user as any)?.level_id)) || ("" as string),
-      cover: user?.user?.avatar || "",
+      cover: coverUrl,
       password: "",
-      avatar: user?.user?.avatar || "",
+      avatar: avatarUrl,
       subject_id: derivedSubjectId,
       tech_no: user?.tech_no || "",
       about: (user?.user as any)?.about || (user as any)?.about || (user?.user as any)?.description || (user as any)?.description || (user?.user as any)?.bio || (user as any)?.bio || "",
@@ -1505,6 +1615,11 @@ function BasicDataTable() {
     getRowId: (row) => String(row.id),
   });
 
+  const editAvatarRefUrlForCover =
+    typeof formData.avatar === "string"
+      ? formData.avatar.trim()
+      : editingUser?.user?.avatar?.trim() || "";
+
   const isAuthrized = useAuthrization({
     user: user as UserType,
     module: "Teachers",
@@ -1742,10 +1857,7 @@ function BasicDataTable() {
                                 }
                               }}
                             />
-                            {(!formData.avatar ||
-                              formData.avatar === "https://safezone-co.top/" ||
-                              formData.avatar ===
-                                "https://via.placeholder.com/150x150") && (
+                            {!hasValidAvatarPreview(formData.avatar) && (
                               <label
                                 htmlFor="avatar"
                                 className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
@@ -1754,41 +1866,37 @@ function BasicDataTable() {
                               </label>
                             )}
                           </div>
-                          {formData.avatar &&
-                            formData.avatar !== "https://safezone-co.top/" &&
-                            formData.avatar !==
-                              "https://via.placeholder.com/150x150" && (
-                              <div className="relative w-20 h-20">
-                                <img
-                                  src={
-                                    typeof formData.avatar === "string"
-                                      ? formData.avatar !==
-                                          "https://safezone-co.top/" &&
-                                        formData.avatar !==
-                                          "https://via.placeholder.com/150x150"
-                                        ? formData.avatar
-                                        : DEFAULT_IMAGE
-                                      : formData.avatar instanceof File
-                                      ? URL.createObjectURL(formData.avatar)
-                                      : DEFAULT_IMAGE
-                                  }
-                                  alt="Avatar Preview"
-                                  className="w-full h-full object-cover rounded-lg"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      avatar: null,
-                                    }))
-                                  }
-                                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
+                          {hasValidAvatarPreview(formData.avatar) ? (
+                            <div className="relative w-20 h-20">
+                              <img
+                                src={
+                                  typeof formData.avatar === "string"
+                                    ? formData.avatar
+                                    : URL.createObjectURL(
+                                        formData.avatar as File
+                                      )
+                                }
+                                alt="Avatar Preview"
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    avatar: null,
+                                  }))
+                                }
+                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {MISSING_IMAGE_AR}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-2 flex items-center justify-center flex-col w-full">
@@ -1817,10 +1925,12 @@ function BasicDataTable() {
                                 }
                               }}
                             />
-                            {(!formData.cover ||
-                              formData.cover === "https://safezone-co.top/" ||
-                              formData.cover ===
-                                "https://via.placeholder.com/150x150") && (
+                            {!hasValidCoverPreview(
+                              formData.cover,
+                              typeof formData.avatar === "string"
+                                ? formData.avatar.trim()
+                                : ""
+                            ) && (
                               <label
                                 htmlFor="cover"
                                 className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200"
@@ -1829,41 +1939,40 @@ function BasicDataTable() {
                               </label>
                             )}
                           </div>
-                          {formData.cover &&
-                            formData.cover !== "https://safezone-co.top/" &&
-                            formData.cover !==
-                              "https://via.placeholder.com/150x150" && (
-                              <div className="relative w-20 h-20">
-                                <img
-                                  src={
-                                    typeof formData.cover === "string"
-                                      ? formData.cover !==
-                                          "https://safezone-co.top/" &&
-                                        formData.cover !==
-                                          "https://via.placeholder.com/150x150"
-                                        ? formData.cover
-                                        : DEFAULT_IMAGE
-                                      : formData.cover instanceof File
-                                      ? URL.createObjectURL(formData.cover)
-                                      : DEFAULT_IMAGE
-                                  }
-                                  alt="Cover Preview"
-                                  className="w-full h-full object-cover rounded-lg"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      cover: null,
-                                    }))
-                                  }
-                                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
+                          {hasValidCoverPreview(
+                            formData.cover,
+                            typeof formData.avatar === "string"
+                              ? formData.avatar.trim()
+                              : ""
+                          ) ? (
+                            <div className="relative w-20 h-20">
+                              <img
+                                src={
+                                  typeof formData.cover === "string"
+                                    ? formData.cover
+                                    : URL.createObjectURL(formData.cover as File)
+                                }
+                                alt="Cover Preview"
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    cover: null,
+                                  }))
+                                }
+                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {MISSING_IMAGE_AR}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div>
@@ -2059,10 +2168,7 @@ function BasicDataTable() {
                             }
                           }}
                         />
-                        {(!formData.avatar ||
-                          formData.avatar === "https://safezone-co.top/" ||
-                          formData.avatar ===
-                            "https://via.placeholder.com/150x150") && (
+                        {!hasValidAvatarPreview(formData.avatar) && (
                           <label
                             htmlFor="edit-avatar"
                             className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
@@ -2071,41 +2177,35 @@ function BasicDataTable() {
                           </label>
                         )}
                       </div>
-                      {formData.avatar &&
-                        formData.avatar !== "https://safezone-co.top/" &&
-                        formData.avatar !==
-                          "https://via.placeholder.com/150x150" && (
-                          <div className="relative w-20 h-20">
-                            <img
-                              src={
-                                typeof formData.avatar === "string"
-                                  ? formData.avatar !==
-                                      "https://safezone-co.top/" &&
-                                    formData.avatar !==
-                                      "https://via.placeholder.com/150x150"
-                                    ? formData.avatar
-                                    : DEFAULT_IMAGE
-                                  : formData.avatar instanceof File
-                                  ? URL.createObjectURL(formData.avatar)
-                                  : DEFAULT_IMAGE
-                              }
-                              alt="Avatar Preview"
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  avatar: null,
-                                }))
-                              }
-                              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
+                      {hasValidAvatarPreview(formData.avatar) ? (
+                        <div className="relative w-20 h-20">
+                          <img
+                            src={
+                              typeof formData.avatar === "string"
+                                ? formData.avatar
+                                : URL.createObjectURL(formData.avatar as File)
+                            }
+                            alt="Avatar Preview"
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                avatar: null,
+                              }))
+                            }
+                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {MISSING_IMAGE_AR}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {/* Cover Photo Upload */}
@@ -2130,10 +2230,10 @@ function BasicDataTable() {
                             }
                           }}
                         />
-                        {(!formData.cover ||
-                          formData.cover === "https://safezone-co.top/" ||
-                          formData.cover ===
-                            "https://via.placeholder.com/150x150") && (
+                        {!hasValidCoverPreview(
+                          formData.cover,
+                          editAvatarRefUrlForCover
+                        ) && (
                           <label
                             htmlFor="edit-cover"
                             className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
@@ -2142,41 +2242,40 @@ function BasicDataTable() {
                           </label>
                         )}
                       </div>
-                      {formData.cover &&
-                        formData.cover !== "https://safezone-co.top/" &&
-                        formData.cover !==
-                          "https://via.placeholder.com/150x150" && (
-                          <div className="relative w-20 h-20">
-                            <img
-                              src={
-                                typeof formData.cover === "string"
-                                  ? formData.cover !==
-                                      "https://safezone-co.top/" &&
-                                    formData.cover !==
-                                      "https://via.placeholder.com/150x150"
-                                    ? formData.cover
-                                    : DEFAULT_IMAGE
-                                  : formData.cover instanceof File
-                                  ? URL.createObjectURL(formData.cover)
-                                  : DEFAULT_IMAGE
-                              }
-                              alt="Cover Preview"
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  cover: null,
-                                }))
-                              }
-                              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
+                      {hasValidCoverPreview(
+                        formData.cover,
+                        editAvatarRefUrlForCover
+                      ) ? (
+                        <div className="relative w-20 h-20">
+                          <img
+                            src={
+                              typeof formData.cover === "string"
+                                ? formData.cover
+                                : formData.cover instanceof File
+                                ? URL.createObjectURL(formData.cover)
+                                : ""
+                            }
+                            alt="Cover Preview"
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                cover: null,
+                              }))
+                            }
+                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {MISSING_IMAGE_AR}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {/* Full Name */}
