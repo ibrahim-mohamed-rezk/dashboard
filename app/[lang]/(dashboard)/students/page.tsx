@@ -31,6 +31,7 @@ import {
   Trash2,
   FileSpreadsheet,
   Download,
+  Unlock,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData } from "@/lib/axios/server";
@@ -617,6 +618,7 @@ function BasicDataTable() {
   const [isDeleting, setIsDeleting] = useState(false);
   // === NEW === Export
   const [isExporting, setIsExporting] = useState(false);
+  const [unblockingId, setUnblockingId] = useState<number | null>(null);
 
   // Calculate statistics
   const calculateStatistics = (studentsData: StudentTypes[], paginate: any) => {
@@ -781,6 +783,28 @@ function BasicDataTable() {
   const handleUpdateClick = (student: StudentTypes) => {
     setSelectedStudent(student);
     setUpdateModalOpen(true);
+  };
+
+  const handleUnblockStudent = async (student: StudentTypes) => {
+    const studentId = student?.user?.id;
+    if (!studentId) return;
+    setUnblockingId(studentId);
+    try {
+      await postData(
+        `unblock-student/${studentId}`,
+        {},
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      toast.success("تم فك حظر الطالب بنجاح");
+      refetchUsers();
+    } catch (error) {
+      console.error("Failed to unblock student:", error);
+      toast.error("فشل فك حظر الطالب");
+    } finally {
+      setUnblockingId(null);
+    }
   };
 
   const handleUpdateModalClose = () => {
@@ -990,16 +1014,36 @@ function BasicDataTable() {
     {
       id: "actions",
       header: "الإجراءات",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleUpdateClick(row.original)}
-          className="h-8 w-8 p-0"
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      ),
+      cell: ({ row }) => {
+        const isBlocked = row.original.user?.blocked === true;
+        const isUnblocking = unblockingId === row.original.id;
+        return (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleUpdateClick(row.original)}
+              className="h-8 w-8 p-0"
+              title="تعديل"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            {isBlocked && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleUnblockStudent(row.original)}
+                disabled={isUnblocking}
+                className="h-8 px-2 text-xs gap-1"
+                title="فك الحظر"
+              >
+                <Unlock className="h-3.5 w-3.5" />
+                {isUnblocking ? "جارٍ..." : "فك الحظر"}
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

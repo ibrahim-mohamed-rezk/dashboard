@@ -181,6 +181,7 @@ export interface StudentTypes {
     phone: string;
     role: string;
     avatar?: string;
+    blocked?: boolean;
   } | null;
   level_id: number;
   stu_no: string;
