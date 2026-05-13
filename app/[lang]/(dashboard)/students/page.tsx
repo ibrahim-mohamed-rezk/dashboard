@@ -1003,15 +1003,6 @@ function BasicDataTable() {
       cell: ({ row }) => <div>{row.original.user?.phone ?? "N/A"}</div>,
     },
     {
-      accessorKey: "role",
-      header: "دور",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="capitalize">
-          {row.original.user?.role ?? "student"}
-        </Badge>
-      ),
-    },
-    {
       id: "actions",
       header: "الإجراءات",
       cell: ({ row }) => {
