@@ -273,14 +273,16 @@ function BasicDataTable() {
   };
 
   // Fetch teachers for admin
-  const fetchTeachers = async () => {
-    if (user?.role !== "admin") return;
+  const fetchTeachers = async (authToken?: string) => {
+    const t = authToken ?? token;
+    if (!t) return;
+    if (authToken == null && user?.role !== "admin") return;
     try {
       const response = await getData(
         "teachers",
         {},
         new AxiosHeaders({
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${t}`,
         })
       );
       setTeachers(response.data);
@@ -289,14 +291,16 @@ function BasicDataTable() {
     }
   };
 
-  // Fetch levels for admin
-  const fetchLevels = async () => {
+  // Fetch levels (used in create-code dialog for admin and teacher)
+  const fetchLevels = async (authToken?: string) => {
+    const t = authToken ?? token;
+    if (!t) return;
     try {
       const response = await getData(
         "levels",
         {},
         new AxiosHeaders({
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${t}`,
         })
       );
       setLevels(response.data);
@@ -309,12 +313,17 @@ function BasicDataTable() {
   const refetchUsers = async () => {
     setIsLoading(true);
     try {
+      const teacherFilterId =
+        user?.role === "admin"
+          ? selectedTeacherId || undefined
+          : Number((user as any)?.teacher_id) || undefined;
+
       const response = await getData(
         "subscription_codes",
         {
           page: pagination.pageIndex + 1,
           per_page: pagination.pageSize,
-          teacher_id: selectedTeacherId || undefined,
+          teacher_id: teacherFilterId,
           is_used: isUsedFilter !== "" ? isUsedFilter : undefined,
         },
         {
@@ -376,6 +385,8 @@ function BasicDataTable() {
     token,
     selectedTeacherId,
     isUsedFilter,
+    user?.role,
+    (user as any)?.teacher_id,
   ]);
 
   // get token from next api
@@ -383,16 +394,17 @@ function BasicDataTable() {
     const feachData = async () => {
       try {
         const response = await axios.get("/api/auth/getToken");
-        setToken(response.data.token);
-        
+        const newToken = response.data.token;
+        setToken(newToken);
+
         // Get user from localStorage
         const userDataString = localStorage.getItem("user");
         if (userDataString) {
           const userData = JSON.parse(userDataString);
           setUser(userData);
+          await fetchLevels(newToken);
           if (userData.role === "admin") {
-            fetchTeachers();
-            fetchLevels();
+            await fetchTeachers(newToken);
           }
         }
       } catch (error) {
@@ -403,35 +415,20 @@ function BasicDataTable() {
     feachData();
   }, [token]);
 
-  // Function to generate student code
+  // Function to generate student code — admin picks teacher in dialog; teacher uses same form with teacher_id preset
   const generateStudentCode = async () => {
     if (user?.role === "admin") {
       setIsTeacherSelectOpen(true);
       return;
     }
 
-    try {
-      const response = await postData(
-        "subscription_codes",
-        {
-          count: codeCount,
-          teacher_id: user?.id,
-          valid_from: validFrom,
-          valid_to: validTo,
-          price: price,
-          level_id: selectedLevelId,
-        },
-        {
-          Authorization: `Bearer ${token}`,
-        }
-      );
-      setGeneratedCode(response.data);
-      setIsDialogOpen(true);
-      setPrice("");
-      setSelectedLevelId(null);
-    } catch (error) {
-      console.error("Error generating student code:", error);
+    const tid = Number((user as any)?.teacher_id || 0);
+    if (!tid) {
+      toast.error("تعذر تحديد معرف المعلم. يرجى إعادة تسجيل الدخول.");
+      return;
     }
+    setSelectedTeacherId(tid);
+    setIsTeacherSelectOpen(true);
   };
 
   const handleTeacherSelect = async (teacherId: number) => {
@@ -439,14 +436,19 @@ function BasicDataTable() {
   };
 
   const handleGenerateCodes = async () => {
-    if (!selectedTeacherId) return;
+    const teacherIdToSend =
+      selectedTeacherId ||
+      (user?.role === "teacher"
+        ? Number((user as any)?.teacher_id || 0)
+        : null);
+    if (!teacherIdToSend) return;
 
     try {
       const response = await postData(
         "subscription_codes",
         {
           count: codeCount,
-          teacher_id: selectedTeacherId,
+          teacher_id: teacherIdToSend,
           valid_from: validFrom,
           valid_to: validTo,
           price: price,
@@ -464,8 +466,10 @@ function BasicDataTable() {
       setValidTo("");
       setPrice("");
       setSelectedLevelId(null);
+      refetchUsers();
     } catch (error) {
       console.error("Error generating student code:", error);
+      toast.error("فشل إنشاء الأكواد. تحقق من البيانات والصلاحيات.");
     }
   };
 
@@ -983,21 +987,25 @@ function BasicDataTable() {
       <Dialog open={isTeacherSelectOpen} onOpenChange={setIsTeacherSelectOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>اختر المعلم</DialogTitle>
+            <DialogTitle>
+              {user?.role === "admin" ? "اختر المعلم" : "إنشاء كود طالب"}
+            </DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <select
-              className="w-full p-2 border rounded-md"
-              onChange={(e) => handleTeacherSelect(Number(e.target.value))}
-              value={selectedTeacherId || ""}
-            >
-              <option value="">اختر المعلم</option>
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher?.user.full_name}
-                </option>
-              ))}
-            </select>
+            {user?.role === "admin" && (
+              <select
+                className="w-full p-2 border rounded-md"
+                onChange={(e) => handleTeacherSelect(Number(e.target.value))}
+                value={selectedTeacherId || ""}
+              >
+                <option value="">اختر المعلم</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>
+                    {teacher?.user.full_name}
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="flex items-center gap-2">
               <label className="text-sm">عدد الأكواد:</label>
               <Input
@@ -1064,7 +1072,10 @@ function BasicDataTable() {
             <Button
               onClick={handleGenerateCodes}
               disabled={
-                !selectedTeacherId || !codeCount || !validFrom || !validTo
+                !codeCount ||
+                !validFrom ||
+                !validTo ||
+                (user?.role === "admin" && !selectedTeacherId)
               }
               className="w-full"
             >
