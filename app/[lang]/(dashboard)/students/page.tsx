@@ -468,7 +468,8 @@ const StudentUpdateModal = ({
 
 const exportToExcel = (
   data: StudentTypes[],
-  filename: string = "students.xlsx"
+  filename: string = "students.xlsx",
+  levelsList: any[] = []
 ) => {
   if (!data || data.length === 0) {
     toast.error("لا توجد بيانات للتصدير");
@@ -487,7 +488,13 @@ const exportToExcel = (
     الهاتف: student.user?.phone || "",
     المحافظة: student.governorate_id || "",
     المنطقة: student.area_id || "",
-    المرحلة: student.level_id || "",
+    المرحلة:
+      (student as any)?.level?.name ??
+      (student as any)?.level_name ??
+      levelsList.find((l: any) => Number(l.id) === Number(student.level_id))
+        ?.name ??
+      student.level_id ??
+      "",
   }));
 
   // Create workbook and worksheet
@@ -839,7 +846,8 @@ function BasicDataTable() {
       if (allStudents.length > 0) {
         exportToExcel(
           allStudents,
-          `students_${new Date().toISOString().split("T")[0]}.xlsx`
+          `students_${new Date().toISOString().split("T")[0]}.xlsx`,
+          level
         );
         toast.success("تم تصدير البيانات بنجاح");
       } else {
@@ -924,6 +932,18 @@ function BasicDataTable() {
       accessorKey: "stu_no",
       header: "كود الطالب",
       cell: ({ row }) => <div>{row.original.stu_no}</div>,
+    },
+    {
+      accessorKey: "level_id",
+      header: "المرحلة",
+      cell: ({ row }) => {
+        const levelId = row.original.level_id;
+        const levelName =
+          (row.original as any)?.level?.name ??
+          (row.original as any)?.level_name ??
+          level?.find((l: any) => Number(l.id) === Number(levelId))?.name;
+        return <div>{levelName || "-"}</div>;
+      },
     },
     {
       accessorKey: "school_name",
