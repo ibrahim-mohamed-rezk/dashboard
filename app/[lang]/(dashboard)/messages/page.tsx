@@ -123,7 +123,7 @@ export default function ContactMessagesPage() {
 
   const isAuthorized = useAuthrization({
     user: user as User,
-    module: ["contact-messages", "ContactMessages"],
+    module: "contact-messages",
   });
 
   const fetchMessages = async (page = 1) => {
@@ -243,7 +243,9 @@ export default function ContactMessagesPage() {
             <Mail className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">رسائل التواصل</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              رسائل التواصل
+            </h2>
             <p className="text-sm text-muted-foreground">
               عرض الرسائل الواردة عبر صفحة "اتصل بنا"
             </p>

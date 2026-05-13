@@ -279,7 +279,7 @@ const ModuleSidebar = ({ user }: { user: User }) => {
               hasModule("Blogs", "blogs") ||
               hasModule("Books", "books") ||
               hasModule("settings") ||
-              hasModule("contact-messages", "ContactMessages")) && (
+              hasModule("contact-messages")) && (
               <div
                 onClick={() => toggleSubMenu(2)}
                 className=" mb-3 last:mb-0 group relative"
@@ -571,12 +571,12 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                         </li>
                       )}
 
-                      {hasModule("contact-messages", "ContactMessages") && (
+                      {hasModule("contact-messages") && (
                         <li className="mb-1.5 last:mb-0">
                           <MenuItem
                             childItem={{
                               href: "/messages",
-                              title: "الرسائل",
+                              title: "رسائل التواصل",
                               icon: Mail,
                             }}
                             toggleNested={toggleNested}
