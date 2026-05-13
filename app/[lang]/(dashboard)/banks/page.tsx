@@ -92,6 +92,9 @@ interface Bank {
   level_id: string;
   image?: string | null;
   subject_id?: number;
+  /** Some API responses embed the subject relation instead of just the id. */
+  subject?: { id?: number; name?: string } | string | null;
+  subject_name?: string;
 }
 
 interface FormData {
@@ -191,6 +194,9 @@ function BanksTable() {
   // === NEW: Multi-select delete states ===
   const [selectedToDelete, setSelectedToDelete] = useState<number[]>([]);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+
+  const isTeacher = user?.role === "teacher";
+  const loggedInTeacherId = Number((user as any)?.teacher_id || 0);
 
   // get token from next api
   useEffect(() => {
@@ -340,6 +346,17 @@ function BanksTable() {
     }
   }, [token]);
 
+  // Re-resolve subject_id once subjects load if the editing bank only exposes a name.
+  useEffect(() => {
+    if (!editBank || !editingBank) return;
+    if (formData.subject_id) return;
+    const resolved = resolveBankSubjectId(editingBank);
+    if (resolved !== "") {
+      setFormData((prev) => ({ ...prev, subject_id: resolved }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects, editBank, editingBank]);
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -404,13 +421,19 @@ function BanksTable() {
       formDataToSend.append("price", formData.price ? formData.price : "");
       formDataToSend.append("banktable_id", formData.banktable_id.toString());
       formDataToSend.append("level_id", formData.level_id);
-      formDataToSend.append("position", formData.position);
+      formDataToSend.append(
+        "position",
+        isTeacher ? "offline" : formData.position
+      );
       formDataToSend.append("banktable_type", "course");
       if (formData.subject_id) {
         formDataToSend.append("subject_id", String(formData.subject_id));
       }
-      if (formData.teacher_id) {
-        formDataToSend.append("teacher_id", String(formData.teacher_id));
+      const teacherIdToSend = isTeacher
+        ? loggedInTeacherId || formData.teacher_id
+        : formData.teacher_id;
+      if (teacherIdToSend) {
+        formDataToSend.append("teacher_id", String(teacherIdToSend));
       }
       if (formData.created_at) {
         formDataToSend.append("created_at", formData.created_at);
@@ -450,6 +473,27 @@ function BanksTable() {
     }
   };
 
+  // Resolve a bank's subject id from several possible API shapes.
+  const resolveBankSubjectId = (bank: Bank): number | "" => {
+    if (bank.subject_id) return Number(bank.subject_id);
+    if (
+      bank.subject &&
+      typeof bank.subject === "object" &&
+      bank.subject?.id
+    ) {
+      return Number(bank.subject.id);
+    }
+    const subjectName =
+      bank.subject_name ||
+      (typeof bank.subject === "string" ? bank.subject : undefined) ||
+      (typeof bank.subject === "object" ? bank.subject?.name : undefined);
+    if (subjectName) {
+      const match = subjects.find((s: any) => s.name === subjectName);
+      if (match?.id) return Number(match.id);
+    }
+    return "";
+  };
+
   // update course
   const handleEdit = (bank: Bank) => {
     setEditingBank(bank);
@@ -458,17 +502,18 @@ function BanksTable() {
       price: bank.price?.toString() || "",
       banktable_id: bank.banktable_id,
       banktable_type: bank.banktable_type,
-      position: bank.position || "online",
+      position: isTeacher ? "offline" : bank.position || "online",
       level_id: bank.level_id || "1",
       image: null,
       created_at: bank.created_at
         ? new Date(bank.created_at).toISOString().slice(0, 10)
         : "",
-      teacher_id:
-        bank.banktable_type === "teacher" && bank.banktable_id
-          ? Number(bank.banktable_id)
-          : "",
-      subject_id: bank.subject_id ? Number(bank.subject_id) : "",
+      teacher_id: isTeacher
+        ? loggedInTeacherId
+        : bank.banktable_type === "teacher" && bank.banktable_id
+        ? Number(bank.banktable_id)
+        : "",
+      subject_id: resolveBankSubjectId(bank),
     });
     setImagePreview(bank.image || null);
     setEditBank(true);
@@ -882,13 +927,19 @@ function BanksTable() {
       formDataToSend.append("price", formData.price ? formData.price : "");
       formDataToSend.append("banktable_id", formData.banktable_id.toString());
       formDataToSend.append("banktable_type", "course");
-      formDataToSend.append("position", formData.position);
+      formDataToSend.append(
+        "position",
+        isTeacher ? "offline" : formData.position
+      );
       formDataToSend.append("level_id", formData.level_id);
       if (formData.subject_id) {
         formDataToSend.append("subject_id", String(formData.subject_id));
       }
-      if (formData.teacher_id) {
-        formDataToSend.append("teacher_id", String(formData.teacher_id));
+      const teacherIdToSend = isTeacher
+        ? loggedInTeacherId || formData.teacher_id
+        : formData.teacher_id;
+      if (teacherIdToSend) {
+        formDataToSend.append("teacher_id", String(teacherIdToSend));
       }
       if (formData.created_at) {
         formDataToSend.append("created_at", formData.created_at);
@@ -1039,20 +1090,22 @@ function BanksTable() {
               ))}
             </SelectContent>
           </Select>
-          {/* Teacher Filter */}
-          <Select value={teacherIdFilter} onValueChange={setTeacherIdFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="المعلم" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل المعلمين</SelectItem>
-              {teachers.map((teacher) => (
-                <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                  {teacher.user?.full_name || `معلم #${teacher.id}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Teacher Filter — admins only */}
+          {!isTeacher && (
+            <Select value={teacherIdFilter} onValueChange={setTeacherIdFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="المعلم" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل المعلمين</SelectItem>
+                {teachers.map((teacher) => (
+                  <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                    {teacher.user?.full_name || `معلم #${teacher.id}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button
             className="flex items-center gap-2"
             variant="outline"
@@ -1136,7 +1189,7 @@ function BanksTable() {
 
           {/* Add Bank Button */}
           <Dialog open={addBank} onOpenChange={setAddBank}>
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || isTeacher) && (
               <DialogTrigger asChild>
                 <Button
                   className="flex items-center gap-2"
@@ -1147,11 +1200,11 @@ function BanksTable() {
                       price: "",
                       banktable_id: 1,
                       banktable_type: "course",
-                      position: "online",
+                      position: isTeacher ? "offline" : "online",
                       level_id: "1",
                       image: null,
                       created_at: "",
-                      teacher_id: "",
+                      teacher_id: isTeacher ? loggedInTeacherId : "",
                     });
                     setImagePreview(null);
                   }}
@@ -1393,44 +1446,46 @@ function BanksTable() {
                             ))}
                       </select>
                     </div>
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="teacher_id"
-                        className="text-sm font-medium"
-                      >
-                        المعلم
-                      </label>
-                      <select
-                        id="teacher_id"
-                        name="teacher_id"
-                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                        value={formData.teacher_id ?? ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            teacher_id: e.target.value
-                              ? parseInt(e.target.value)
-                              : "",
-                          }))
-                        }
-                      >
-                        <option
-                          value=""
-                          className="dark:bg-gray-800 dark:!text-white"
+                    {!isTeacher && (
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="teacher_id"
+                          className="text-sm font-medium"
                         >
-                          اختر المعلم
-                        </option>
-                        {teachers.map((teacher) => (
+                          المعلم
+                        </label>
+                        <select
+                          id="teacher_id"
+                          name="teacher_id"
+                          className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                          value={formData.teacher_id ?? ""}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              teacher_id: e.target.value
+                                ? parseInt(e.target.value)
+                                : "",
+                            }))
+                          }
+                        >
                           <option
-                            key={teacher.id}
-                            value={teacher.id}
+                            value=""
                             className="dark:bg-gray-800 dark:!text-white"
                           >
-                            {teacher.user?.full_name || `معلم #${teacher.id}`}
+                            اختر المعلم
                           </option>
-                        ))}
-                      </select>
-                    </div>
+                          {teachers.map((teacher) => (
+                            <option
+                              key={teacher.id}
+                              value={teacher.id}
+                              className="dark:bg-gray-800 dark:!text-white"
+                            >
+                              {teacher.user?.full_name || `معلم #${teacher.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <label htmlFor="position" className="text-sm font-medium">
                         الموقع
@@ -1438,8 +1493,9 @@ function BanksTable() {
                       <select
                         id="position"
                         name="position"
-                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                        value={formData.position}
+                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2 disabled:opacity-70"
+                        value={isTeacher ? "offline" : formData.position}
+                        disabled={isTeacher}
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
@@ -1447,12 +1503,14 @@ function BanksTable() {
                           }))
                         }
                       >
-                        <option
-                          value="online"
-                          className="dark:bg-gray-800 dark:!text-white"
-                        >
-                          أونلاين
-                        </option>
+                        {!isTeacher && (
+                          <option
+                            value="online"
+                            className="dark:bg-gray-800 dark:!text-white"
+                          >
+                            أونلاين
+                          </option>
+                        )}
                         <option
                           value="offline"
                           className="dark:bg-gray-800 dark:!text-white"
@@ -1832,44 +1890,46 @@ function BanksTable() {
                           ))}
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="edit-teacher_id"
-                      className="text-sm font-medium"
-                    >
-                      المعلم
-                    </label>
-                    <select
-                      id="edit-teacher_id"
-                      name="teacher_id"
-                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                      value={formData.teacher_id ?? ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          teacher_id: e.target.value
-                            ? parseInt(e.target.value)
-                            : "",
-                        }))
-                      }
-                    >
-                      <option
-                        value=""
-                        className="dark:bg-gray-800 dark:!text-white"
+                  {!isTeacher && (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="edit-teacher_id"
+                        className="text-sm font-medium"
                       >
-                        اختر المعلم
-                      </option>
-                      {teachers.map((teacher) => (
+                        المعلم
+                      </label>
+                      <select
+                        id="edit-teacher_id"
+                        name="teacher_id"
+                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                        value={formData.teacher_id ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            teacher_id: e.target.value
+                              ? parseInt(e.target.value)
+                              : "",
+                          }))
+                        }
+                      >
                         <option
-                          key={teacher.id}
-                          value={teacher.id}
+                          value=""
                           className="dark:bg-gray-800 dark:!text-white"
                         >
-                          {teacher.user?.full_name || `معلم #${teacher.id}`}
+                          اختر المعلم
                         </option>
-                      ))}
-                    </select>
-                  </div>
+                        {teachers.map((teacher) => (
+                          <option
+                            key={teacher.id}
+                            value={teacher.id}
+                            className="dark:bg-gray-800 dark:!text-white"
+                          >
+                            {teacher.user?.full_name || `معلم #${teacher.id}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <label
                       htmlFor="edit-position"
@@ -1880,8 +1940,9 @@ function BanksTable() {
                     <select
                       id="edit-position"
                       name="position"
-                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                      value={formData.position}
+                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2 disabled:opacity-70"
+                      value={isTeacher ? "offline" : formData.position}
+                      disabled={isTeacher}
                       onChange={(e) =>
                         setFormData((prev) => ({
                           ...prev,
@@ -1889,12 +1950,14 @@ function BanksTable() {
                         }))
                       }
                     >
-                      <option
-                        value="online"
-                        className="dark:bg-gray-800 dark:!text-white"
-                      >
-                        أونلاين
-                      </option>
+                      {!isTeacher && (
+                        <option
+                          value="online"
+                          className="dark:bg-gray-800 dark:!text-white"
+                        >
+                          أونلاين
+                        </option>
+                      )}
                       <option
                         value="offline"
                         className="dark:bg-gray-800 dark:!text-white"

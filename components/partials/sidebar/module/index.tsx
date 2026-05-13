@@ -36,6 +36,7 @@ import {
   ClipboardCheck,
   ClipboardSignature,
   Shield,
+  Mail,
 } from "lucide-react";
 
 const ModuleSidebar = ({ user }: { user: User }) => {
@@ -277,7 +278,8 @@ const ModuleSidebar = ({ user }: { user: User }) => {
             {(hasModule("Banners", "banners") ||
               hasModule("Blogs", "blogs") ||
               hasModule("Books", "books") ||
-              hasModule("settings")) && (
+              hasModule("settings") ||
+              hasModule("contact-messages", "ContactMessages")) && (
               <div
                 onClick={() => toggleSubMenu(2)}
                 className=" mb-3 last:mb-0 group relative"
@@ -560,6 +562,22 @@ const ModuleSidebar = ({ user }: { user: User }) => {
                               href: "/settings",
                               title: "الخصوصية و الدعم",
                               icon: Shield,
+                            }}
+                            toggleNested={toggleNested}
+                            index={1}
+                            nestedIndex={nestedIndex}
+                            locationName={locationName}
+                          />
+                        </li>
+                      )}
+
+                      {hasModule("contact-messages", "ContactMessages") && (
+                        <li className="mb-1.5 last:mb-0">
+                          <MenuItem
+                            childItem={{
+                              href: "/messages",
+                              title: "الرسائل",
+                              icon: Mail,
                             }}
                             toggleNested={toggleNested}
                             index={1}
