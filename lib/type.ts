@@ -260,7 +260,6 @@ export interface Statistics {
       total_revenue?: number;
       registration_date?: string;
       online_purchases_count?: number;
-      online_courses_count?: number;
     }>;
     top_students_by_revenue?: any[];
     total_revenue_from_students?: number;
