@@ -224,6 +224,25 @@ export interface SubscriptionCodeTypes {
 
 
 export interface Statistics {
+  overview?: {
+    total_users: number;
+    total_students: number;
+    total_teachers: number;
+    total_courses: number;
+    total_books: number;
+    total_exams: number;
+    total_videos: number;
+    total_blogs: number;
+    total_revenue: number;
+    active_users_today: number;
+  };
+  performance?: {
+    conversion_rate: number;
+    average_customer_value: number;
+    user_growth_rate: number;
+    total_active_users: number;
+    purchasing_users: number;
+  };
   students: {
     total: number;
     details?: Array<{
@@ -240,7 +259,8 @@ export interface Statistics {
       total_purchases?: number;
       total_revenue?: number;
       registration_date?: string;
-      online_purchases_count?: number; // Optional as it might not be in JSON "students.details" but used in code
+      online_purchases_count?: number;
+      online_courses_count?: number;
     }>;
     top_students_by_revenue?: any[];
     total_revenue_from_students?: number;
@@ -380,9 +400,25 @@ export interface Statistics {
     };
   };
   books: {
-    by_level?: Array<{ level_id: number; count: number }>;
-    by_subject?: Array<{ subject_id: number; count: number }>;
     total?: number;
+    details?: Array<{
+      id: number;
+      title: string;
+      teacher: string | null;
+      subject: string;
+      level: string;
+      price: number;
+      purchases_count: number;
+      revenue: number;
+      created_at: string;
+    }>;
+    by_level?: Array<{ level_id: number; level_name?: string; count: number }>;
+    by_subject?: Array<{ subject_id: number; subject_name?: string; count: number }>;
+    top_books_by_revenue?: any[];
+    total_revenue?: number;
+    total_purchases?: number;
+    average_price?: number;
+    creation_trend?: any[];
     by_month?: { [key: string]: number };
     by_week?: { [key: string]: number };
   };

@@ -210,6 +210,10 @@ function BooksDataTable() {
         ...prev,
         teacher_id: loggedInTeacherId,
       }));
+      setFilters((prev) => ({
+        ...prev,
+        teacher_id: String(loggedInTeacherId),
+      }));
     }
   }, [isTeacherUser, loggedInTeacherId]);
 
@@ -217,8 +221,10 @@ function BooksDataTable() {
   useEffect(() => {
     feachSubjectsData();
     feachLevelsData();
-    fetchTeachers();
-  }, [token]);
+    if (!isTeacherUser) {
+      fetchTeachers();
+    }
+  }, [token, isTeacherUser]);
 
   // feach data
   useEffect(() => {
@@ -418,8 +424,10 @@ function BooksDataTable() {
           subjects.find((s) => s.name === editingBook.subject)?.id || 0,
         level_id: levels.find((l) => l.name === editingBook.level)?.id || 0,
         teacher_id:
-          teachers.find((t) => t.user.full_name === editingBook.teacher)?.id ||
-          0,
+          isTeacherUser && loggedInTeacherId
+            ? loggedInTeacherId
+            : teachers.find((t) => t.user.full_name === editingBook.teacher)
+                ?.id || 0,
         description: editingBook.description,
         type: editingBook.price > 0 ? "paid" : "free",
         price: editingBook.price,
@@ -429,7 +437,7 @@ function BooksDataTable() {
         file: null,
       });
     }
-  }, [editingBook, subjects, levels, teachers]);
+  }, [editingBook, subjects, levels, teachers, isTeacherUser, loggedInTeacherId]);
 
   // columns of table
   const columns: ColumnDef<Book>[] = [
@@ -859,21 +867,22 @@ function BooksDataTable() {
             </option>
           ))}
         </select>
-        {/* teacher filter */}
-        <select
-          value={filters.teacher_id}
-          onChange={(e) => {
-            setFilters((prev) => ({ ...prev, teacher_id: e.target.value }));
-          }}
-          className="min-w-[140px] h-10 border rounded px-2"
-        >
-          <option value="">كل المعلمين</option>
-          {teachers.map((teacher) => (
-            <option key={teacher.id} value={teacher.id}>
-              {teacher.user.full_name}
-            </option>
-          ))}
-        </select>
+        {!isTeacherUser && (
+          <select
+            value={filters.teacher_id}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, teacher_id: e.target.value }));
+            }}
+            className="min-w-[140px] h-10 border rounded px-2"
+          >
+            <option value="">كل المعلمين</option>
+            {teachers.map((teacher) => (
+              <option key={teacher.id} value={teacher.id}>
+                {teacher.user.full_name}
+              </option>
+            ))}
+          </select>
+        )}
         {/* type filter */}
         <select
           value={filters.type}

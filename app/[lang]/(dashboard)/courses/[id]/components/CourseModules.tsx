@@ -126,8 +126,14 @@ const CourseModules = ({
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<
     number | null
   >(null);
-  const [editQuestionForm, setEditQuestionForm] = useState({
+  const [editQuestionForm, setEditQuestionForm] = useState<{
+    question: string;
+    questionType: "text" | "image";
+    options: { answer: string; is_correct: boolean }[];
+    degree: number;
+  }>({
     question: "",
+    questionType: "text",
     options: [
       { answer: "", is_correct: false },
       { answer: "", is_correct: false },
@@ -348,6 +354,10 @@ const CourseModules = ({
           formData.append(
             `questions[${questionNumber}][question]`,
             question.question
+          );
+          formData.append(
+            `questions[${questionNumber}][questionType]`,
+            question.questionType || "text"
           );
           formData.append(
             `questions[${questionNumber}][degree]`,
@@ -744,6 +754,7 @@ const CourseModules = ({
     setEditingQuestionIndex(index);
     setEditQuestionForm({
       question: question.question,
+      questionType: question.questionType || "text",
       options: question.options.map((opt) => ({
         answer: opt.answer,
         is_correct: opt.is_correct,
@@ -763,15 +774,26 @@ const CourseModules = ({
   const saveEditedQuestion = () => {
     if (editingQuestionIndex === null) return;
 
+    if (!editQuestionForm.question.trim()) {
+      toast.error("يرجى إدخال السؤال");
+      return;
+    }
+
+    if (
+      editQuestionForm.questionType === "image" &&
+      !isValidImageUrl(editQuestionForm.question)
+    ) {
+      toast.error("يرجى إدخال رابط صورة صالح");
+      return;
+    }
+
     const updatedQuestions = [...editForm.questions];
     updatedQuestions[editingQuestionIndex] = {
       ...updatedQuestions[editingQuestionIndex],
       question: editQuestionForm.question,
+      questionType: editQuestionForm.questionType,
       options: editQuestionForm.options,
-      degree:
-        (editQuestionForm as any).degree ??
-        updatedQuestions[editingQuestionIndex].degree ??
-        1,
+      degree: editQuestionForm.degree ?? 1,
     };
 
     setEditForm({
@@ -782,6 +804,7 @@ const CourseModules = ({
     setEditingQuestionIndex(null);
     setEditQuestionForm({
       question: "",
+      questionType: "text",
       options: [
         { answer: "", is_correct: false },
         { answer: "", is_correct: false },
@@ -790,12 +813,14 @@ const CourseModules = ({
       ],
       degree: 1,
     });
+    setImageError(null);
   };
 
   const cancelEditingQuestion = () => {
     setEditingQuestionIndex(null);
     setEditQuestionForm({
       question: "",
+      questionType: "text",
       options: [
         { answer: "", is_correct: false },
         { answer: "", is_correct: false },
@@ -804,6 +829,7 @@ const CourseModules = ({
       ],
       degree: 1,
     });
+    setImageError(null);
   };
 
   const handleViewModule = (module: CoursModules) => {
@@ -1676,54 +1702,120 @@ const CourseModules = ({
                               <div className="space-y-4">
                                 <div>
                                   <label className="block text-sm font-medium mb-2">
-                                    السؤال
+                                    نوع السؤال
                                   </label>
-                                  <Editor
-                                    apiKey={siteConfig.tinymceApiKey}
-                                    value={editQuestionForm.question}
-                                    onEditorChange={(content: string) => {
+                                  <Select
+                                    value={editQuestionForm.questionType}
+                                    onValueChange={(value) => {
                                       setEditQuestionForm((prev) => ({
                                         ...prev,
-                                        question: content,
+                                        questionType: value as "text" | "image",
                                       }));
+                                      setImageError(null);
                                     }}
-                                    init={{
-                                      height: 300,
-                                      menubar: true,
-                                      directionality: "rtl",
-                                      skin: "oxide-dark",
-                                      content_css: "dark",
-                                      plugins: [
-                                        "advlist",
-                                        "autolink",
-                                        "lists",
-                                        "link",
-                                        "image",
-                                        "charmap",
-                                        "preview",
-                                        "anchor",
-                                        "searchreplace",
-                                        "visualblocks",
-                                        "code",
-                                        "fullscreen",
-                                        "insertdatetime",
-                                        "media",
-                                        "table",
-                                        "code",
-                                        "help",
-                                        "wordcount",
-                                      ],
-                                      toolbar:
-                                        "undo redo | blocks | " +
-                                        "bold italic forecolor | alignleft aligncenter " +
-                                        "alignright alignjustify | bullist numlist outdent indent | " +
-                                        "removeformat | help",
-                                      content_style:
-                                        "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
-                                      branding: false,
-                                      promotion: false,
-                                    }}
-                                  />
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="اختر نوع السؤال" />
+                                    </SelectTrigger>
+                                    <SelectContent className="z-[9999]">
+                                      <SelectItem value="text">نص</SelectItem>
+                                      <SelectItem value="image">صورة</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">
+                                    {editQuestionForm.questionType === "text"
+                                      ? "نص السؤال"
+                                      : "رابط صورة السؤال"}
+                                  </label>
+                                  {editQuestionForm.questionType === "text" ? (
+                                    <Editor
+                                      apiKey={siteConfig.tinymceApiKey}
+                                      value={editQuestionForm.question}
+                                      onEditorChange={(content: string) => {
+                                        setEditQuestionForm((prev) => ({
+                                          ...prev,
+                                          question: content,
+                                        }));
+                                      }}
+                                      init={{
+                                        height: 300,
+                                        menubar: true,
+                                        directionality: "rtl",
+                                        skin: "oxide-dark",
+                                        content_css: "dark",
+                                        plugins: [
+                                          "advlist",
+                                          "autolink",
+                                          "lists",
+                                          "link",
+                                          "image",
+                                          "charmap",
+                                          "preview",
+                                          "anchor",
+                                          "searchreplace",
+                                          "visualblocks",
+                                          "code",
+                                          "fullscreen",
+                                          "insertdatetime",
+                                          "media",
+                                          "table",
+                                          "code",
+                                          "help",
+                                          "wordcount",
+                                        ],
+                                        toolbar:
+                                          "undo redo | blocks | " +
+                                          "bold italic forecolor | alignleft aligncenter " +
+                                          "alignright alignjustify | bullist numlist outdent indent | " +
+                                          "removeformat | help",
+                                        content_style:
+                                          "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                                        branding: false,
+                                        promotion: false,
+                                      }}
+                                    />
+                                  ) : (
+                                    <>
+                                      <Input
+                                        value={editQuestionForm.question}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          setEditQuestionForm((prev) => ({
+                                            ...prev,
+                                            question: value,
+                                          }));
+                                          if (value && !isValidImageUrl(value)) {
+                                            setImageError(
+                                              "يجب أن يكون الرابط ينتهي بامتداد صورة (مثل: .jpg, .png, .webp)",
+                                            );
+                                          } else {
+                                            setImageError(null);
+                                          }
+                                        }}
+                                        placeholder="https://example.com/image.jpg"
+                                      />
+                                      {imageError && (
+                                        <p className="text-sm text-red-500 mt-1">
+                                          {imageError}
+                                        </p>
+                                      )}
+                                      {editQuestionForm.question && (
+                                        <div className="mt-2">
+                                          <img
+                                            src={editQuestionForm.question}
+                                            alt="معاينة السؤال"
+                                            className="max-h-40 rounded border"
+                                            onError={(e) => {
+                                              (e.target as HTMLImageElement).alt =
+                                                "فشل تحميل الصورة";
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
                                 </div>
                                 <div className="space-y-2">
                                   <label className="block text-sm font-medium">
@@ -1790,9 +1882,7 @@ const CourseModules = ({
                                   <Input
                                     type="number"
                                     min="1"
-                                    value={
-                                      (editQuestionForm as any).degree || 1
-                                    }
+                                    value={editQuestionForm.degree || 1}
                                     onChange={(e) =>
                                       setEditQuestionForm((prev) => ({
                                         ...prev,
@@ -1910,55 +2000,123 @@ const CourseModules = ({
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium mb-2">
-                            السؤال
+                            نوع السؤال
                           </label>
-                          <Editor
-                            apiKey={siteConfig.tinymceApiKey}
-                            value={currentQuestion.question}
-                            onEditorChange={(content: string) => {
-                              setCurrentQuestion({
-                                ...currentQuestion,
-                                question: content,
-                              });
-                            }}
-                            init={{
-                              height: 300,
-                              menubar: true,
-                              directionality: "rtl",
-                              skin: "oxide-dark",
-                              content_css: "dark",
-                              plugins: [
-                                "advlist",
-                                "autolink",
-                                "lists",
-                                "link",
-                                "image",
-                                "charmap",
-                                "preview",
-                                "anchor",
-                                "searchreplace",
-                                "visualblocks",
-                                "code",
-                                "fullscreen",
-                                "insertdatetime",
-                                "media",
-                                "table",
-                                "code",
-                                "help",
-                                "wordcount",
-                              ],
-                              toolbar:
-                                "undo redo | blocks | " +
-                                "bold italic forecolor | alignleft aligncenter " +
-                                "alignright alignjustify | bullist numlist outdent indent | " +
-                                "removeformat | help",
-                              content_style:
-                                "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
-                              branding: false,
-                              promotion: false,
-                            }}
-                          />
+                          <Select
+                            value={currentQuestion.questionType}
+                            onValueChange={(value) =>
+                              setCurrentQuestion((prev) => ({
+                                ...prev,
+                                questionType: value as "text" | "image",
+                                question: "",
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر نوع السؤال" />
+                            </SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              <SelectItem value="text">نص</SelectItem>
+                              <SelectItem value="image">صورة</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
+
+                        {currentQuestion.questionType === "text" ? (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              نص السؤال
+                            </label>
+                            <Editor
+                              apiKey={siteConfig.tinymceApiKey}
+                              value={currentQuestion.question}
+                              onEditorChange={(content: string) => {
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  question: content,
+                                });
+                              }}
+                              init={{
+                                height: 300,
+                                menubar: true,
+                                directionality: "rtl",
+                                skin: "oxide-dark",
+                                content_css: "dark",
+                                plugins: [
+                                  "advlist",
+                                  "autolink",
+                                  "lists",
+                                  "link",
+                                  "image",
+                                  "charmap",
+                                  "preview",
+                                  "anchor",
+                                  "searchreplace",
+                                  "visualblocks",
+                                  "code",
+                                  "fullscreen",
+                                  "insertdatetime",
+                                  "media",
+                                  "table",
+                                  "code",
+                                  "help",
+                                  "wordcount",
+                                ],
+                                toolbar:
+                                  "undo redo | blocks | " +
+                                  "bold italic forecolor | alignleft aligncenter " +
+                                  "alignright alignjustify | bullist numlist outdent indent | " +
+                                  "removeformat | help",
+                                content_style:
+                                  "body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color: #fff; background-color: #1f2937; }",
+                                branding: false,
+                                promotion: false,
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              رابط صورة السؤال
+                            </label>
+                            <Input
+                              value={currentQuestion.question}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  question: value,
+                                });
+                                if (value && !isValidImageUrl(value)) {
+                                  setImageError(
+                                    "يجب أن يكون الرابط ينتهي بامتداد صورة (مثل: .jpg, .png, .webp)",
+                                  );
+                                } else {
+                                  setImageError(null);
+                                }
+                              }}
+                              placeholder="https://example.com/image.jpg"
+                            />
+                            {imageError && (
+                              <p className="text-sm text-red-500 mt-1">
+                                {imageError}
+                              </p>
+                            )}
+                            {currentQuestion.question && (
+                              <div className="mt-2">
+                                <img
+                                  src={currentQuestion.question}
+                                  alt="Preview"
+                                  className="max-h-40 rounded border"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).alt =
+                                      "فشل تحميل الصورة";
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         <div>
                           <label className="block text-sm font-medium mb-2">

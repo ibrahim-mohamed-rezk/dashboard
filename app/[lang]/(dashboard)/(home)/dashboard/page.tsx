@@ -24,6 +24,18 @@ const Dashboard = async ({
       : null;
 
   const filterBy = (paramsData.filter_by as string) || "month";
+  const teacherId =
+    typeof paramsData.teacher_id === "string" ? paramsData.teacher_id : undefined;
+  const search =
+    typeof paramsData.search === "string" ? paramsData.search : undefined;
+  const category =
+    typeof paramsData.category === "string" ? paramsData.category : undefined;
+  const period =
+    typeof paramsData.period === "string" ? paramsData.period : undefined;
+
+  const authHeaders = new AxiosHeaders({
+    Authorization: `Bearer ${token}`,
+  });
 
   const fetchData = async () => {
     try {
@@ -33,10 +45,12 @@ const Dashboard = async ({
           start_date: startDate,
           end_date: endDate,
           filter_by: filterBy,
+          ...(teacherId ? { teacher_id: teacherId } : {}),
+          ...(search ? { search } : {}),
+          ...(category && category !== "all" ? { category } : {}),
+          ...(period && period !== "all" ? { period } : {}),
         },
-        new AxiosHeaders({
-          Authorization: `Bearer ${token}`,
-        }),
+        authHeaders,
       );
       return response;
     } catch (error) {
@@ -57,14 +71,31 @@ const Dashboard = async ({
   // Detect whether the API returned teacher-specific stats
   // The teacher endpoint returns { message: "Teacher statistics", data: { ... } }
   const isTeacherStats = statistics?.message === "Teacher statistics";
-  const role = isTeacherStats ? "teacher" : sessionRole;
+  const role = isTeacherStats
+    ? "teacher"
+    : String(sessionRole || "user").toLowerCase();
 
-  console.log("Dashboard Loaded", { role, isTeacherStats });
+  const statsPayload = isTeacherStats
+    ? null
+    : statistics?.data && typeof statistics.data === "object"
+      ? statistics.data
+      : statistics;
+
+  let teachersForFilter: { id: number; user: { full_name: string } }[] = [];
+  if (!isTeacherStats && role !== "teacher") {
+    try {
+      const teachersRes = await getData("teachers", {}, authHeaders);
+      teachersForFilter = teachersRes?.data ?? [];
+    } catch {
+      teachersForFilter = [];
+    }
+  }
 
   return (
     <DashboardPageView
-      statistics={isTeacherStats ? null : statistics}
+      statistics={statsPayload}
       teacherStatistics={isTeacherStats ? statistics?.data : null}
+      teachersForFilter={teachersForFilter}
       trans={trans}
       role={role}
     />
