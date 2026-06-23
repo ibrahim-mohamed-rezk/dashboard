@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import User from "@/public/images/avatar/user.png";
 import { cn } from "@/lib/utils";
 import { Fragment } from "react";
-import { cookies } from "next/headers";
 import { User as UserTypes } from "@/lib/type";
-const Header = async ({
+const Header = ({
   teacherId,
   user,
 }: {
