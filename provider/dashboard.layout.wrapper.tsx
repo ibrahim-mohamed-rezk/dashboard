@@ -5,33 +5,44 @@ import { useRouter } from "next/navigation";
 import DashBoardLayoutProvider from "./dashboard.layout.provider";
 import LayoutLoader from "@/components/layout-loader";
 import { User } from "@/lib/type";
+import { clearAuthSession, refreshAuthSession } from "@/lib/auth-session";
 
-const DashboardLayoutWrapper = ({ children }: { children: React.ReactNode }) => {
+const DashboardLayoutWrapper = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Get user data from localStorage
-    const userDataString = localStorage.getItem("user");
-    
-    if (!userDataString) {
-      // If no user data in localStorage, redirect to login
-      router.push("/auth/login");
-      return;
-    }
+    let cancelled = false;
 
-    try {
-      const userData = JSON.parse(userDataString);
-      setUser(userData);
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      // Clear invalid data and redirect to login
-      localStorage.removeItem("user");
-      router.push("/auth/login");
-    } finally {
-      setLoading(false);
-    }
+    const syncSession = async () => {
+      try {
+        const response = await refreshAuthSession();
+        if (!cancelled) {
+          setUser(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to refresh auth session:", error);
+        await clearAuthSession();
+        if (!cancelled) {
+          router.replace("/auth/login");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    syncSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (loading || !user) {

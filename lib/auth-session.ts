@@ -1,9 +1,10 @@
 import axios from "axios";
 import { postData } from "@/lib/axios/server";
+import { User } from "@/lib/type";
 
 export type LoginResponse = {
   token: string;
-  data: Record<string, unknown>;
+  data: User;
 };
 
 export async function persistAuthSession(
@@ -22,13 +23,35 @@ export async function persistAuthSession(
   );
 }
 
-export async function loginWithToken(token: string): Promise<LoginResponse> {
-  const data = new FormData();
-  data.append("token", token);
+export async function clearAuthSession(): Promise<void> {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("user");
+  }
 
-  const response = await postData("login-with-token", data, {
-    Authorization: "Bearer token",
+  try {
+    await axios.post("/api/auth/removeToken");
+  } catch {
+    // ignore cleanup errors
+  }
+}
+
+export async function loginWithToken(token: string): Promise<LoginResponse> {
+  const response = await postData("login-with-token", new FormData(), {
+    Authorization: `Bearer ${token}`,
   });
 
   return response as LoginResponse;
+}
+
+export async function refreshAuthSession(): Promise<LoginResponse> {
+  const tokenResponse = await axios.get("/api/auth/getToken");
+  const token = tokenResponse.data?.token;
+
+  if (!token) {
+    throw new Error("Authentication token not found");
+  }
+
+  const response = await loginWithToken(token);
+  await persistAuthSession(response);
+  return response;
 }
