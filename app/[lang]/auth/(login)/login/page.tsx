@@ -1,12 +1,29 @@
 import Image from "next/image";
 import background from "@/public/images/auth/line.png";
 import LogInForm from "@/components/auth/login-form";
+import AutoLogin from "@/components/auth/auto-login";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const LoginPage = async () => {
+const LoginPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) => {
+  const params = await searchParams;
+  const urlToken =
+    typeof params.token === "string" ? params.token.trim() : undefined;
+  const redirectTo =
+    typeof params.redirect === "string" && params.redirect.startsWith("/")
+      ? params.redirect
+      : "/dashboard";
+
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
+
+  if (urlToken) {
+    return <AutoLogin token={urlToken} redirectTo={redirectTo} />;
+  }
 
   if (token) {
     return redirect("/dashboard");

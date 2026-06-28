@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { postData } from "@/lib/axios/server";
-import axios from "axios";
+import { persistAuthSession } from "@/lib/auth-session";
 
 const LogInForm = () => {
   const [isPending, setIsPending] = useState(false);
@@ -30,19 +30,7 @@ const LogInForm = () => {
         Authorization: `Bearer token`,
       });
 
-      // Store user data in localStorage (client-side only)
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user", JSON.stringify(response.data));
-      }
-
-      // Only store token in cookie (via API route)
-      await axios.post(
-        "/api/auth/setToken",
-        { token: response.token },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      await persistAuthSession(response);
 
       router.push("/dashboard");
 
