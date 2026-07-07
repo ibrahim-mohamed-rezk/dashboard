@@ -32,6 +32,7 @@ import {
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractListData, unwrapApiData } from "@/lib/api/response";
 import {
   handleApiFormError,
   showApiActionError,
@@ -111,7 +112,7 @@ function GroupStudentsManager() {
   const fetchGroupStudents = async (page: number = 1) => {
     try {
       setIsLoading(true);
-      const response = (await getData(
+      const response = await getData(
         `teacher-groups/${params.groupId}/students`,
         {
           page,
@@ -121,16 +122,18 @@ function GroupStudentsManager() {
         {
           Authorization: `Bearer ${token}`,
         }
-      )) as GroupStudentsResponse;
+      );
 
-      if (response.status) {
-        setStudents(response.data.students);
-        setGroupInfo(response.data.group_info);
-        setPagination(response.data.pagination);
-        setCurrentPage(page);
-      } else {
-        toast.error(response.msg || "فشل في جلب قائمة الطلاب");
-      }
+      const payload = unwrapApiData<{
+        group_info: GroupInfo;
+        students: GroupStudent[];
+        pagination: PaginationInfo;
+      }>(response);
+
+      setStudents(payload.students || []);
+      setGroupInfo(payload.group_info || null);
+      setPagination(payload.pagination || null);
+      setCurrentPage(page);
     } catch (error) {
       console.log("Error fetching group students:", error);
       toast.error("فشل في جلب قائمة الطلاب");
@@ -150,12 +153,18 @@ function GroupStudentsManager() {
         }
       );
 
-      // Filter out students already in the group
-      const allStudents = response.data.students || response;
+      const allStudents = extractListData<{
+        id: number;
+        full_name?: string;
+        user?: { full_name?: string };
+      }>(response, "students");
       const currentStudentIds = students.map((s) => s.student_id);
-      const filtered = allStudents.filter(
-        (student: Student) => !currentStudentIds.includes(student.id)
-      );
+      const filtered = allStudents
+        .map((student) => ({
+          id: student.id,
+          full_name: student.full_name || student.user?.full_name || "",
+        }))
+        .filter((student) => !currentStudentIds.includes(student.id));
 
       setAvailableStudents(filtered);
     } catch (error) {

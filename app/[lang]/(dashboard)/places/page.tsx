@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
+import { extractPaginatedList } from "@/lib/api/response";
 import {
   handleApiFormError,
   showApiActionError,
@@ -201,8 +202,10 @@ function GovernoratesAreasManagement() {
     pageSize = governoratePageSize,
     search = governorateSearch
   ) => {
+    if (!token) return;
+
     try {
-      const params: any = {
+      const params: Record<string, unknown> = {
         page: pageIndex + 1,
         per_page: pageSize,
       };
@@ -214,13 +217,19 @@ function GovernoratesAreasManagement() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setGovernorates(response.data || []);
-      setGovernoratesMeta(response.meta || {
-        current_page: 1,
-        last_page: 1,
-        per_page: pageSize,
-        total: 0,
-      });
+      const { items, pagination } = extractPaginatedList<Governorate>(
+        response,
+        "governorates",
+      );
+      setGovernorates(items);
+      setGovernoratesMeta(
+        pagination || {
+          current_page: 1,
+          last_page: 1,
+          per_page: pageSize,
+          total: 0,
+        },
+      );
     } catch (error) {
       console.error("Error fetching governorates:", error);
     }
@@ -232,8 +241,10 @@ function GovernoratesAreasManagement() {
     pageSize = areaPageSize,
     search = areaSearch
   ) => {
+    if (!token) return;
+
     try {
-      const params: any = {
+      const params: Record<string, unknown> = {
         page: pageIndex + 1,
         per_page: pageSize,
       };
@@ -245,13 +256,19 @@ function GovernoratesAreasManagement() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setAreas(response.data || []);
-      setAreasMeta(response.meta || {
-        current_page: 1,
-        last_page: 1,
-        per_page: pageSize,
-        total: 0,
-      });
+      const { items, pagination } = extractPaginatedList<Area>(
+        response,
+        "areas",
+      );
+      setAreas(items);
+      setAreasMeta(
+        pagination || {
+          current_page: 1,
+          last_page: 1,
+          per_page: pageSize,
+          total: 0,
+        },
+      );
     } catch (error) {
       console.error("Error fetching areas:", error);
     }

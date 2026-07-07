@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
+import { extractPaginatedList } from "@/lib/api/response";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { showApiActionError } from "@/lib/api/show-api-error-toast";
@@ -95,18 +96,26 @@ function PurchasesDataTable() {
 
   // Refetch purchases
   const refetchPurchases = async (page: number = 1, type: string = purchaseType) => {
+    if (!token) return;
+
     setIsLoading(true);
     try {
       const response = await getData(
-        `purchases?page=${page}&type=${type}`,
-        {},
+        "purchases",
+        { page, type },
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
-      setTotalPages(response.meta.last_page);
-      setCurrentPage(response.meta.current_page);
+      const { items, pagination } = extractPaginatedList<Purchase>(
+        response,
+        "purchases",
+      );
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setCurrentPage(pagination.current_page);
+      }
     } catch (error) {
       console.log(error);
       toast.error("فشل في جلب البيانات");

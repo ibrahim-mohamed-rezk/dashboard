@@ -38,6 +38,7 @@ import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractListData, extractPaginatedList } from "@/lib/api/response";
 import {
   handleApiFormError,
   showApiActionError,
@@ -145,38 +146,15 @@ function TeacherGroupsDataTable() {
         Authorization: `Bearer ${token}`,
       });
 
-      let groups = [];
-      let meta = null;
+      const { items, pagination } = extractPaginatedList<TeacherGroup>(
+        response,
+        "groups",
+      );
+      setData(items);
 
-      if (response.status === true && response.data?.groups) {
-        groups = response.data.groups;
-        const pagination = response.data.pagination;
-        meta = {
-          current_page: pagination.current_page,
-          last_page: pagination.last_page,
-          per_page: pagination.per_page,
-          total: pagination.total,
-          from: pagination.from,
-          to: pagination.to,
-          has_more_pages: pagination.has_more_pages,
-          next_page_url: pagination.next_page_url,
-          prev_page_url: pagination.prev_page_url,
-        };
-      } else if (Array.isArray(response)) {
-        groups = response;
-      } else if (response.data && Array.isArray(response.data)) {
-        groups = response.data;
-        meta = response.meta || null;
-      } else {
-        groups = [];
-        console.warn("Unexpected response structure:", response);
-      }
-
-      setData(groups);
-
-      if (meta) {
-        setTotalPages(meta.last_page || 1);
-        setCurrentPage(meta.current_page || 1);
+      if (pagination) {
+        setTotalPages(pagination.last_page || 1);
+        setCurrentPage(pagination.current_page || 1);
       } else {
         setTotalPages(1);
         setCurrentPage(1);
@@ -198,9 +176,8 @@ function TeacherGroupsDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setTeachers(teachersResponse.data || teachersResponse);
+      setTeachers(extractListData<Teacher>(teachersResponse, "teachers"));
 
-      // Fetch levels
       const levelsResponse = await getData(
         "levels",
         {},
@@ -208,9 +185,8 @@ function TeacherGroupsDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setLevels(levelsResponse.data || levelsResponse);
+      setLevels(extractListData<Level>(levelsResponse, "levels"));
 
-      // Fetch subjects
       const subjectsResponse = await getData(
         "subjects",
         {},
@@ -218,7 +194,7 @@ function TeacherGroupsDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setSubjects(subjectsResponse.data || subjectsResponse);
+      setSubjects(extractListData<Subject>(subjectsResponse, "subjects"));
     } catch (error) {
       console.log("Error fetching teachers, levels, or subjects:", error);
     }

@@ -379,7 +379,8 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setStudentTeachers(response.data || response);
+      const studentTeacherItems = extractListData(response, "student_teachers");
+      setStudentTeachers(studentTeacherItems);
     } catch (error) {
       console.error("Error fetching student-teachers:", error);
       setStudentTeachersError("Failed to fetch student-teachers data");
@@ -401,9 +402,8 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setTeachers(teachersResponse.data || teachersResponse);
+      setTeachers(extractListData(teachersResponse, "teachers"));
 
-      // Fetch levels
       const levelsResponse = await getData(
         "levels",
         {},
@@ -411,9 +411,8 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setFilterLevels(levelsResponse.data || levelsResponse);
+      setFilterLevels(extractListData(levelsResponse, "levels"));
 
-      // Fetch subjects
       const subjectsResponse = await getData(
         "subjects",
         {},
@@ -421,9 +420,8 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setFilterSubjects(subjectsResponse.data || subjectsResponse);
+      setFilterSubjects(extractListData(subjectsResponse, "subjects"));
 
-      // Fetch students
       const studentsResponse = await getData(
         "students",
         {},
@@ -431,7 +429,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setStudents(studentsResponse.data.students || studentsResponse);
+      setStudents(extractListData(studentsResponse, "students"));
     } catch (error) {
       console.error("Error fetching filter options:", error);
     }
@@ -588,6 +586,21 @@ function BasicDataTable() {
       toast.success("تم تحديث المستخدم بنجاح");
     } catch (error) {
       handleApiFormError(error, setEditError, "حدث خطأ أثناء التحديث");
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    if (!confirm("هل أنت متأكد من حذف هذا المعلم؟")) return;
+
+    try {
+      await deleteData(`teachers/${userId}`, {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      });
+      toast.success("تم حذف المستخدم بنجاح");
+      refetchUsers();
+    } catch (error) {
+      showApiActionError(error, "فشل في حذف المستخدم");
     }
   };
 

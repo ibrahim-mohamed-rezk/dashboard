@@ -33,6 +33,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractPaginatedList } from "@/lib/api/response";
 import {
   handleApiFormError,
   showApiActionError,
@@ -100,17 +101,22 @@ function JobsDataTable() {
 
   // refetch jobs
   const refetchJobs = async (page: number = 1) => {
+    if (!token) return;
+
     try {
       const response = await getData(
-        `works?page=${page}`,
-        {},
+        "works",
+        { page },
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data.data);
-      setTotalPages(response.meta.last_page);
-      setCurrentPage(response.meta.current_page);
+      const { items, pagination } = extractPaginatedList<Job>(response, "works");
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setCurrentPage(pagination.current_page);
+      }
     } catch (error) {
       console.log(error);
     }
