@@ -20,7 +20,6 @@ import {
   ArrowUpDown,
   ChevronDown,
   RefreshCw,
-  AlertTriangle,
   CheckCircle,
   CreditCard,
   Building2,
@@ -62,7 +61,6 @@ import {
   DialogClose,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -79,13 +77,30 @@ import {
   extractPaginatedList,
   unwrapApiData,
 } from "@/lib/api/response";
-import { showApiActionError } from "@/lib/api/show-api-error-toast";
+import {
+  handleApiFormError,
+} from "@/lib/api/show-api-error-toast";
+import {
+  createFormFieldHelpers,
+  FormGeneralError,
+} from "@/components/form/form-field-helpers";
+import { useFormApiErrors } from "@/hooks/use-form-api-errors";
+import { cn } from "@/lib/utils";
 import axios, { AxiosHeaders } from "axios";
 import toast from "react-hot-toast";
 import { CoursesData, Teacher, User } from "@/lib/type";
 import Link from "next/link";
 import Image from "next/image";
 import useAuthrization from "@/hooks/useAuthrization";
+
+function bankSelectClass(hasError: boolean) {
+  return cn(
+    "w-full rounded-md text-[#000000] dark:!text-white border bg-background dark:bg-gray-800 px-3 py-2",
+    hasError
+      ? "border-destructive bg-destructive/5"
+      : "border-input dark:border-gray-700",
+  );
+}
 
 interface Bank {
   id: number;
@@ -99,9 +114,12 @@ interface Bank {
   level_id: string;
   image?: string | null;
   subject_id?: number;
+  teacher_id?: number;
+  teacher_name?: string;
   /** Some API responses embed the subject relation instead of just the id. */
   subject?: { id?: number; name?: string } | string | null;
   subject_name?: string;
+  teacher?: { id?: number; name?: string; user?: { full_name?: string } } | null;
 }
 
 interface FormData {
@@ -178,7 +196,21 @@ function BanksTable() {
     subject_id: "",
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const {
+    fieldErrors: addFieldErrors,
+    editFieldErrors,
+    setFieldErrors,
+    setEditFieldErrors,
+    clearFieldError,
+    clearAddErrors,
+    clearEditErrors,
+  } = useFormApiErrors();
+  const addHelpers = createFormFieldHelpers(addFieldErrors);
+  const editHelpers = createFormFieldHelpers(editFieldErrors);
+  const { inputClass: addInputClass, fileButtonClass: addFileButtonClass, FieldError: AddFieldError } =
+    addHelpers;
+  const { inputClass: editInputClass, fileButtonClass: editFileButtonClass, FieldError: EditFieldError } =
+    editHelpers;
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -369,12 +401,24 @@ function BanksTable() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjects, editBank, editingBank]);
 
+  // Re-resolve teacher_id once teachers/courses load if not set yet.
+  useEffect(() => {
+    if (!editBank || !editingBank) return;
+    if (formData.teacher_id) return;
+    const resolved = resolveBankTeacherId(editingBank);
+    if (resolved !== "") {
+      setFormData((prev) => ({ ...prev, teacher_id: resolved }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teachers, courses, editBank, editingBank]);
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
     const { name, value } = e.target;
+    clearFieldError(name);
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -385,6 +429,7 @@ function BanksTable() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      clearFieldError("image");
       setFormData((prev) => ({
         ...prev,
         image: file,
@@ -426,6 +471,7 @@ function BanksTable() {
   // submit course
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearAddErrors();
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
@@ -471,10 +517,11 @@ function BanksTable() {
         subject_id: "",
       });
       setImagePreview(null);
+      clearAddErrors();
       await fetchData(currentPage);
       toast.success("تم إضافة البنك بنجاح");
     } catch (error) {
-      showApiActionError(error, "حدث خطأ أثناء الإضافة");
+      handleApiFormError(error, setFieldErrors, "حدث خطأ أثناء الإضافة");
     } finally {
       setIsLoading(false);
     }
@@ -501,8 +548,44 @@ function BanksTable() {
     return "";
   };
 
+  // Resolve a bank's teacher id from several possible API shapes.
+  const resolveBankTeacherId = (bank: Bank): number | "" => {
+    if (isTeacher && loggedInTeacherId) return loggedInTeacherId;
+
+    if (bank.teacher_id) return Number(bank.teacher_id);
+
+    if (bank.teacher?.id) return Number(bank.teacher.id);
+
+    if (bank.banktable_type === "teacher" && bank.banktable_id) {
+      return Number(bank.banktable_id);
+    }
+
+    if (bank.banktable_type === "course" && bank.banktable_id) {
+      const course = courses.find((c) => c.id === bank.banktable_id);
+      const courseTeacherId = (course as CoursesData & { teacher_id?: number })
+        ?.teacher_id;
+      if (courseTeacherId) return Number(courseTeacherId);
+    }
+
+    const teacherName =
+      bank.teacher_name ||
+      bank.teacher?.user?.full_name ||
+      bank.teacher?.name;
+    if (teacherName) {
+      const match = teachers.find(
+        (t) =>
+          t.user?.full_name === teacherName ||
+          (t as { name?: string }).name === teacherName
+      );
+      if (match?.id) return Number(match.id);
+    }
+
+    return "";
+  };
+
   // update course
   const handleEdit = (bank: Bank) => {
+    clearEditErrors();
     setEditingBank(bank);
     setFormData({
       name: bank.name,
@@ -515,11 +598,7 @@ function BanksTable() {
       created_at: bank.created_at
         ? new Date(bank.created_at).toISOString().slice(0, 10)
         : "",
-      teacher_id: isTeacher
-        ? loggedInTeacherId
-        : bank.banktable_type === "teacher" && bank.banktable_id
-        ? Number(bank.banktable_id)
-        : "",
+      teacher_id: resolveBankTeacherId(bank),
       subject_id: resolveBankSubjectId(bank),
     });
     setImagePreview(bank.image || null);
@@ -926,8 +1005,8 @@ function BanksTable() {
   });
 
   const updateBank = async (id: number) => {
+    clearEditErrors();
     setIsLoading(true);
-    setEditError(null);
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("name", formData.name);
@@ -974,11 +1053,11 @@ function BanksTable() {
         subject_id: "",
       });
       setImagePreview(null);
+      clearEditErrors();
       await fetchData(currentPage);
       toast.success("تم تعديل البنك بنجاح");
-    } catch (error: any) {
-      setEditError("Failed to update bank");
-      toast.error("فشل في تعديل البنك");
+    } catch (error) {
+      handleApiFormError(error, setEditFieldErrors, "حدث خطأ أثناء التعديل");
     } finally {
       setIsLoading(false);
     }
@@ -1201,6 +1280,7 @@ function BanksTable() {
                 <Button
                   className="flex items-center gap-2"
                   onClick={() => {
+                    clearAddErrors();
                     setAddBank(true);
                     setFormData({
                       name: "",
@@ -1246,8 +1326,10 @@ function BanksTable() {
                         placeholder="أدخل اسم البنك"
                         value={formData.name}
                         onChange={handleInputChange}
+                        className={addInputClass("name")}
                         required
                       />
+                      <AddFieldError field="name" />
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="price" className="text-sm font-medium">
@@ -1262,7 +1344,9 @@ function BanksTable() {
                         placeholder="أدخل السعر (اتركه فارغاً للمجاني)"
                         value={formData.price}
                         onChange={handleInputChange}
+                        className={addInputClass("price")}
                       />
+                      <AddFieldError field="price" />
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="image" className="text-sm font-medium">
@@ -1280,7 +1364,7 @@ function BanksTable() {
                           />
                           <label
                             htmlFor="image"
-                            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            className={addFileButtonClass("image")}
                           >
                             <Upload className="w-4 h-4" />
                             اختر صورة
@@ -1314,6 +1398,7 @@ function BanksTable() {
                           </div>
                         )}
                       </div>
+                      <AddFieldError field="image" />
                     </div>
                     <div className="space-y-2">
                       <label
@@ -1328,7 +1413,9 @@ function BanksTable() {
                         type="date"
                         value={formData.created_at}
                         onChange={handleInputChange}
+                        className={addInputClass("created_at")}
                       />
+                      <AddFieldError field="created_at" />
                     </div>
                     <div className="space-y-2">
                       <label
@@ -1340,16 +1427,17 @@ function BanksTable() {
                       <select
                         id="subject_id"
                         name="subject_id"
-                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                        className={bankSelectClass(Boolean(addFieldErrors?.subject_id?.[0]))}
                         value={formData.subject_id ?? ""}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          clearFieldError("subject_id");
                           setFormData((prev) => ({
                             ...prev,
                             subject_id: e.target.value
                               ? parseInt(e.target.value)
                               : "",
-                          }))
-                        }
+                          }));
+                        }}
                       >
                         <option
                           value=""
@@ -1367,6 +1455,7 @@ function BanksTable() {
                           </option>
                         ))}
                       </select>
+                      <AddFieldError field="subject_id" />
                     </div>
                     <div className="space-y-2">
                       <label
@@ -1377,15 +1466,16 @@ function BanksTable() {
                       </label>
                       <select
                         id="banktable_type"
-                        name="banktable_type"
-                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                        name="level_id"
+                        className={bankSelectClass(Boolean(addFieldErrors?.level_id?.[0]))}
                         value={formData.level_id}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          clearFieldError("level_id");
                           setFormData((prev) => ({
                             ...prev,
                             level_id: e.target.value,
-                          }))
-                        }
+                          }));
+                        }}
                         required
                       >
                         {levels.map((level) => (
@@ -1398,6 +1488,7 @@ function BanksTable() {
                           </option>
                         ))}
                       </select>
+                      <AddFieldError field="level_id" />
                     </div>
                     <div className="space-y-2">
                       <label
@@ -1412,14 +1503,15 @@ function BanksTable() {
                       <select
                         id="banktable_id"
                         name="banktable_id"
-                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                        className={bankSelectClass(Boolean(addFieldErrors?.banktable_id?.[0]))}
                         value={formData.banktable_id}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          clearFieldError("banktable_id");
                           setFormData((prev) => ({
                             ...prev,
                             banktable_id: parseInt(e.target.value) || 1,
-                          }))
-                        }
+                          }));
+                        }}
                         required
                       >
                         <option
@@ -1452,6 +1544,7 @@ function BanksTable() {
                               </option>
                             ))}
                       </select>
+                      <AddFieldError field="banktable_id" />
                     </div>
                     {!isTeacher && (
                       <div className="space-y-2">
@@ -1464,16 +1557,17 @@ function BanksTable() {
                         <select
                           id="teacher_id"
                           name="teacher_id"
-                          className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                          value={formData.teacher_id ?? ""}
-                          onChange={(e) =>
+                          className={bankSelectClass(Boolean(addFieldErrors?.teacher_id?.[0]))}
+                          value={formData.teacher_id ? String(formData.teacher_id) : ""}
+                          onChange={(e) => {
+                            clearFieldError("teacher_id");
                             setFormData((prev) => ({
                               ...prev,
                               teacher_id: e.target.value
                                 ? parseInt(e.target.value)
                                 : "",
-                            }))
-                          }
+                            }));
+                          }}
                         >
                           <option
                             value=""
@@ -1491,6 +1585,7 @@ function BanksTable() {
                             </option>
                           ))}
                         </select>
+                        <AddFieldError field="teacher_id" />
                       </div>
                     )}
                     <div className="space-y-2">
@@ -1500,15 +1595,16 @@ function BanksTable() {
                       <select
                         id="position"
                         name="position"
-                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2 disabled:opacity-70"
+                        className={bankSelectClass(Boolean(addFieldErrors?.position?.[0]))}
                         value={isTeacher ? "offline" : formData.position}
                         disabled={isTeacher}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          clearFieldError("position");
                           setFormData((prev) => ({
                             ...prev,
                             position: e.target.value as "online" | "offline",
-                          }))
-                        }
+                          }));
+                        }}
                       >
                         {!isTeacher && (
                           <option
@@ -1525,14 +1621,10 @@ function BanksTable() {
                           أوفلاين
                         </option>
                       </select>
+                      <AddFieldError field="position" />
                     </div>
                   </div>
-                  {editError && (
-                    <Alert variant="soft">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>{editError}</AlertDescription>
-                    </Alert>
-                  )}
+                  <FormGeneralError errors={addFieldErrors} />
                   <div className="flex gap-3 pt-4">
                     <Button
                       type="submit"
@@ -1664,7 +1756,13 @@ function BanksTable() {
       </div>
 
       {/* Edit Bank Dialog */}
-      <Dialog open={editBank} onOpenChange={setEditBank}>
+      <Dialog
+        open={editBank}
+        onOpenChange={(open) => {
+          setEditBank(open);
+          if (!open) clearEditErrors();
+        }}
+      >
         <DialogContent
           className="w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border-gray-700"
           onPointerDownOutside={(e) => e.preventDefault()}
@@ -1696,8 +1794,10 @@ function BanksTable() {
                       placeholder="أدخل اسم البنك"
                       value={formData.name}
                       onChange={handleInputChange}
+                      className={editInputClass("name")}
                       required
                     />
+                    <EditFieldError field="name" />
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="edit-price" className="text-sm font-medium">
@@ -1712,7 +1812,9 @@ function BanksTable() {
                       placeholder="أدخل السعر (اتركه فارغاً للمجاني)"
                       value={formData.price}
                       onChange={handleInputChange}
+                      className={editInputClass("price")}
                     />
+                    <EditFieldError field="price" />
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="edit-image" className="text-sm font-medium">
@@ -1730,7 +1832,7 @@ function BanksTable() {
                         />
                         <label
                           htmlFor="edit-image"
-                          className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          className={editFileButtonClass("image")}
                         >
                           <Upload className="w-4 h-4" />
                           تغيير الصورة
@@ -1761,6 +1863,7 @@ function BanksTable() {
                         </div>
                       )}
                     </div>
+                    <EditFieldError field="image" />
                   </div>
                   <div className="space-y-2">
                     <label
@@ -1775,7 +1878,9 @@ function BanksTable() {
                       type="date"
                       value={formData.created_at}
                       onChange={handleInputChange}
+                      className={editInputClass("created_at")}
                     />
+                    <EditFieldError field="created_at" />
                   </div>
                   <div className="space-y-2">
                     <label
@@ -1787,16 +1892,17 @@ function BanksTable() {
                     <select
                       id="edit-subject_id"
                       name="subject_id"
-                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                      className={bankSelectClass(Boolean(editFieldErrors?.subject_id?.[0]))}
                       value={formData.subject_id ?? ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        clearFieldError("subject_id");
                         setFormData((prev) => ({
                           ...prev,
                           subject_id: e.target.value
                             ? parseInt(e.target.value)
                             : "",
-                        }))
-                      }
+                        }));
+                      }}
                     >
                       <option
                         value=""
@@ -1814,6 +1920,7 @@ function BanksTable() {
                         </option>
                       ))}
                     </select>
+                    <EditFieldError field="subject_id" />
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="edit-price" className="text-sm font-medium">
@@ -1821,15 +1928,16 @@ function BanksTable() {
                     </label>
                     <select
                       id="edit-banktable_type"
-                      name="banktable_type"
-                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                      name="level_id"
+                      className={bankSelectClass(Boolean(editFieldErrors?.level_id?.[0]))}
                       value={formData.level_id}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        clearFieldError("level_id");
                         setFormData((prev) => ({
                           ...prev,
                           level_id: e.target.value,
-                        }))
-                      }
+                        }));
+                      }}
                       required
                     >
                       {levels.map((level) => (
@@ -1842,6 +1950,7 @@ function BanksTable() {
                         </option>
                       ))}
                     </select>
+                    <EditFieldError field="level_id" />
                   </div>
                   <div className="space-y-2">
                     <label
@@ -1856,14 +1965,23 @@ function BanksTable() {
                     <select
                       id="banktable_id"
                       name="banktable_id"
-                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
+                      className={bankSelectClass(Boolean(editFieldErrors?.banktable_id?.[0]))}
                       value={formData.banktable_id}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        clearFieldError("banktable_id");
+                        const courseId = parseInt(e.target.value) || 1;
+                        const course = courses.find((c) => c.id === courseId);
+                        const courseTeacherId = (
+                          course as CoursesData & { teacher_id?: number }
+                        )?.teacher_id;
                         setFormData((prev) => ({
                           ...prev,
-                          banktable_id: parseInt(e.target.value) || 1,
-                        }))
-                      }
+                          banktable_id: courseId,
+                          ...(!isTeacher && courseTeacherId
+                            ? { teacher_id: Number(courseTeacherId) }
+                            : {}),
+                        }));
+                      }}
                       required
                     >
                       <option
@@ -1896,6 +2014,7 @@ function BanksTable() {
                             </option>
                           ))}
                     </select>
+                    <EditFieldError field="banktable_id" />
                   </div>
                   {!isTeacher && (
                     <div className="space-y-2">
@@ -1908,16 +2027,17 @@ function BanksTable() {
                       <select
                         id="edit-teacher_id"
                         name="teacher_id"
-                        className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2"
-                        value={formData.teacher_id ?? ""}
-                        onChange={(e) =>
+                        className={bankSelectClass(Boolean(editFieldErrors?.teacher_id?.[0]))}
+                        value={formData.teacher_id ? String(formData.teacher_id) : ""}
+                        onChange={(e) => {
+                          clearFieldError("teacher_id");
                           setFormData((prev) => ({
                             ...prev,
                             teacher_id: e.target.value
                               ? parseInt(e.target.value)
                               : "",
-                          }))
-                        }
+                          }));
+                        }}
                       >
                         <option
                           value=""
@@ -1935,6 +2055,7 @@ function BanksTable() {
                           </option>
                         ))}
                       </select>
+                      <EditFieldError field="teacher_id" />
                     </div>
                   )}
                   <div className="space-y-2">
@@ -1947,15 +2068,16 @@ function BanksTable() {
                     <select
                       id="edit-position"
                       name="position"
-                      className="w-full rounded-md text-[#000000] dark:!text-white border border-input bg-background dark:bg-gray-800 dark:border-gray-700 px-3 py-2 disabled:opacity-70"
+                      className={bankSelectClass(Boolean(editFieldErrors?.position?.[0]))}
                       value={isTeacher ? "offline" : formData.position}
                       disabled={isTeacher}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        clearFieldError("position");
                         setFormData((prev) => ({
                           ...prev,
                           position: e.target.value as "online" | "offline",
-                        }))
-                      }
+                        }));
+                      }}
                     >
                       {!isTeacher && (
                         <option
@@ -1972,14 +2094,10 @@ function BanksTable() {
                         أوفلاين
                       </option>
                     </select>
+                    <EditFieldError field="position" />
                   </div>
                 </div>
-                {editError && (
-                  <Alert variant="soft">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>{editError}</AlertDescription>
-                  </Alert>
-                )}
+                <FormGeneralError errors={editFieldErrors} />
                 <div className="flex gap-3 pt-4">
                   <Button type="submit" disabled={isLoading} className="flex-1">
                     {isLoading ? (
