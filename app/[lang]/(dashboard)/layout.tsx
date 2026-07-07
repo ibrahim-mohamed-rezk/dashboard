@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 
 const layout = async ({
   children,
-  params: { lang },
+  params,
 }: {
   children: React.ReactNode;
-  params: { lang: any };
+  params: Promise<{ lang: string }>;
 }) => {
+  await params;
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
 

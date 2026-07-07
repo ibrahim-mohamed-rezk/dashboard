@@ -6,6 +6,7 @@ import PersonalDetails from "./personal-details";
 import ChangePassword from "./change-password";
 import Header from "../components/header";
 import { getData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { User } from "@/lib/type";
@@ -41,7 +42,7 @@ const Settings = () => {
               Authorization: `Bearer ${tokenValue}`,
             }
           );
-          setTeacherData(response.data);
+          setTeacherData(unwrapApiData(response));
         }
       } catch (error) {
         console.error("Error fetching data:", error);

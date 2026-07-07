@@ -9,6 +9,8 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { postData } from "@/lib/axios/server";
 import { persistAuthSession } from "@/lib/auth-session";
+import { normalizeLoginResponse } from "@/lib/api/response";
+import { showApiErrorToast } from "@/lib/api/show-api-error-toast";
 
 const LogInForm = () => {
   const [isPending, setIsPending] = useState(false);
@@ -28,15 +30,15 @@ const LogInForm = () => {
     try {
       const response = await postData("login", data, {
         Authorization: `Bearer token`,
-      });
+      }, { throwOnFailure: false });
 
-      await persistAuthSession(response);
+      await persistAuthSession(normalizeLoginResponse(response));
 
       router.push("/dashboard");
 
       toast.success("Logged in successfully");
     } catch (error) {
-      toast.error("Invalid email or password");
+      showApiErrorToast(error, "Invalid email or password");
       throw error;
     } finally {
       setIsPending(false);

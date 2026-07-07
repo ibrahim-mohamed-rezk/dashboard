@@ -38,6 +38,11 @@ import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -89,8 +94,8 @@ function TeacherGroupsDataTable() {
   const [levels, setLevels] = useState<Level[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<string, string[]> | null>(null);
+  const [editError, setEditError] = useState<Record<string, string[]> | null>(null);
   const [editingGroup, setEditingGroup] = useState<TeacherGroup | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -287,17 +292,7 @@ function TeacherGroupsDataTable() {
       toast.success("تم إضافة المجموعة بنجاح");
       dialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ أثناء الإضافة");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -321,17 +316,7 @@ function TeacherGroupsDataTable() {
       toast.success("تم تحديث المجموعة بنجاح");
       editDialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setEditError(errorMessages);
-        } else {
-          setEditError("حدث خطأ أثناء التحديث");
-        }
-      } else {
-        setEditError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setEditError, "حدث خطأ أثناء التحديث");
     }
   };
 
@@ -350,17 +335,7 @@ function TeacherGroupsDataTable() {
       refetchGroups();
       toast.success("تم حذف المجموعة بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(" ");
-          toast.error(errorMessages);
-        } else {
-          toast.error("حدث خطأ أثناء الحذف");
-        }
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ أثناء الحذف");
     }
   };
 
@@ -834,12 +809,7 @@ function TeacherGroupsDataTable() {
                 </div>
               </div>
               <div>
-                {error && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: error }}
-                  />
-                )}
+                <FormGeneralError errors={error} />
               </div>
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">
@@ -961,12 +931,7 @@ function TeacherGroupsDataTable() {
                 </div>
               </div>
               <div>
-                {editError && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: editError }}
-                  />
-                )}
+                <FormGeneralError errors={editError} />
               </div>
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">

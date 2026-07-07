@@ -21,11 +21,12 @@ export const metadata = {
 
 export default async function RootLayout({
   children,
-  params: { lang },
+  params,
 }: {
   children: React.ReactNode;
-  params: { lang: string };
+  params: Promise<{ lang: string }>;
 }) {
+  const { lang } = await params;
   const cookiesData = await cookies();
   const token = cookiesData.get("token")?.value;
   const headersList = await headers();

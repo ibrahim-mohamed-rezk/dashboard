@@ -12,6 +12,7 @@ import useAuthrization from "@/hooks/useAuthrization";
 import { User } from "@/lib/type";
 import toast from "react-hot-toast";
 import { getData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 
 interface Book {
   id: number;
@@ -64,7 +65,7 @@ const BookDetailsPage = () => {
           Authorization: `Bearer ${token}`,
         }
       );
-      setBook(res.data);
+      setBook(unwrapApiData(res));
     } catch (err) {
       console.error("Error fetching book:", err);
     } finally {

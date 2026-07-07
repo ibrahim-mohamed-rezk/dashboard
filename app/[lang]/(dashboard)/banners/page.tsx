@@ -41,6 +41,12 @@ import axios, { AxiosError } from "axios";
 import { Teacher, User } from "@/lib/type";
 import { useEffect, useState } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
+import {
+  extractListData,
+  extractPaginatedList,
+} from "@/lib/api/response";
+import { handleApiFormError } from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import toast from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
 
@@ -251,6 +257,10 @@ function BannerTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
+  const [formFieldErrors, setFormFieldErrors] = useState<Record<
+    string,
+    string[]
+  > | null>(null);
   const [loading, setLoading] = useState<LoadingState>({
     banners: false,
     teachers: false,
@@ -490,11 +500,12 @@ function BannerTable() {
         getData("teachers", {}, { Authorization: `Bearer ${tokenToUse}` })
       );
 
-      if (!Array.isArray(response.data)) {
+      const teachers = extractListData<Teacher>(response, "teachers");
+      if (!Array.isArray(teachers)) {
         throw new Error("تنسيق بيانات المدرسين غير صحيح");
       }
 
-      setTeachers(response.data);
+      setTeachers(teachers);
     } catch (error) {
       const errorState = handleApiError(error);
       console.error("Failed to fetch teachers:", error);
@@ -524,15 +535,19 @@ function BannerTable() {
         )
       );
 
-      if (!response?.data || !Array.isArray(response.data)) {
+      const { items, pagination: pageInfo } = extractPaginatedList<Banner>(
+        response,
+        "banners",
+      );
+      if (!Array.isArray(items)) {
         throw new Error("تنسيق بيانات البانرات غير صحيح");
       }
 
-      setData(response.data);
+      setData(items);
       setPagination((prev) => ({
         ...prev,
-        total: response.meta?.total || 0,
-        lastPage: response.meta?.last_page || 1,
+        total: pageInfo?.total || 0,
+        lastPage: pageInfo?.last_page || 1,
       }));
       // Clear selection when page/filter changes data set
       setSelectedIds([]);
@@ -556,6 +571,7 @@ function BannerTable() {
     try {
       setLoading((prev) => ({ ...prev, submitting: true }));
       setError(null);
+      setFormFieldErrors(null);
 
       // Teachers: force offline + current teacher id from auth user.
       const finalType = isTeacherUser ? "offline" : formData.type;
@@ -635,9 +651,7 @@ function BannerTable() {
       setIsEditDialogOpen(false);
     } catch (error) {
       console.error("Form submission error:", error);
-      const errorState = handleApiError(error);
-      setError(errorState);
-      toast.error(errorState.message);
+      handleApiFormError(error, setFormFieldErrors, "حدث خطأ أثناء حفظ البانر");
     } finally {
       setLoading((prev) => ({ ...prev, submitting: false }));
     }
@@ -969,6 +983,7 @@ function BannerTable() {
                   </div>
                 )}
               </div>
+              <FormGeneralError errors={formFieldErrors} />
               <Button
                 type="submit"
                 className="mt-4 w-full"

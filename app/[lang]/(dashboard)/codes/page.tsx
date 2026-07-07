@@ -39,9 +39,15 @@ import { Copy, Printer, Loader2, Trash2, Pencil } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
+import {
+  extractListData,
+  extractPaginatedList,
+  unwrapApiData,
+} from "@/lib/api/response";
 import axios, { AxiosHeaders } from "axios";
 import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
 import toast from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import * as XLSX from "xlsx";
 import useAuthrization from "@/hooks/useAuthrization";
 
@@ -236,7 +242,7 @@ function BasicDataTable() {
       refetchUsers();
     } catch (error) {
       console.error("Error deleting code:", error);
-      toast.error("حدث خطأ أثناء حذف الكود");
+      showApiActionError(error, "حدث خطأ أثناء حذف الكود");
     } finally {
       setIsLoading(false);
     }
@@ -266,7 +272,7 @@ function BasicDataTable() {
       setIsBulkDeleteConfirmOpen(false);
       refetchUsers();
     } catch (error) {
-      toast.error("حدث خطأ أثناء الحذف الجماعي");
+      showApiActionError(error, "حدث خطأ أثناء الحذف الجماعي");
     } finally {
       setIsLoading(false);
     }
@@ -285,7 +291,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${t}`,
         })
       );
-      setTeachers(response.data);
+      setTeachers(extractListData(response, "teachers"));
     } catch (error) {
       console.log("Failed to fetch teachers");
     }
@@ -303,7 +309,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${t}`,
         })
       );
-      setLevels(response.data);
+      setLevels(extractListData(response, "levels"));
     } catch (error) {
       console.log("Failed to fetch levels");
     }
@@ -331,31 +337,50 @@ function BasicDataTable() {
         }
       );
 
-      // Support grouped response or classic paginated list
-      if (response?.data?.groups) {
-        setGroups(response.data.groups);
+      const payload = unwrapApiData<Record<string, unknown>>(response);
+
+      if (payload?.groups) {
+        setGroups(
+          payload.groups as {
+            group_key: string;
+            group_label: string;
+            bulk: unknown | null;
+            count: number;
+            items: SubscriptionCodeTypes[];
+          }[],
+        );
         setData([]);
         setPagination((prev) => ({
           ...prev,
-          total: response?.data?.total ?? 0,
+          total: Number(payload.total ?? 0),
           lastPage: 1,
           currentPage: 1,
           from: 1,
-          to: response?.data?.total ?? 0,
+          to: Number(payload.total ?? 0),
           links: [],
         }));
       } else {
-        const { codes, paginate } = response.data;
+        const { items, pagination } = extractPaginatedList(response, "codes");
+        const paginate =
+          pagination ??
+          (payload?.paginate as {
+            total: number;
+            last_page: number;
+            current_page: number;
+            from: number;
+            to: number;
+            links?: unknown[];
+          } | null);
         setGroups(null);
-        setData(codes);
+        setData((payload?.codes as SubscriptionCodeTypes[]) ?? items);
         setPagination((prev) => ({
           ...prev,
-          total: paginate.total,
-          lastPage: paginate.last_page,
-          currentPage: paginate.current_page,
-          from: paginate.from,
-          to: paginate.to,
-          links: paginate.links || [],
+          total: paginate?.total ?? pagination?.total ?? 0,
+          lastPage: paginate?.last_page ?? pagination?.last_page ?? 1,
+          currentPage: paginate?.current_page ?? pagination?.current_page ?? 1,
+          from: paginate?.from ?? pagination?.from ?? 0,
+          to: paginate?.to ?? pagination?.to ?? 0,
+          links: (paginate && "links" in paginate ? paginate.links : []) as PaginationLink[],
         }));
       }
     } catch (error) {
@@ -458,7 +483,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setGeneratedCode(response.data);
+      setGeneratedCode(unwrapApiData(response));
       setIsTeacherSelectOpen(false);
       setIsDialogOpen(true);
       setSelectedTeacherId(null);
@@ -469,7 +494,7 @@ function BasicDataTable() {
       refetchUsers();
     } catch (error) {
       console.error("Error generating student code:", error);
-      toast.error("فشل إنشاء الأكواد. تحقق من البيانات والصلاحيات.");
+      showApiActionError(error, "فشل إنشاء الأكواد. تحقق من البيانات والصلاحيات.");
     }
   };
 

@@ -19,6 +19,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,7 +156,7 @@ function GovernoratesAreasManagement() {
     name: "",
     governorate_id: "",
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<string, string[]> | null>(null);
   // Excel upload dialog states
   const [isExcelDialogOpen, setIsExcelDialogOpen] = useState(false);
   const [excelType, setExcelType] = useState<"governorates" | "areas">("governorates");
@@ -307,17 +312,7 @@ function GovernoratesAreasManagement() {
       refetchGovernorates();
       setError(null);
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(", ");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -364,17 +359,7 @@ function GovernoratesAreasManagement() {
       refetchAreas();
       setError(null);
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(", ");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -525,17 +510,7 @@ function GovernoratesAreasManagement() {
       refetchGovernorates();
       refetchAreas();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(", ");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -548,17 +523,7 @@ function GovernoratesAreasManagement() {
       toast.success("تم حذف المنطقة بنجاح");
       refetchAreas();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(", ");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -1087,7 +1052,7 @@ function GovernoratesAreasManagement() {
                       className="max-w-sm min-w-[200px] h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  {error && <div className="text-red-500 text-sm">{error}</div>}
+                  <FormGeneralError errors={error} />
                   <Button type="submit" className="w-full">
                     {isEditingGovernorate ? "تحديث" : "إضافة"}
                   </Button>
@@ -1257,7 +1222,7 @@ function GovernoratesAreasManagement() {
                       ))}
                     </select>
                   </div>
-                  {error && <div className="text-red-500 text-sm">{error}</div>}
+                  <FormGeneralError errors={error} />
                   <Button type="submit" className="w-full">
                     {isEditingArea ? "تحديث" : "إضافة"}
                   </Button>

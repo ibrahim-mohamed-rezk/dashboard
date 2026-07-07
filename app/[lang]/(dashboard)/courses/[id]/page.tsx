@@ -1,6 +1,7 @@
 "use client";
 
 import { getData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import CourseModules from "./components/CourseModules";
 import { canAccessModule } from "@/lib/permissions";
 import { useEffect, useState } from "react";
@@ -44,7 +45,7 @@ const CoursePage = () => {
               Authorization: `Bearer ${tokenValue}`,
             }
           );
-          setCourseData(courseResponse.data);
+          setCourseData(unwrapApiData(courseResponse));
         }
       } catch (error) {
         console.error("Error fetching data:", error);

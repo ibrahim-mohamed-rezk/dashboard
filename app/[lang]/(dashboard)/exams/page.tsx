@@ -33,6 +33,11 @@ import { siteConfig } from "@/config/site";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import * as XLSX from "xlsx";
@@ -158,8 +163,8 @@ function ExamsDataTable() {
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Exam[]>([]);
   const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<string, string[]> | null>(null);
+  const [editError, setEditError] = useState<Record<string, string[]> | null>(null);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -441,9 +446,11 @@ function ExamsDataTable() {
       questions.length === 0 ||
       events.length === 0
     ) {
-      setError(
-        "يرجى ملء جميع الحقول المطلوبة: العنوان، المعلم، الصورة، الأسئلة، والأحداث",
-      );
+      setError({
+        general: [
+          "يرجى ملء جميع الحقول المطلوبة: العنوان، المعلم، الصورة، الأسئلة، والأحداث",
+        ],
+      });
       return;
     }
 
@@ -455,7 +462,7 @@ function ExamsDataTable() {
         !event.group_id ||
         !event.duration
       ) {
-        setError("يرجى ملء جميع بيانات الأحداث");
+        setError({ general: ["يرجى ملء جميع بيانات الأحداث"] });
         return;
       }
     }
@@ -550,17 +557,7 @@ function ExamsDataTable() {
       toast.success("تم إضافة الامتحان بنجاح");
       dialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ أثناء الإضافة");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -572,11 +569,11 @@ function ExamsDataTable() {
 
     // Validate required pieces the backend asks for
     if (!formData.title) {
-      setEditError("يرجى إدخال عنوان الامتحان");
+      setEditError({ general: ["يرجى إدخال عنوان الامتحان"] });
       return;
     }
     if (events.length === 0) {
-      setEditError("يرجى إضافة موعد واحد على الأقل");
+      setEditError({ general: ["يرجى إضافة موعد واحد على الأقل"] });
       return;
     }
     for (const event of events) {
@@ -586,7 +583,7 @@ function ExamsDataTable() {
         !event.group_id ||
         !event.duration
       ) {
-        setEditError("يرجى ملء جميع بيانات الأحداث");
+        setEditError({ general: ["يرجى ملء جميع بيانات الأحداث"] });
         return;
       }
     }
@@ -699,17 +696,7 @@ function ExamsDataTable() {
       toast.success("تم تحديث الامتحان بنجاح");
       editDialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setEditError(errorMessages);
-        } else {
-          setEditError("حدث خطأ أثناء التحديث");
-        }
-      } else {
-        setEditError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setEditError, "حدث خطأ أثناء التحديث");
     }
   };
 
@@ -744,17 +731,7 @@ function ExamsDataTable() {
       refetchExams();
       toast.success("تم حذف الامتحان بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(" ");
-          toast.error(errorMessages);
-        } else {
-          toast.error("حدث خطأ أثناء الحذف");
-        }
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ أثناء الحذف");
     }
   };
 
@@ -1746,12 +1723,7 @@ function ExamsDataTable() {
               </div>
 
               <div>
-                {error && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: error }}
-                  />
-                )}
+                <FormGeneralError errors={error} />
               </div>
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">
@@ -2459,12 +2431,7 @@ function ExamsDataTable() {
                 </div>
               </div>
               <div>
-                {editError && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: editError }}
-                  />
-                )}
+                <FormGeneralError errors={editError} />
               </div>
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">

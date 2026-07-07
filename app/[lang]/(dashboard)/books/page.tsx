@@ -36,6 +36,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractListData, extractPaginatedList } from "@/lib/api/response";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import {
+  createFormFieldHelpers,
+  FormGeneralError,
+} from "@/components/form/form-field-helpers";
+import { useFormApiErrors } from "@/hooks/use-form-api-errors";
 import axios, { AxiosHeaders } from "axios";
 import { toast } from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
@@ -77,8 +87,16 @@ function BooksDataTable() {
   const [data, setData] = useState<Book[]>([]);
   const [token, setToken] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const {
+    fieldErrors: error,
+    editFieldErrors: editError,
+    setFieldErrors,
+    setEditFieldErrors,
+    clearFieldError,
+    clearAddErrors,
+    clearEditErrors,
+  } = useFormApiErrors();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [viewingBook, setViewingBook] = useState<Book | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,9 +144,12 @@ function BooksDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
-      setTotalPages(response.meta.last_page);
-      setCurrentPage(response.meta.current_page);
+      const { items, pagination } = extractPaginatedList<Book>(response, "books");
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setCurrentPage(pagination.current_page);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -144,7 +165,7 @@ function BooksDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setLevels(response.data);
+      setLevels(extractListData<{ id: number; name: string }>(response, "levels"));
     } catch (error) {
       console.log(error);
     }
@@ -160,7 +181,12 @@ function BooksDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setTeachers(response.data);
+      setTeachers(
+        extractListData<{ id: number; user: { full_name: string } }>(
+          response,
+          "teachers",
+        ),
+      );
     } catch (error) {
       console.log("Failed to fetch teachers");
     }
@@ -176,7 +202,7 @@ function BooksDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setSubjects(response.data);
+      setSubjects(extractListData<{ id: number; name: string }>(response, "subjects"));
     } catch (error) {
       console.log(error);
     }
@@ -236,6 +262,7 @@ function BooksDataTable() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    clearFieldError(name);
     setFormData((prevFormData) => ({
       ...prevFormData,
       [name]:
@@ -247,6 +274,7 @@ function BooksDataTable() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
+      clearFieldError(name);
       setFormData((prevFormData) => ({
         ...prevFormData,
         [name]: files[0],
@@ -257,6 +285,7 @@ function BooksDataTable() {
   // handle select change
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
+    clearFieldError(name);
     setFormData((prevFormData) => ({
       ...prevFormData,
       [name]:
@@ -286,6 +315,7 @@ function BooksDataTable() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearAddErrors();
     try {
       const formDataToSend = new FormData();
       const payloadData: FormData = {
@@ -328,26 +358,17 @@ function BooksDataTable() {
         file: null,
       });
       refetchBooks();
+      clearAddErrors();
       toast.success("تم إضافة الكتاب بنجاح");
       dialogCloseRef.current?.click();
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
-      throw error;
+    } catch (apiError) {
+      handleApiFormError(apiError, setFieldErrors, "حدث خطأ أثناء الإضافة");
     }
   };
 
   // update book
   const updateBook = async (id: number) => {
+    clearEditErrors();
     try {
       const formDataToSend = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
@@ -369,20 +390,10 @@ function BooksDataTable() {
       reset();
       setEditingBook(null);
       refetchBooks();
+      clearEditErrors();
       toast.success("تم تحديث الكتاب بنجاح");
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setEditError(errorMessages);
-        } else {
-          setEditError("حدث خطأ");
-        }
-      } else {
-        setEditError("حدث خطأ غير متوقع");
-      }
-      throw error;
+    } catch (apiError) {
+      handleApiFormError(apiError, setEditFieldErrors, "حدث خطأ أثناء التحديث");
     }
   };
 
@@ -398,19 +409,8 @@ function BooksDataTable() {
       setEditingBook(null);
       refetchBooks();
       toast.success("تم حذف الكتاب بنجاح");
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
-      throw error;
+    } catch (apiError) {
+      showApiActionError(apiError, "حدث خطأ أثناء الحذف");
     }
   };
 
@@ -515,7 +515,13 @@ function BooksDataTable() {
           >
             عرض
           </Button>
-          <Button onClick={() => setEditingBook(row.original)} size="sm">
+          <Button
+            onClick={() => {
+              clearEditErrors();
+              setEditingBook(row.original);
+            }}
+            size="sm"
+          >
             تعديل
           </Button>
           <Button
@@ -540,7 +546,12 @@ function BooksDataTable() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const renderBookForm = (isEdit: boolean = false) => (
+  const renderBookForm = (isEdit: boolean = false) => {
+    const fieldErrors = isEdit ? editError : error;
+    const { inputClass, fileButtonClass, FieldError } =
+      createFormFieldHelpers(fieldErrors);
+
+    return (
     <form
       onSubmit={
         isEdit
@@ -561,8 +572,9 @@ function BooksDataTable() {
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className={inputClass("name")}
             />
+            <FieldError field="name" />
           </div>
           <div>
             <label htmlFor={isEdit ? "edit_author" : "author"}>المؤلف</label>
@@ -572,8 +584,9 @@ function BooksDataTable() {
               name="author"
               value={formData.author}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className={inputClass("author")}
             />
+            <FieldError field="author" />
           </div>
         </div>
 
@@ -584,7 +597,7 @@ function BooksDataTable() {
               name="subject_id"
               value={formData.subject_id}
               onChange={handleSelectChange}
-              className="w-full p-2 border rounded"
+              className={inputClass("subject_id")}
             >
               <option value={0}>اختر الموضوع</option>
               {subjects.map((subject: { id: number; name: string }) => (
@@ -593,6 +606,7 @@ function BooksDataTable() {
                 </option>
               ))}
             </select>
+            <FieldError field="subject_id" />
           </div>
           <div>
             <label>المستوى</label>
@@ -600,7 +614,7 @@ function BooksDataTable() {
               name="level_id"
               value={formData.level_id}
               onChange={handleSelectChange}
-              className="w-full p-2 border rounded"
+              className={inputClass("level_id")}
             >
               <option value={0}>اختر المستوى</option>
               {levels.map((level: { id: number; name: string }) => (
@@ -609,6 +623,7 @@ function BooksDataTable() {
                 </option>
               ))}
             </select>
+            <FieldError field="level_id" />
           </div>
           <div>
             <label>المعلم</label>
@@ -616,7 +631,7 @@ function BooksDataTable() {
               name="teacher_id"
               value={formData.teacher_id}
               onChange={handleSelectChange}
-              className="w-full p-2 border rounded"
+              className={inputClass("teacher_id")}
               disabled={isTeacherUser}
             >
               {!isTeacherUser && <option value={0}>اختر المعلم</option>}
@@ -628,6 +643,7 @@ function BooksDataTable() {
                 )
               )}
             </select>
+            <FieldError field="teacher_id" />
           </div>
         </div>
 
@@ -641,8 +657,9 @@ function BooksDataTable() {
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            className="w-full p-2 border rounded min-h-[100px] resize-vertical"
+            className={inputClass("description", "min-h-[100px] resize-vertical")}
           />
+          <FieldError field="description" />
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -652,11 +669,12 @@ function BooksDataTable() {
               name="type"
               value={formData.type}
               onChange={handleSelectChange}
-              className="w-full p-2 border rounded"
+              className={inputClass("type")}
             >
               <option value="free">مجاني</option>
               <option value="paid">مدفوع</option>
             </select>
+            <FieldError field="type" />
           </div>
           <div>
             <label htmlFor={isEdit ? "edit_price" : "price"}>السعر</label>
@@ -669,8 +687,9 @@ function BooksDataTable() {
               value={formData.price}
               onChange={handleInputChange}
               disabled={formData.type === "free"}
-              className="w-full p-2 border rounded"
+              className={inputClass("price")}
             />
+            <FieldError field="price" />
           </div>
           <div>
             <label htmlFor={isEdit ? "edit_count" : "count"}>الكمية</label>
@@ -681,8 +700,9 @@ function BooksDataTable() {
               name="count"
               value={formData.count}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
+              className={inputClass("count")}
             />
+            <FieldError field="count" />
           </div>
         </div>
 
@@ -702,7 +722,7 @@ function BooksDataTable() {
             <div className="flex items-center gap-2">
               <label
                 htmlFor={isEdit ? "edit_image" : "image"}
-                className="cursor-pointer px-3 py-2 bg-gray-100 border rounded hover:bg-gray-200 transition-colors text-sm font-medium"
+                className={fileButtonClass("image")}
               >
                 اختر صورة
               </label>
@@ -718,6 +738,7 @@ function BooksDataTable() {
                 className="hidden"
               />
             </div>
+            <FieldError field="image" />
           </div>
           <div>
             <label htmlFor={isEdit ? "edit_min_file" : "min_file"}>
@@ -738,7 +759,7 @@ function BooksDataTable() {
             <div className="flex items-center gap-2">
               <label
                 htmlFor={isEdit ? "edit_min_file" : "min_file"}
-                className="cursor-pointer px-3 py-2 bg-gray-100 border rounded hover:bg-gray-200 transition-colors text-sm font-medium"
+                className={fileButtonClass("min_file")}
               >
                 اختر ملف
               </label>
@@ -756,6 +777,7 @@ function BooksDataTable() {
                 className="hidden"
               />
             </div>
+            <FieldError field="min_file" />
           </div>
           <div>
             <label htmlFor={isEdit ? "edit_file" : "file"}>الملف الكامل</label>
@@ -774,7 +796,7 @@ function BooksDataTable() {
             <div className="flex items-center gap-2">
               <label
                 htmlFor={isEdit ? "edit_file" : "file"}
-                className="cursor-pointer px-3 py-2 bg-gray-100 border rounded hover:bg-gray-200 transition-colors text-sm font-medium"
+                className={fileButtonClass("file")}
               >
                 اختر ملف
               </label>
@@ -790,19 +812,11 @@ function BooksDataTable() {
                 className="hidden"
               />
             </div>
+            <FieldError field="file" />
           </div>
         </div>
       </div>
-      <div>
-        {(isEdit ? editError : error) && (
-          <p
-            className="text-red-500 mt-2"
-            dangerouslySetInnerHTML={{
-              __html: isEdit ? editError || "" : error || "",
-            }}
-          />
-        )}
-      </div>
+      <FormGeneralError errors={fieldErrors} />
       <div className="mt-6 space-y-2">
         <Button type="submit" className="w-full">
           {isEdit ? "تحديث" : "إضافة"}
@@ -818,7 +832,8 @@ function BooksDataTable() {
         </DialogClose>
       </div>
     </form>
-  );
+    );
+  };
 
   const isAuthrized = useAuthrization({ user: user as User, module: "Books" });
   if (!isAuthrized) {
@@ -896,7 +911,13 @@ function BooksDataTable() {
           <option value="paid">مدفوع</option>
         </select>
         {/* add book Dialog */}
-        <Dialog>
+        <Dialog
+          open={addDialogOpen}
+          onOpenChange={(open) => {
+            setAddDialogOpen(open);
+            if (!open) clearAddErrors();
+          }}
+        >
           <DialogTrigger asChild>
             <Button variant="outline">إضافة كتاب</Button>
           </DialogTrigger>
@@ -910,7 +931,15 @@ function BooksDataTable() {
       </div>
 
       {/* Edit Book Dialog */}
-      <Dialog open={!!editingBook} onOpenChange={() => setEditingBook(null)}>
+      <Dialog
+        open={!!editingBook}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingBook(null);
+            clearEditErrors();
+          }
+        }}
+      >
         <DialogContent className="!max-w-7xl">
           <DialogHeader>
             <DialogTitle>تعديل الكتاب</DialogTitle>

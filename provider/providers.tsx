@@ -10,6 +10,20 @@ import { usePathname } from "next/navigation";
 import ReduxProvider from "@/store/ReduxProvider";
 
 const inter = Inter({ subsets: ["latin"] });
+
+const hotToastOptions = {
+  position: "top-center" as const,
+  containerClassName: "!top-6",
+  containerStyle: { zIndex: 100000 },
+  toastOptions: {
+    className: "shadow-xl",
+    style: {
+      zIndex: 100000,
+      maxWidth: "440px",
+    },
+  },
+};
+
 const Providers = ({ children }: { children: React.ReactNode }) => {
   const { theme, radius } = useThemeStore();
   const location = usePathname();
@@ -27,7 +41,7 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
               {children}
               <ReactToaster />
             </div>
-            <Toaster />
+            <Toaster {...hotToastOptions} />
             <SonnToaster />
           </ThemeProvider>
         </ReduxProvider>
@@ -52,7 +66,7 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
           {children}
           <ReactToaster />
         </div>
-        <Toaster />
+        <Toaster {...hotToastOptions} />
         <SonnToaster />
       </ThemeProvider>
     </body>

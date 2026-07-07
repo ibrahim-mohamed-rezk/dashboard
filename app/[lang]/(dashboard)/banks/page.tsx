@@ -73,6 +73,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import {
+  ApiPagination,
+  extractListData,
+  extractPaginatedList,
+  unwrapApiData,
+} from "@/lib/api/response";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import axios, { AxiosHeaders } from "axios";
 import toast from "react-hot-toast";
 import { CoursesData, Teacher, User } from "@/lib/type";
@@ -141,7 +148,7 @@ interface ApiResponse {
 function BanksTable() {
   const [data, setData] = useState<Bank[]>([]);
   const [user, setUser] = useState<User | null>(null);
-  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+  const [paginationMeta, setPaginationMeta] = useState<ApiPagination | null>(
     null
   );
   const [paginationLinks, setPaginationLinks] =
@@ -238,10 +245,14 @@ function BanksTable() {
       const response = await getData(`banks`, params, {
         Authorization: `Bearer ${token}`,
       });
-      setData(response.data || []);
-      setPaginationMeta(response.meta || null);
-      setPaginationLinks(response.links || null);
-      setCurrentPage(response.meta?.current_page || 1);
+      const { items, pagination: pageInfo } = extractPaginatedList<Bank>(
+        response,
+        "banks",
+      );
+      setData(items);
+      setPaginationMeta(pageInfo);
+      setPaginationLinks(null);
+      setCurrentPage(pageInfo?.current_page || 1);
     } catch (error) {
       console.log(error);
     }
@@ -279,7 +290,8 @@ function BanksTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setCourses(response.courses);
+      const data = unwrapApiData<{ courses: CoursesData[] }>(response);
+      setCourses(data.courses);
     } catch (error) {
       console.log(error);
     }
@@ -296,7 +308,7 @@ function BanksTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setLevels(response.data);
+      setLevels(extractListData(response, "levels"));
     } catch (error) {
       console.log(error);
     }
@@ -313,7 +325,7 @@ function BanksTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setSubjects(response.data);
+      setSubjects(extractListData(response, "subjects"));
     } catch (error) {
       console.log(error);
     }
@@ -330,7 +342,7 @@ function BanksTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setTeachers(response.data);
+      setTeachers(extractListData(response, "teachers"));
     } catch (error) {
       console.log(error);
     }
@@ -462,12 +474,7 @@ function BanksTable() {
       await fetchData(currentPage);
       toast.success("تم إضافة البنك بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.msg || "An error occurred");
-      } else {
-        toast.error("An unexpected error occurred");
-      }
-      throw error;
+      showApiActionError(error, "حدث خطأ أثناء الإضافة");
     } finally {
       setIsLoading(false);
     }

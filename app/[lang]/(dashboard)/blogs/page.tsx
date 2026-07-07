@@ -14,6 +14,8 @@ import { useEffect, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractPaginatedList } from "@/lib/api/response";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import axios, { AxiosHeaders } from "axios";
 import { Upload, X } from "lucide-react";
 import { Editor } from "@tinymce/tinymce-react";
@@ -33,28 +35,6 @@ interface Blog {
   published?: boolean;
   created_at: string;
   updated_at?: string;
-}
-
-interface PaginationMeta {
-  current_page: number;
-  from: number;
-  last_page: number;
-  per_page: number;
-  to: number;
-  total: number;
-}
-
-interface PaginationLinks {
-  first: string;
-  last: string;
-  prev: string | null;
-  next: string | null;
-}
-
-interface ApiResponse {
-  data: Blog[];
-  links: PaginationLinks;
-  meta: PaginationMeta;
 }
 
 interface FormData {
@@ -418,11 +398,7 @@ function BlogTable() {
         setIsCreateDialogOpen(false);
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.msg || "حدث خطأ");
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ");
     } finally {
       setIsSubmitting(false);
     }
@@ -747,10 +723,12 @@ const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
           Authorization: `Bearer ${token}`,
         })
       );
-      const apiResponse = response as ApiResponse;
-      setData(apiResponse.data);
-      setTotalPages(apiResponse.meta.last_page);
-      setTotalItems(apiResponse.meta.total);
+      const { items, pagination } = extractPaginatedList<Blog>(response, "blogs");
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setTotalItems(pagination.total);
+      }
     } catch (error) {
       toast.error("Failed to fetch blogs");
     } finally {

@@ -25,6 +25,10 @@ import {
 } from "@/components/ui/table";
 
 import { deleteData, getData } from "@/lib/axios/server";
+import {
+  extractPaginatedList,
+  unwrapApiData,
+} from "@/lib/api/response";
 import { User } from "@/lib/type";
 import useAuthrization from "@/hooks/useAuthrization";
 
@@ -135,14 +139,15 @@ export default function ContactMessagesPage() {
         { page },
         { Authorization: `Bearer ${token}` }
       );
-      const list: ContactMessage[] = Array.isArray(response)
-        ? response
-        : response?.data || [];
-      setMessages(list);
+      const { items, pagination } = extractPaginatedList<ContactMessage>(
+        response,
+        "messages",
+      );
+      setMessages(items);
       setPagination({
-        current_page: response?.meta?.current_page ?? page,
-        last_page: response?.meta?.last_page ?? 1,
-        total: response?.meta?.total ?? list.length,
+        current_page: pagination?.current_page ?? page,
+        last_page: pagination?.last_page ?? 1,
+        total: pagination?.total ?? items.length,
       });
     } catch (err) {
       console.error("Failed to fetch contact messages:", err);
@@ -168,7 +173,7 @@ export default function ContactMessagesPage() {
         {},
         { Authorization: `Bearer ${token}` }
       );
-      const detail: ContactMessage = response?.data ?? response;
+      const detail = unwrapApiData<ContactMessage>(response);
       if (detail && typeof detail === "object") {
         setSelected({ ...message, ...detail });
       }

@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { getData, postData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import { Editor } from "@tinymce/tinymce-react";
 import { siteConfig } from "@/config/site";
 import useAuthrization from "@/hooks/useAuthrization";
@@ -56,16 +58,14 @@ const PrivacyPage = () => {
           { Authorization: `Bearer ${token}` }
         );
 
-        const data = response?.data;
+        const data = unwrapApiData<Record<string, unknown>>(response);
         if (data) {
           // Handle Privacy
-          if (data.privacy) setPrivacyContent(data.privacy);
+          if (typeof data.privacy === "string") setPrivacyContent(data.privacy);
 
-          // Handle Support
-          if (data.support) setSupportContent(data.support);
+          if (typeof data.support === "string") setSupportContent(data.support);
 
-          // Handle About Us
-          if (data["about_us"]) setAboutUsContent(data["about_us"]);
+          if (typeof data["about_us"] === "string") setAboutUsContent(data["about_us"]);
 
           // Handle Array format if applicable
           if (Array.isArray(data)) {
@@ -120,7 +120,7 @@ const PrivacyPage = () => {
       toast.success(`تم حفظ ${successMessages[activeTab]} بنجاح`);
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error("حدث خطأ أثناء الحفظ");
+      showApiActionError(error, "حدث خطأ أثناء الحفظ");
     } finally {
       setIsSaving(false);
     }

@@ -35,6 +35,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractListData, extractPaginatedList } from "@/lib/api/response";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import axios from "axios";
 import Link from "next/link";
 import { SubjectsData } from "@/lib/type";
@@ -216,8 +222,8 @@ function BasicDataTable() {
   const [selectedLevelIds, setSelectedLevelIds] = useState<string[]>([]);
   const [token, setToken] = useState("");
   const [user, setUser] = useState<UserType | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<string, string[]> | null>(null);
+  const [editError, setEditError] = useState<Record<string, string[]> | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -431,24 +437,28 @@ function BasicDataTable() {
     }
   };
   const refetchUsers = async (page: number = 1) => {
+    if (!token) return;
+
     try {
       const response = await getData(
-        `teachers?page=${page}`,
-        { ...filters },
+        "teachers",
+        { page, ...filters },
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
-      setTotalPages(response.meta.last_page);
-      setCurrentPage(response.meta.current_page);
-      setTotalUsers(response.meta.total);
-      // Update stats
-      setStats((prev) => ({
-        ...prev,
-        totalTeachers: response.meta.total,
-        activeUsers: response.data.length,
-      }));
+      const { items, pagination } = extractPaginatedList<User>(response, "teachers");
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setCurrentPage(pagination.current_page);
+        setTotalUsers(pagination.total);
+        setStats((prev) => ({
+          ...prev,
+          totalTeachers: pagination.total,
+          activeUsers: items.length,
+        }));
+      }
     } catch (error) {
       console.log(error);
     }
@@ -549,18 +559,7 @@ function BasicDataTable() {
       toast.success("تم إضافة المستخدم بنجاح");
       dialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("An error occurred");
-        }
-      } else {
-        setError("An unexpected error occurred");
-      }
-      throw error;
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -588,45 +587,7 @@ function BasicDataTable() {
       refetchUsers();
       toast.success("تم تحديث المستخدم بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setEditError(errorMessages);
-        } else {
-          setEditError("An error occurred");
-        }
-      } else {
-        setEditError("An unexpected error occurred");
-      }
-      throw error;
-    }
-  };
-
-  // delete user
-  const deleteUser = async (id: number) => {
-    try {
-      await deleteData(`teachers/${id}`, {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      });
-      reset();
-      setEditingUser(null);
-      refetchUsers();
-      toast.success("تم حذف المستخدم بنجاح");
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("An error occurred");
-        }
-      } else {
-        setError("An unexpected error occurred");
-      }
-      throw error;
+      handleApiFormError(error, setEditError, "حدث خطأ أثناء التحديث");
     }
   };
 
@@ -1096,12 +1057,15 @@ function BasicDataTable() {
 
   // Refetch users when filters change
   useEffect(() => {
-    refetchUsers(1); // Reset to first page on filter change
+    if (!token) return;
     setCurrentPage(1);
-  }, [filters]);
+    refetchUsers(1);
+  }, [filters, token]);
 
   // feach subjects from api
   useEffect(() => {
+    if (!token) return;
+
     const feachData = async () => {
       try {
         const response = await getData(
@@ -1111,12 +1075,13 @@ function BasicDataTable() {
             Authorization: `Bearer ${token}`,
           }
         );
-        setSubjects(response.data);
+        const subjectsList = extractListData<SubjectsData>(response, "subjects");
+        setSubjects(subjectsList);
         setStats((prev) => ({
           ...prev,
-          totalSubjects: response.data.length,
+          totalSubjects: subjectsList.length,
         }));
-        // fetch levels
+
         const levelsResponse = await getData(
           "levels",
           {},
@@ -1124,7 +1089,7 @@ function BasicDataTable() {
             Authorization: `Bearer ${token}`,
           }
         );
-        setLevels(levelsResponse.data || levelsResponse);
+        setLevels(extractListData<LevelOption>(levelsResponse, "levels"));
       } catch (error) {
         console.log(error);
       }
@@ -2099,12 +2064,7 @@ function BasicDataTable() {
                       </div>
                     </div>
                     <div>
-                      {error && (
-                        <p
-                          className="text-red-500"
-                          dangerouslySetInnerHTML={{ __html: error }}
-                        />
-                      )}
+                      <FormGeneralError errors={error} />
                     </div>
                     <div className="mt-6 space-y-2">
                       <Button type="submit" className="w-full">
@@ -2425,12 +2385,7 @@ function BasicDataTable() {
                   </div>
                 </div>
                 <div>
-                  {editError && (
-                    <p
-                      className="text-red-500"
-                      dangerouslySetInnerHTML={{ __html: editError || "" }}
-                    />
-                  )}
+                    <FormGeneralError errors={editError} />
                 </div>
                 <div className="mt-6 space-y-2">
                   <Button type="submit" className="w-full">

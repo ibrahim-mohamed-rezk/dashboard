@@ -33,6 +33,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
@@ -77,8 +82,8 @@ function JobsDataTable() {
   const [data, setData] = useState<Job[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<string, string[]> | null>(null);
+  const [editError, setEditError] = useState<Record<string, string[]> | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -193,18 +198,7 @@ function JobsDataTable() {
       toast.success("تم إضافة الوظيفة بنجاح");
       dialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("An error occurred");
-        }
-      } else {
-        setError("An unexpected error occurred");
-      }
-      throw error;
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -224,18 +218,7 @@ function JobsDataTable() {
       refetchJobs();
       toast.success("تم تحديث الوظيفة بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setEditError(errorMessages);
-        } else {
-          setEditError("An error occurred");
-        }
-      } else {
-        setEditError("An unexpected error occurred");
-      }
-      throw error;
+      handleApiFormError(error, setEditError, "حدث خطأ أثناء التحديث");
     }
   };
 
@@ -251,18 +234,7 @@ function JobsDataTable() {
       refetchJobs();
       toast.success("تم حذف الوظيفة بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("An error occurred");
-        }
-      } else {
-        setError("An unexpected error occurred");
-      }
-      throw error;
+      showApiActionError(error, "حدث خطأ أثناء الحذف");
     }
   };
 
@@ -500,12 +472,7 @@ function JobsDataTable() {
                   </div>
                 </div>
                 <div>
-                  {error && (
-                    <p
-                      className="text-red-500 mt-2"
-                      dangerouslySetInnerHTML={{ __html: error }}
-                    />
-                  )}
+                  <FormGeneralError errors={error} />
                 </div>
                 <div className="mt-6 space-y-2">
                   <Button type="submit" className="w-full">
@@ -586,12 +553,7 @@ function JobsDataTable() {
                 </div>
               </div>
               <div>
-                {editError && (
-                  <p
-                    className="text-red-500 mt-2"
-                    dangerouslySetInnerHTML={{ __html: editError }}
-                  />
-                )}
+                <FormGeneralError errors={editError} />
               </div>
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import LayoutLoader from "@/components/layout-loader";
 import { loginWithToken, persistAuthSession } from "@/lib/auth-session";
 
@@ -27,7 +28,7 @@ const AutoLogin = ({ token, redirectTo = "/dashboard" }: AutoLoginProps) => {
         router.replace(redirectTo);
       } catch (error) {
         console.error("Auto login failed:", error);
-        toast.error("Invalid or expired login link");
+        showApiActionError(error, "Invalid or expired login link");
         router.replace("/auth/login");
       }
     };

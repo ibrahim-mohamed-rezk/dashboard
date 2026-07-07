@@ -30,6 +30,7 @@ import { useEffect, useState } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import useAuthrization from "@/hooks/useAuthrization";
 import { User } from "@/lib/type";
 
@@ -158,17 +159,7 @@ function PurchasesDataTable() {
       refetchPurchases(currentPage, purchaseType);
       toast.success("تم تحديث حالة الشراء بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          toast.error(errorMessages);
-        } else {
-          toast.error("حدث خطأ أثناء تحديث الحالة");
-        }
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ أثناء تحديث الحالة");
     }
   };
 
@@ -184,15 +175,7 @@ function PurchasesDataTable() {
       refetchPurchases(currentPage, purchaseType);
       toast.success("تم حذف الشراء بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        const message = errorData
-          ? Object.values(errorData).flat().join(" ")
-          : "حدث خطأ أثناء الحذف";
-        toast.error(message);
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ أثناء الحذف");
     }
   };
 

@@ -5,9 +5,16 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { postData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import { User } from "@/lib/type";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { handleApiFormError } from "@/lib/api/show-api-error-toast";
+import {
+  createFormFieldHelpers,
+  FormGeneralError,
+} from "@/components/form/form-field-helpers";
+import { useFormApiErrors } from "@/hooks/use-form-api-errors";
 import { useRouter } from "next/navigation";
 
 const PersonalDetails = ({
@@ -24,9 +31,17 @@ const PersonalDetails = ({
     phone: user.phone || "",
     email: user.email || "",
   });
+  const {
+    fieldErrors,
+    setFieldErrors,
+    clearFieldError,
+    clearAddErrors,
+  } = useFormApiErrors();
+  const { inputClass, FieldError } = createFormFieldHelpers(fieldErrors);
   const router = useRouter();
 
   const handleUpdate = async () => {
+    clearAddErrors();
     try {
       if (!token) {
         toast.error("login expired. Please log in again.");
@@ -49,7 +64,7 @@ const PersonalDetails = ({
 
       await axios.post(
         "/api/auth/setToken",
-        { user: JSON.stringify(response.data) },
+        { user: JSON.stringify(unwrapApiData(response)) },
         {
           headers: { "Content-Type": "application/json" },
         }
@@ -59,7 +74,7 @@ const PersonalDetails = ({
       router.push("/user-profile");
     } catch (err) {
       console.error("Update error:", err);
-      toast.error("حدث خطأ أثناء التعديل");
+      handleApiFormError(err, setFieldErrors, "حدث خطأ أثناء التعديل");
     }
   };
 
@@ -75,8 +90,13 @@ const PersonalDetails = ({
               id="firstName"
               type="text"
               value={data.full_name}
-              onChange={(e) => setData({ ...data, full_name: e.target.value })}
+              className={inputClass("full_name")}
+              onChange={(e) => {
+                clearFieldError("full_name");
+                setData({ ...data, full_name: e.target.value });
+              }}
             />
+            <FieldError field="full_name" />
           </div>
           <div className="col-span-12 md:col-span-6">
             <Label htmlFor="phoneNumber" className="mb-2">
@@ -84,12 +104,15 @@ const PersonalDetails = ({
             </Label>
             <Input
               onChange={(e) => {
+                clearFieldError("phone");
                 setData({ ...data, phone: e.target.value });
               }}
               value={data.phone}
               id="phoneNumber"
               type="number"
+              className={inputClass("phone")}
             />
+            <FieldError field="phone" />
           </div>
           <div className="col-span-12 md:col-span-6">
             <Label htmlFor="email" className="mb-2">
@@ -99,10 +122,16 @@ const PersonalDetails = ({
               id="email"
               value={data.email}
               type="email"
-              onChange={(e) => setData({ ...data, email: e.target.value })}
+              className={inputClass("email")}
+              onChange={(e) => {
+                clearFieldError("email");
+                setData({ ...data, email: e.target.value });
+              }}
             />
+            <FieldError field="email" />
           </div>
         </div>
+        <FormGeneralError errors={fieldErrors} />
         <div className="flex justify-end gap-4 mt-6">
           <Button onClick={handleUpdate}>حفظ</Button>
         </div>

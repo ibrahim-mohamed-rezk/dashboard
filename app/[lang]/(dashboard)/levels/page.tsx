@@ -31,6 +31,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractPaginatedList } from "@/lib/api/response";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import {
+  createFormFieldHelpers,
+  FormGeneralError,
+} from "@/components/form/form-field-helpers";
+import { useFormApiErrors } from "@/hooks/use-form-api-errors";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
@@ -42,28 +52,6 @@ interface Level {
   marketing_teachers: string;
 }
 
-interface PaginationMeta {
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-  from: number;
-  to: number;
-}
-
-interface PaginationLinks {
-  first: string;
-  last: string;
-  prev: string | null;
-  next: string | null;
-}
-
-interface ApiResponse {
-  data: Level[];
-  meta: PaginationMeta;
-  links: PaginationLinks;
-}
-
 type FormData = {
   name: string;
   marketing_teachers: string;
@@ -73,8 +61,19 @@ function LevelsDataTable() {
   const [data, setData] = useState<Level[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const {
+    fieldErrors: error,
+    editFieldErrors: editError,
+    clearFieldError,
+    onAddError,
+    onEditError,
+    clearAddErrors,
+    clearEditErrors,
+  } = useFormApiErrors();
+  const addHelpers = createFormFieldHelpers(error);
+  const editHelpers = createFormFieldHelpers(editError);
+  const { inputClass: addInputClass, FieldError: AddFieldError } = addHelpers;
+  const { inputClass: editInputClass, FieldError: EditFieldError } = editHelpers;
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -95,9 +94,12 @@ function LevelsDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
-      setTotalPages(response.meta.last_page);
-      setCurrentPage(response.meta.current_page);
+      const { items, pagination } = extractPaginatedList<Level>(response, "levels");
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setCurrentPage(pagination.current_page);
+      }
     } catch (error) {
       console.log(error);
       toast.error("فشل في جلب البيانات");
@@ -129,6 +131,7 @@ function LevelsDataTable() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    clearFieldError(name);
     setFormData((prevFormData) => ({
       ...prevFormData,
       [name]: value,
@@ -149,7 +152,7 @@ function LevelsDataTable() {
   // Handle submit for adding new level
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    clearAddErrors();
     try {
       await postData("levels", formData, {
         Authorization: `Bearer ${token}`,
@@ -164,23 +167,13 @@ function LevelsDataTable() {
       toast.success("تم إضافة المستوى بنجاح");
       dialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ أثناء الإضافة");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      onAddError(error, "حدث خطأ أثناء الإضافة");
     }
   };
 
   // Update level
   const updateLevel = async (id: number) => {
-    setEditError(null);
+    clearEditErrors();
     try {
       await postData(
         `levels/${id}`,
@@ -196,17 +189,7 @@ function LevelsDataTable() {
       toast.success("تم تحديث المستوى بنجاح");
       editDialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setEditError(errorMessages);
-        } else {
-          setEditError("حدث خطأ أثناء التحديث");
-        }
-      } else {
-        setEditError("حدث خطأ غير متوقع");
-      }
+      onEditError(error, "حدث خطأ أثناء التحديث");
     }
   };
 
@@ -223,17 +206,7 @@ function LevelsDataTable() {
       refetchLevels();
       toast.success("تم حذف المستوى بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(" ");
-          toast.error(errorMessages);
-        } else {
-          toast.error("حدث خطأ أثناء الحذف");
-        }
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ أثناء الحذف");
     }
   };
 
@@ -254,10 +227,7 @@ function LevelsDataTable() {
           "Content-Type": "application/json",
         });
       } catch (err) {
-        const errorMsg = axios.isAxiosError(err)
-          ? Object.values(err.response?.data?.errors || {}).flat().join(" ")
-          : "حذف فاشل";
-        toast.error(`فشل في حذف المستوى ${id}: ${errorMsg}`);
+        showApiActionError(err, `فشل في حذف المستوى ${id}`);
       }
     }
 
@@ -289,7 +259,7 @@ function LevelsDataTable() {
       name: "",
       marketing_teachers: "",
     });
-    setError(null);
+    clearAddErrors();
   };
 
   const handleEditDialogClose = () => {
@@ -298,7 +268,7 @@ function LevelsDataTable() {
       name: "",
       marketing_teachers: "",
     });
-    setEditError(null);
+    clearEditErrors();
   };
 
   // Columns with multi-select checkbox
@@ -436,7 +406,9 @@ function LevelsDataTable() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
+                    className={addInputClass("name")}
                   />
+                  <AddFieldError field="name" />
                 </div>
                 <div>
                   <label
@@ -452,17 +424,12 @@ function LevelsDataTable() {
                     name="marketing_teachers"
                     value={formData.marketing_teachers}
                     onChange={handleInputChange}
+                    className={addInputClass("marketing_teachers")}
                   />
+                  <AddFieldError field="marketing_teachers" />
                 </div>
               </div>
-              <div>
-                {error && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: error }}
-                  />
-                )}
-              </div>
+              <FormGeneralError errors={error} />
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">
                   إضافة
@@ -513,7 +480,9 @@ function LevelsDataTable() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
+                    className={editInputClass("name")}
                   />
+                  <EditFieldError field="name" />
                 </div>
                 <div>
                   <label
@@ -528,17 +497,12 @@ function LevelsDataTable() {
                     name="marketing_teachers"
                     value={formData.marketing_teachers}
                     onChange={handleInputChange}
+                    className={editInputClass("marketing_teachers")}
                   />
+                  <EditFieldError field="marketing_teachers" />
                 </div>
               </div>
-              <div>
-                {editError && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: editError }}
-                  />
-                )}
-              </div>
+              <FormGeneralError errors={editError} />
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">
                   تحديث

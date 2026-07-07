@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { postData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import { User } from "@/lib/type";
 import avatar from "@/public/images/avatar/user.png";
 import { Icon } from "@iconify/react";
@@ -12,10 +13,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { handleApiFormError } from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
+import { useFormApiErrors } from "@/hooks/use-form-api-errors";
 
 const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const { fieldErrors, setFieldErrors, clearFieldError } = useFormApiErrors();
   const router = useRouter();
 
   const handleUpdate = async (e?: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,6 +34,7 @@ const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
       // Handle image change if event is provided
       if (e?.target.files?.[0]) {
         const selectedFile = e.target.files[0];
+        clearFieldError("avatar");
         setFile(selectedFile);
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -53,7 +59,7 @@ const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
 
         await axios.post(
           "/api/auth/setToken",
-          { user: JSON.stringify(response.data) },
+          { user: JSON.stringify(unwrapApiData(response)) },
           {
             headers: { "Content-Type": "application/json" },
           }
@@ -64,7 +70,7 @@ const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
       }
     } catch (err) {
       console.error("Update error:", err);
-      toast.error("حدث خطأ أثناء التعديل");
+      handleApiFormError(err, setFieldErrors, "حدث خطأ أثناء التعديل");
     }
   };
 
@@ -105,6 +111,7 @@ const UserMeta = ({ token, user }: { token: string | null; user: User }) => {
         <div className="mt-1.5 text-sm font-medium text-default-500">
           {user?.role}
         </div>
+        <FormGeneralError errors={fieldErrors} />
       </CardContent>
     </Card>
   );

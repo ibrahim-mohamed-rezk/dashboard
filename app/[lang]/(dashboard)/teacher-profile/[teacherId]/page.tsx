@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, User } from "@/components/svg";
 import Header from "./components/header";
 import { getData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import { canAccessModule } from "@/lib/permissions";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -46,7 +47,7 @@ const Overview = () => {
               Authorization: `Bearer ${tokenValue}`,
             }
           );
-          setTeacherData(response.data);
+          setTeacherData(unwrapApiData(response));
         } else {
           router.push("/auth/login");
         }

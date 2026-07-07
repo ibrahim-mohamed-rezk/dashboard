@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { postData, deleteData, getData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import { toast } from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -161,7 +163,8 @@ const CourseModules = ({
           Authorization: `Bearer ${token}`,
         }
       );
-      setModules(response.data.modules);
+      const data = unwrapApiData<{ modules: CoursModules[] }>(response);
+      setModules(data.modules);
     } catch (error) {
       throw error;
     }
@@ -177,7 +180,8 @@ const CourseModules = ({
           Authorization: `Bearer ${token}`,
         }
       );
-      setVideos(response.videos);
+      const data = unwrapApiData<{ videos: VideoTypes[] }>(response);
+      setVideos(data.videos);
     } catch (error) {
       throw error;
     }
@@ -394,7 +398,7 @@ const CourseModules = ({
       setSelectedModule(null);
       toast.success("تم تحديث الدرس بنجاح");
     } catch (error) {
-      toast.error("حدث خطأ أثناء تحديث الدرس");
+      showApiActionError(error, "حدث خطأ أثناء تحديث الدرس");
     }
   };
 
@@ -456,7 +460,7 @@ const CourseModules = ({
       toast.success("تم تحديث اختبار الفيديو بنجاح");
     } catch (error) {
       console.error("Error updating video quiz:", error);
-      toast.error("حدث خطأ أثناء تحديث اختبار الفيديو");
+      showApiActionError(error, "حدث خطأ أثناء تحديث اختبار الفيديو");
     }
   };
 
@@ -503,7 +507,7 @@ const CourseModules = ({
       setSelectedModule(null);
       toast.success("تم حذف اختبار الفيديو بنجاح");
     } catch (error) {
-      toast.error("حدث خطأ أثناء حذف اختبار الفيديو");
+      showApiActionError(error, "حدث خطأ أثناء حذف اختبار الفيديو");
     }
   };
 
@@ -635,7 +639,7 @@ const CourseModules = ({
       });
       toast.success("تم إضافة الدرس بنجاح");
     } catch (error) {
-      toast.error("حدث خطأ أثناء إضافة الدرس");
+      showApiActionError(error, "حدث خطأ أثناء إضافة الدرس");
     }
   };
 
@@ -1059,7 +1063,7 @@ const CourseModules = ({
                                 `تم حذف ${selectedModuleIds.length} عنصر بنجاح`
                               );
                             } catch (err) {
-                              toast.error("حدث خطأ أثناء الحذف");
+                              showApiActionError(err, "حدث خطأ أثناء الحذف");
                             } finally {
                               setSelectedModuleIds([]); // Clear selection
                             }

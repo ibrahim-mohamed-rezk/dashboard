@@ -29,8 +29,10 @@ import {
 import { Copy, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getData, postData } from "@/lib/axios/server";
+import { extractPaginatedList } from "@/lib/api/response";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import useAuthrization from "@/hooks/useAuthrization";
 import { User } from "@/lib/type";
 
@@ -173,7 +175,7 @@ function BasicDataTable() {
       refetchCoupons();
     } catch (error) {
       console.error("Error saving coupon:", error);
-      toast.error("حدث خطأ أثناء حفظ الكوبون");
+      showApiActionError(error, "حدث خطأ أثناء حفظ الكوبون");
     } finally {
       setIsLoading(false);
     }
@@ -195,7 +197,7 @@ function BasicDataTable() {
       refetchCoupons();
     } catch (error) {
       console.error("Error deleting coupon:", error);
-      toast.error("حدث خطأ أثناء حذف الكوبون");
+      showApiActionError(error, "حدث خطأ أثناء حذف الكوبون");
     } finally {
       setIsLoading(false);
     }
@@ -225,7 +227,7 @@ function BasicDataTable() {
       setIsBulkDeleteConfirmOpen(false);
       refetchCoupons();
     } catch (error) {
-      toast.error("حدث خطأ أثناء الحذف الجماعي");
+      showApiActionError(error, "حدث خطأ أثناء الحذف الجماعي");
     } finally {
       setIsLoading(false);
     }
@@ -245,15 +247,19 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
+      const { items, pagination: pageInfo } = extractPaginatedList<Coupon>(
+        response,
+        "coupons",
+      );
+      setData(items);
       setPagination((prev) => ({
         ...prev,
-        total: response.data.total,
-        lastPage: response.data.last_page,
-        currentPage: response.data.current_page,
-        from: response.data.from,
-        to: response.data.to,
-        links: response.data.links,
+        total: pageInfo?.total ?? 0,
+        lastPage: pageInfo?.last_page ?? 1,
+        currentPage: pageInfo?.current_page ?? 1,
+        from: pageInfo?.from ?? 0,
+        to: pageInfo?.to ?? 0,
+        links: [],
       }));
     } catch (error) {
       console.log(error);

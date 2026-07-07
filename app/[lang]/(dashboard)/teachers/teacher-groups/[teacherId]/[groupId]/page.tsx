@@ -32,6 +32,11 @@ import {
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
@@ -94,7 +99,7 @@ function GroupStudentsManager() {
   const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
   const [token, setToken] = useState("");
   const [user, setUser] = useState<UserType | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<string, string[]> | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -212,7 +217,7 @@ function GroupStudentsManager() {
     setError(null);
 
     if (!selectedStudentId) {
-      setError("يرجى اختيار طالب");
+      setError({ general: ["يرجى اختيار طالب"] });
       return;
     }
 
@@ -235,19 +240,7 @@ function GroupStudentsManager() {
       toast.success("تم إضافة الطالب بنجاح");
       dialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError(
-            error.response?.data?.message || "حدث خطأ أثناء إضافة الطالب"
-          );
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -274,19 +267,7 @@ function GroupStudentsManager() {
       fetchGroupStudents(currentPage);
       toast.success("تم إزالة الطالب بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(" ");
-          toast.error(errorMessages);
-        } else {
-          toast.error(
-            error.response?.data?.message || "حدث خطأ أثناء إزالة الطالب"
-          );
-        }
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ أثناء الحذف");
     }
   };
 
@@ -427,12 +408,7 @@ function GroupStudentsManager() {
                 </div>
               </div>
               <div>
-                {error && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: error }}
-                  />
-                )}
+                <FormGeneralError errors={error} />
               </div>
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">

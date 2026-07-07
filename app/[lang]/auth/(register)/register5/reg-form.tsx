@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { addUser } from "@/action/auth-action";
@@ -55,13 +56,20 @@ const RegForm = () => {
 
   const onSubmit = (data: any) => {
     startTransition(async () => {
-      let response = await addUser(data);
-      if (response?.status === "success") {
-        toast.success(response?.message);
-        reset();
-        router.push("/");
-      } else {
-        toast.error(response?.message);
+      try {
+        const response = await addUser(data);
+        if (response?.status === "success") {
+          toast.success(response?.message);
+          reset();
+          router.push("/");
+        } else {
+          showApiActionError(
+            { response: { data: { message: response?.message } } },
+            "فشل التسجيل",
+          );
+        }
+      } catch (error) {
+        showApiActionError(error, "فشل التسجيل");
       }
     });
   };

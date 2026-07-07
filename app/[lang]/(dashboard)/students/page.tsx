@@ -35,6 +35,13 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData } from "@/lib/axios/server";
+import {
+  ApiPagination,
+  extractListData,
+  extractPaginatedList,
+  getValidationErrors,
+  unwrapApiData,
+} from "@/lib/api/response";
 import axios, { AxiosHeaders } from "axios";
 import { StudentTypes, SubscriptionCodeTypes, Teacher, User } from "@/lib/type";
 import { Label } from "@/components/ui/label";
@@ -196,11 +203,11 @@ const StudentUpdateModal = ({
       // === NEW ===
       toast.success("تم تحديث بيانات الطالب بنجاح");
     } catch (error: any) {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
+      const validationErrors = getValidationErrors(error);
+      if (validationErrors) {
+        setErrors(validationErrors);
       } else {
         console.error("Failed to update student:", error);
-        // === NEW ===
         toast.error("فشل في تحديث الطالب");
       }
     } finally {
@@ -649,7 +656,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setGovernorates(response.data);
+      setGovernorates(extractListData(response, "governorates"));
     } catch (error) {
       console.log(error);
     }
@@ -664,7 +671,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setLevel(response.data);
+      setLevel(extractListData(response, "levels"));
     } catch (error) {
       console.log(error);
     }
@@ -679,7 +686,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setArea(response.data);
+      setArea(extractListData(response, "areas"));
     } catch (error) {
       console.log(error);
     }
@@ -717,7 +724,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setTeachers(response.data);
+      setTeachers(extractListData(response, "teachers"));
     } catch (error) {
       console.log("Failed to fetch teachers");
     }
@@ -738,17 +745,22 @@ function BasicDataTable() {
         }
       );
 
-      const studentsData = response.data.students;
-      const paginate = response.data.paginate;
+      const { items, pagination: pageInfo } = extractPaginatedList<StudentTypes>(
+        response,
+        "students",
+      );
+      const paginate =
+        pageInfo ??
+        (unwrapApiData(response) as { paginate?: ApiPagination })?.paginate;
 
-      setData(studentsData);
+      setData(items);
       setPagination((prev) => ({
         ...prev,
-        total: paginate.total,
-        lastPage: paginate.last_page,
+        total: paginate?.total ?? pageInfo?.total ?? 0,
+        lastPage: paginate?.last_page ?? pageInfo?.last_page ?? 1,
       }));
 
-      calculateStatistics(studentsData, paginate);
+      calculateStatistics(items, paginate ?? pageInfo);
     } catch (error) {
       console.log(error);
     }
@@ -855,7 +867,7 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      return response.data.students;
+      return extractListData<StudentTypes>(response, "students");
     } catch (error) {
       console.error("Failed to fetch students for export:", error);
       toast.error("فشل في جلب بيانات الطلاب للتصدير");

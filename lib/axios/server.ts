@@ -1,6 +1,12 @@
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
+import {
+  ApiError,
+  ApiResponse,
+  assertApiSuccess,
+  normalizeApiResponse,
+  parseAxiosApiError,
+} from "@/lib/api/response";
 
-// Create an Axios instance
 const backendServer = axios.create({
   baseURL: "https://safezone-co.top/api/v1/dashboard/",
   headers: {
@@ -8,44 +14,59 @@ const backendServer = axios.create({
   },
 });
 
-// Example of a GET request
-export const getData = async (
+async function request<T>(
+  promise: Promise<{ data: unknown }>,
+  throwOnFailure = true,
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await promise;
+    const normalized = normalizeApiResponse<T>(response.data);
+
+    if (throwOnFailure) {
+      assertApiSuccess(normalized);
+    }
+
+    return normalized;
+  } catch (error) {
+    throw parseAxiosApiError(error);
+  }
+}
+
+export const getData = async <T = unknown>(
   endpoint: string,
-  params?: any,
-  headers?: any
-) => {
-  try {
-    const response = await backendServer.get(endpoint, { params, headers });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    throw error;
-  }
+  params?: Record<string, unknown>,
+  headers?: AxiosHeaders | Record<string, string>,
+  options?: { throwOnFailure?: boolean },
+): Promise<ApiResponse<T>> => {
+  return request<T>(
+    backendServer.get(endpoint, { params, headers }),
+    options?.throwOnFailure !== false,
+  );
 };
 
-// Example of a POST request
-export const postData = async (endpoint: string, data: any, headers?: any) => {
-  try {
-    const response = await backendServer.post(endpoint, data, {
-      headers: { ...headers },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error posting data:", error);
-    throw error;
-  }
+export const postData = async <T = unknown>(
+  endpoint: string,
+  data: unknown,
+  headers?: AxiosHeaders | Record<string, string>,
+  options?: { throwOnFailure?: boolean },
+): Promise<ApiResponse<T>> => {
+  return request<T>(
+    backendServer.post(endpoint, data, { headers: { ...headers } }),
+    options?.throwOnFailure !== false,
+  );
 };
 
-export const deleteData = async (endpoint: string, headers?: any) => {
-  try {
-    const response = await backendServer.delete(endpoint, {
-      headers: { ...headers },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting data:", error);
-    throw error;
-  }
+export const deleteData = async <T = unknown>(
+  endpoint: string,
+  headers?: AxiosHeaders | Record<string, string>,
+  options?: { throwOnFailure?: boolean },
+): Promise<ApiResponse<T>> => {
+  return request<T>(
+    backendServer.delete(endpoint, { headers: { ...headers } }),
+    options?.throwOnFailure !== false,
+  );
 };
 
+export type { ApiResponse };
+export { ApiError };
 export default backendServer;

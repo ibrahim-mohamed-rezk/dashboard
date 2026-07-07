@@ -10,7 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getData, postData, deleteData } from "@/lib/axios/server";
+import { unwrapApiData } from "@/lib/api/response";
 import { toast } from "react-hot-toast";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,7 +154,7 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
         }
       );
 
-      setSelectedBank(response.data);
+      setSelectedBank(unwrapApiData(response));
     } catch (error) {
       toast.error("فشل في جلب بيانات البنوك");
     }
@@ -230,7 +232,7 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
       await fetchBanks(); // Refresh bank data
       toast.success("تم حذف القسم بنجاح");
     } catch (error) {
-      toast.error("حدث خطأ أثناء حذف القسم");
+      showApiActionError(error, "حدث خطأ أثناء حذف القسم");
     } finally {
       setIsLoading(false);
     }
@@ -318,7 +320,7 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
       closeDialog();
       toast.success("تم تحديث القسم بنجاح");
     } catch (error) {
-      toast.error("حدث خطأ أثناء تحديث القسم");
+      showApiActionError(error, "حدث خطأ أثناء تحديث القسم");
     } finally {
       setIsLoading(false);
     }
@@ -400,7 +402,7 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
         toast.success(`تم إضافة ${validQuestions.length} سؤال بنجاح`);
       }
     } catch (error) {
-      toast.error("حدث خطأ أثناء إضافة القسم");
+      showApiActionError(error, "حدث خطأ أثناء إضافة القسم");
     } finally {
       setIsLoading(false);
     }
@@ -491,7 +493,7 @@ const BankModulesComponent = ({ bankId, token }: BankModulesComponentProps) => {
       setIsBulkMode(false);
       toast.success(`تم حذف ${selectedQuestions.length} قسم بنجاح`);
     } catch (error) {
-      toast.error("حدث خطأ أثناء حذف الأقسام");
+      showApiActionError(error, "حدث خطأ أثناء حذف الأقسام");
     } finally {
       setIsLoading(false);
     }

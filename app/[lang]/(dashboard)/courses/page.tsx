@@ -69,6 +69,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState, useMemo, useRef } from "react";
 import axios, { AxiosHeaders } from "axios";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import {
+  extractListData,
+  extractPaginatedList,
+  getValidationErrors,
+  unwrapApiData,
+} from "@/lib/api/response";
+import { handleApiFormError } from "@/lib/api/show-api-error-toast";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { Teacher, User } from "@/lib/type";
@@ -175,7 +183,7 @@ function CoursesTable() {
     price: "0",
     cover: undefined,
   });
-  const [editError, setEditError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<Record<string, string[]> | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -276,10 +284,7 @@ function CoursesTable() {
       });
       await fetchData();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to add course";
-      setEditError(errorMessage);
-      toast.error(errorMessage);
+      handleApiFormError(error, setEditError, "Failed to add course");
     } finally {
       setIsLoading(false);
     }
@@ -317,7 +322,7 @@ function CoursesTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setTeachers(response.data);
+      setTeachers(extractListData(response, "teachers"));
     } catch (error) {
       toast.error("Failed to fetch teachers");
     }
@@ -334,7 +339,7 @@ function CoursesTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setSubjects(response.data);
+      setSubjects(extractListData(response, "subjects"));
     } catch (error) {
       toast.error("Failed to fetch subjects");
     }
@@ -381,9 +386,14 @@ function CoursesTable() {
           Authorization: `Bearer ${token}`,
         })
       );
-      setData(response.courses);
-      setPaginationMeta(response.pagination);
-      setStatistics(response.statistics);
+      const data = unwrapApiData<{
+        courses: Course[];
+        pagination: PaginationMeta;
+        statistics: any;
+      }>(response);
+      setData(data.courses);
+      setPaginationMeta(data.pagination);
+      setStatistics(data.statistics);
     } catch (error) {
       toast.error("Failed to fetch courses");
     } finally {
@@ -421,7 +431,7 @@ function CoursesTable() {
           lang: "ar",
         })
       );
-      setLevels(response.data);
+      setLevels(extractListData(response, "levels"));
     } catch (error) {
       console.error("Error fetching levels:", error);
     }
@@ -1258,10 +1268,7 @@ function CoursesTable() {
       });
       await fetchData();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to update course";
-      setEditError(errorMessage);
-      toast.error(errorMessage);
+      handleApiFormError(error, setEditError, "Failed to update course");
     } finally {
       setIsLoading(false);
     }
@@ -1518,9 +1525,9 @@ function CoursesTable() {
                   {editError && (
                     <Alert variant="soft">
                       <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription
-                        dangerouslySetInnerHTML={{ __html: editError }}
-                      />
+                      <AlertDescription>
+                        <FormGeneralError errors={editError} />
+                      </AlertDescription>
                     </Alert>
                   )}
                   <div className="flex gap-3 pt-4">
@@ -1679,9 +1686,9 @@ function CoursesTable() {
                 {editError && (
                   <Alert variant="soft">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription
-                      dangerouslySetInnerHTML={{ __html: editError }}
-                    />
+                    <AlertDescription>
+                      <FormGeneralError errors={editError} />
+                    </AlertDescription>
                   </Alert>
                 )}
                 <div className="flex gap-3 pt-4">

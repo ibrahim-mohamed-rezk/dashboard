@@ -1,6 +1,8 @@
 import { getData } from "@/lib/axios/server";
+import { extractListData, isApiResponse, unwrapApiData } from "@/lib/api/response";
 import DashboardPageView from "./page-view";
 import { getDictionary } from "@/app/dictionaries";
+import { Statistics, TeacherStatistics } from "@/lib/type";
 import { AxiosHeaders } from "axios";
 import { cookies } from "next/headers";
 
@@ -59,7 +61,7 @@ const Dashboard = async ({
     }
   };
 
-  const statistics = await fetchData();
+  const statisticsResponse = await fetchData();
 
   const trans = await getDictionary("ar");
 
@@ -68,24 +70,24 @@ const Dashboard = async ({
   const session = await getServerSession(authOptions);
   const sessionRole = (session?.user as any)?.role || "user";
 
-  // Detect whether the API returned teacher-specific stats
-  // The teacher endpoint returns { message: "Teacher statistics", data: { ... } }
-  const isTeacherStats = statistics?.message === "Teacher statistics";
+  const isTeacherStats =
+    (isApiResponse(statisticsResponse) &&
+      statisticsResponse.msg === "Teacher statistics") ||
+    (statisticsResponse as { message?: string })?.message ===
+      "Teacher statistics";
   const role = isTeacherStats
     ? "teacher"
     : String(sessionRole || "user").toLowerCase();
 
   const statsPayload = isTeacherStats
     ? null
-    : statistics?.data && typeof statistics.data === "object"
-      ? statistics.data
-      : statistics;
+    : (unwrapApiData(statisticsResponse) as Statistics);
 
   let teachersForFilter: { id: number; user: { full_name: string } }[] = [];
   if (!isTeacherStats && role !== "teacher") {
     try {
       const teachersRes = await getData("teachers", {}, authHeaders);
-      teachersForFilter = teachersRes?.data ?? [];
+      teachersForFilter = extractListData(teachersRes, "teachers");
     } catch {
       teachersForFilter = [];
     }
@@ -94,7 +96,11 @@ const Dashboard = async ({
   return (
     <DashboardPageView
       statistics={statsPayload}
-      teacherStatistics={isTeacherStats ? statistics?.data : null}
+      teacherStatistics={
+        isTeacherStats
+          ? (unwrapApiData(statisticsResponse) as TeacherStatistics)
+          : null
+      }
       teachersForFilter={teachersForFilter}
       trans={trans}
       role={role}

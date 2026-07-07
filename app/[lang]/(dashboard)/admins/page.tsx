@@ -21,6 +21,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useRef } from "react";
 import { getData, postData, deleteData } from "@/lib/axios/server";
+import {
+  handleApiFormError,
+  showApiActionError,
+} from "@/lib/api/show-api-error-toast";
+import { extractListData, extractPaginatedList } from "@/lib/api/response";
+import { FormGeneralError } from "@/components/form/form-field-helpers";
 import axios from "axios";
 import { AdminTypes, Module, Teacher, User } from "@/lib/type";
 import { Button } from "@/components/ui/button";
@@ -102,7 +108,7 @@ function BasicDataTable() {
     teacher_modules: [] as number[][],
     admin_modules: [] as number[],
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<string, string[]> | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
   const [pagination, setPagination] = useState<{
@@ -160,14 +166,20 @@ function BasicDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
-      setPagination({
-        current_page: response.meta.current_page,
-        last_page: response.meta.last_page,
-        per_page: response.meta.per_page,
-        total: response.meta.total,
-        links: response.meta.links,
-      });
+      const { items, pagination } = extractPaginatedList<AdminTypes>(
+        response,
+        "admins",
+      );
+      setData(items);
+      if (pagination) {
+        setPagination({
+          current_page: pagination.current_page,
+          last_page: pagination.last_page,
+          per_page: pagination.per_page,
+          total: pagination.total,
+          links: [],
+        });
+      }
     } catch (error) {
       console.log(error);
     }
@@ -187,7 +199,7 @@ function BasicDataTable() {
             Authorization: `Bearer ${token}`,
           }
         );
-        setModules(response);
+        setModules(extractListData<Module>(response, "modules"));
       } catch (error) {
         console.log(error);
       }
@@ -205,7 +217,7 @@ function BasicDataTable() {
             Authorization: `Bearer ${token}`,
           }
         );
-        setTeachers(response.data);
+        setTeachers(extractListData<Teacher>(response, "teachers"));
       } catch (error) {
         console.log(error);
       }
@@ -324,17 +336,7 @@ function BasicDataTable() {
       });
       refetchAdmins();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      handleApiFormError(error, setError, "حدث خطأ");
     }
   };
 
@@ -1010,7 +1012,7 @@ function BasicDataTable() {
                       </div>
                     </div>
                   </div>
-                  {error && <div className="text-red-500 text-sm">{error}</div>}
+                  <FormGeneralError errors={error} />
                   <Button type="submit" className="w-full">
                     {isEdit ? "تحديث" : "إضافة"}
                   </Button>

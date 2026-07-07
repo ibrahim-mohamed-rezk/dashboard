@@ -31,6 +31,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
+import { extractPaginatedList } from "@/lib/api/response";
+import { showApiActionError } from "@/lib/api/show-api-error-toast";
+import {
+  createFormFieldHelpers,
+  FormGeneralError,
+} from "@/components/form/form-field-helpers";
+import { useFormApiErrors } from "@/hooks/use-form-api-errors";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import useAuthrization from "@/hooks/useAuthrization";
@@ -42,34 +49,6 @@ interface Subject {
   description: string;
 }
 
-interface PaginationMeta {
-  current_page: number;
-  last_page: number;
-  per_page: number;
-  total: number;
-  from: number;
-  to: number;
-  links: {
-    url: string | null;
-    label: string;
-    active: boolean;
-  }[];
-  path: string;
-}
-
-interface PaginationLinks {
-  first: string;
-  last: string;
-  prev: string | null;
-  next: string | null;
-}
-
-interface ApiResponse {
-  data: Subject[];
-  meta: PaginationMeta;
-  links: PaginationLinks;
-}
-
 type FormData = {
   name: string;
   description: string;
@@ -79,8 +58,21 @@ function SubjectsDataTable() {
   const [data, setData] = useState<Subject[]>([]);
   const [token, setToken] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
+  const {
+    fieldErrors: error,
+    editFieldErrors: editError,
+    setFieldErrors: setError,
+    setEditFieldErrors: setEditError,
+    clearFieldError,
+    onAddError,
+    onEditError,
+    clearAddErrors,
+    clearEditErrors,
+  } = useFormApiErrors();
+  const { inputClass: addInputClass, FieldError: AddFieldError } =
+    createFormFieldHelpers(error);
+  const { inputClass: editInputClass, FieldError: EditFieldError } =
+    createFormFieldHelpers(editError);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -94,16 +86,22 @@ function SubjectsDataTable() {
   // Refetch subjects (keep pagination in request, remove client table limit)
   const refetchSubjects = async (page: number = 1) => {
     try {
-      const response: ApiResponse = await getData(
+      const response = await getData(
         `subjects?page=${page}`,
         {},
         {
           Authorization: `Bearer ${token}`,
         }
       );
-      setData(response.data);
-      setTotalPages(response.meta.last_page);
-      setCurrentPage(response.meta.current_page);
+      const { items, pagination } = extractPaginatedList<Subject>(
+        response,
+        "subjects",
+      );
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setCurrentPage(pagination.current_page);
+      }
     } catch (error) {
       console.log(error);
       toast.error("فشل في جلب البيانات");
@@ -135,6 +133,7 @@ function SubjectsDataTable() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    clearFieldError(name);
     setFormData((prevFormData) => ({
       ...prevFormData,
       [name]: value,
@@ -155,7 +154,7 @@ function SubjectsDataTable() {
   // Handle submit for adding new subject
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    clearAddErrors();
     try {
       await postData("subjects", formData, {
         Authorization: `Bearer ${token}`,
@@ -170,23 +169,13 @@ function SubjectsDataTable() {
       toast.success("تم إضافة المادة بنجاح");
       dialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setError(errorMessages);
-        } else {
-          setError("حدث خطأ أثناء الإضافة");
-        }
-      } else {
-        setError("حدث خطأ غير متوقع");
-      }
+      onAddError(error, "حدث خطأ أثناء الإضافة");
     }
   };
 
   // Update subject
   const updateSubject = async (id: number) => {
-    setEditError(null);
+    clearEditErrors();
     try {
       await postData(
         `subjects/${id}`,
@@ -202,17 +191,7 @@ function SubjectsDataTable() {
       toast.success("تم تحديث المادة بنجاح");
       editDialogCloseRef.current?.click();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join("<br>");
-          setEditError(errorMessages);
-        } else {
-          setEditError("حدث خطأ أثناء التحديث");
-        }
-      } else {
-        setEditError("حدث خطأ غير متوقع");
-      }
+      onEditError(error, "حدث خطأ أثناء التحديث");
     }
   };
 
@@ -229,17 +208,7 @@ function SubjectsDataTable() {
       refetchSubjects(currentPage);
       toast.success("تم حذف المادة بنجاح");
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorData = error.response?.data?.errors;
-        if (errorData) {
-          const errorMessages = Object.values(errorData).flat().join(" ");
-          toast.error(errorMessages);
-        } else {
-          toast.error("حدث خطأ أثناء الحذف");
-        }
-      } else {
-        toast.error("حدث خطأ غير متوقع");
-      }
+      showApiActionError(error, "حدث خطأ أثناء الحذف");
     }
   };
 
@@ -260,10 +229,7 @@ function SubjectsDataTable() {
           "Content-Type": "application/json",
         });
       } catch (err) {
-        const errorMsg = axios.isAxiosError(err)
-          ? Object.values(err.response?.data?.errors || {}).flat().join(" ")
-          : "حذف فاشل";
-        toast.error(`فشل في حذف المادة ${id}: ${errorMsg}`);
+        showApiActionError(err, `فشل في حذف المادة ${id}`);
       }
     }
 
@@ -296,7 +262,7 @@ function SubjectsDataTable() {
       name: "",
       description: "",
     });
-    setError(null);
+    clearAddErrors();
   };
 
   const handleEditDialogClose = () => {
@@ -305,7 +271,7 @@ function SubjectsDataTable() {
       name: "",
       description: "",
     });
-    setEditError(null);
+    clearEditErrors();
   };
 
   // Columns with multi-select checkbox
@@ -454,7 +420,9 @@ function SubjectsDataTable() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
+                    className={addInputClass("name")}
                   />
+                  <AddFieldError field="name" />
                 </div>
                 <div>
                   <label
@@ -470,17 +438,12 @@ function SubjectsDataTable() {
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
+                    className={addInputClass("description")}
                   />
+                  <AddFieldError field="description" />
                 </div>
               </div>
-              <div>
-                {error && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: error }}
-                  />
-                )}
-              </div>
+              <FormGeneralError errors={error} />
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">
                   إضافة
@@ -531,7 +494,9 @@ function SubjectsDataTable() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
+                    className={editInputClass("name")}
                   />
+                  <EditFieldError field="name" />
                 </div>
                 <div>
                   <label
@@ -546,17 +511,12 @@ function SubjectsDataTable() {
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
+                    className={editInputClass("description")}
                   />
+                  <EditFieldError field="description" />
                 </div>
               </div>
-              <div>
-                {editError && (
-                  <p
-                    className="text-red-500 mt-2 text-sm"
-                    dangerouslySetInnerHTML={{ __html: editError }}
-                  />
-                )}
-              </div>
+              <FormGeneralError errors={editError} />
               <div className="mt-6 space-y-2">
                 <Button type="submit" className="w-full">
                   تحديث

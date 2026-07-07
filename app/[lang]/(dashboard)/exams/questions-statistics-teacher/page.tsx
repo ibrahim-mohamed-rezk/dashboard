@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getData } from "@/lib/axios/server";
+import { extractListData, extractPaginatedList } from "@/lib/api/response";
 import axios from "axios";
 import { Label } from "@/components/ui/label";
 import * as XLSX from "xlsx";
@@ -226,13 +227,8 @@ function QuestionsStatisticsTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setTeachers(
-        teachersResponse.data?.teachers ||
-          teachersResponse.data ||
-          teachersResponse
-      );
+      setTeachers(extractListData(teachersResponse, "teachers"));
 
-      // Fetch exams
       const examsResponse = await getData(
         "exams",
         {},
@@ -240,9 +236,8 @@ function QuestionsStatisticsTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setExams(examsResponse.data || examsResponse);
+      setExams(extractListData(examsResponse, "exams"));
 
-      // Fetch levels
       const levelsResponse = await getData(
         "levels",
         {},
@@ -250,7 +245,7 @@ function QuestionsStatisticsTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      setLevels(levelsResponse.data || levelsResponse);
+      setLevels(extractListData(levelsResponse, "levels"));
     } catch (error) {
       console.error("Error fetching filter options:", error);
     }
@@ -276,19 +271,19 @@ function QuestionsStatisticsTable() {
         }
       );
 
-      const questionData = response.data || response;
-      setData(questionData);
+      const { items, pagination: pageInfo } =
+        extractPaginatedList<TeacherQuestionResult>(response, "questions");
+      setData(items);
 
-      // Update pagination if response has pagination info
-      if (response.meta) {
+      if (pageInfo) {
         setPagination((prev) => ({
           ...prev,
-          total: response.meta.total,
-          lastPage: response.meta.last_page,
+          total: pageInfo.total,
+          lastPage: pageInfo.last_page,
         }));
       }
 
-      calculateStatistics(questionData);
+      calculateStatistics(items);
     } catch (error: any) {
       console.error("Failed to fetch question results:", error);
       setError("فشل في تحميل بيانات النتائج");

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { postData } from "@/lib/axios/server";
 import { User } from "@/lib/type";
+import { normalizeLoginResponse } from "@/lib/api/response";
 
 export type LoginResponse = {
   token: string;
@@ -36,11 +37,16 @@ export async function clearAuthSession(): Promise<void> {
 }
 
 export async function loginWithToken(token: string): Promise<LoginResponse> {
-  const response = await postData("login-with-token", new FormData(), {
-    Authorization: `Bearer ${token}`,
-  });
+  const response = await postData(
+    "login-with-token",
+    new FormData(),
+    {
+      Authorization: `Bearer ${token}`,
+    },
+    { throwOnFailure: false },
+  );
 
-  return response as LoginResponse;
+  return normalizeLoginResponse(response);
 }
 
 export async function refreshAuthSession(): Promise<LoginResponse> {
