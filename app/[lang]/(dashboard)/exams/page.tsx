@@ -34,6 +34,11 @@ import { z } from "zod";
 import { useEffect, useState, useRef } from "react";
 import { deleteData, getData, postData } from "@/lib/axios/server";
 import {
+  extractListData,
+  extractPaginatedList,
+  unwrapApiData,
+} from "@/lib/api/response";
+import {
   handleApiFormError,
   showApiActionError,
 } from "@/lib/api/show-api-error-toast";
@@ -215,17 +220,22 @@ function ExamsDataTable() {
 
   // Refetch exams
   const refetchExams = async (page: number = 1) => {
+    if (!token) return;
+
     try {
       const response = await getData(
-        `exams?page=${page}`,
-        {},
+        "exams",
+        { page },
         {
           Authorization: `Bearer ${token}`,
         },
       );
-      setData(response.data);
-      setTotalPages(response.meta.last_page);
-      setCurrentPage(response.meta.current_page);
+      const { items, pagination } = extractPaginatedList<Exam>(response, "exams");
+      setData(items);
+      if (pagination) {
+        setTotalPages(pagination.last_page);
+        setCurrentPage(pagination.current_page);
+      }
     } catch (error) {
       console.log(error);
       toast.error("فشل في جلب البيانات");
@@ -234,8 +244,9 @@ function ExamsDataTable() {
 
   // Fetch teachers, levels, subjects, and groups
   const fetchTeachersAndLevels = async () => {
+    if (!token) return;
+
     try {
-      // Fetch teachers
       const teachersResponse = await getData(
         "teachers",
         {},
@@ -243,9 +254,8 @@ function ExamsDataTable() {
           Authorization: `Bearer ${token}`,
         },
       );
-      setTeachers(teachersResponse.data || teachersResponse);
+      setTeachers(extractListData<Teacher>(teachersResponse, "teachers"));
 
-      // Fetch levels
       const levelsResponse = await getData(
         "levels",
         {},
@@ -253,9 +263,8 @@ function ExamsDataTable() {
           Authorization: `Bearer ${token}`,
         },
       );
-      setLevels(levelsResponse.data || levelsResponse);
+      setLevels(extractListData<Level>(levelsResponse, "levels"));
 
-      // Fetch subjects
       const subjectsResponse = await getData(
         "subjects",
         {},
@@ -263,9 +272,8 @@ function ExamsDataTable() {
           Authorization: `Bearer ${token}`,
         },
       );
-      setSubjects(subjectsResponse.data || subjectsResponse);
+      setSubjects(extractListData<Subject>(subjectsResponse, "subjects"));
 
-      // Fetch all groups
       const groupsResponse = await getData(
         "teacher-groups",
         {},
@@ -273,7 +281,7 @@ function ExamsDataTable() {
           Authorization: `Bearer ${token}`,
         },
       );
-      setGroups(groupsResponse.data || groupsResponse);
+      setGroups({ groups: extractListData(groupsResponse, "groups") });
     } catch (error) {
       console.log(
         "Error fetching teachers, levels, subjects, or groups:",
@@ -710,7 +718,7 @@ function ExamsDataTable() {
           Authorization: `Bearer ${token}`,
         }
       );
-      const full = detail?.data ?? detail;
+      const full = unwrapApiData<Exam>(detail);
       setEditingExam({ ...exam, ...(full || {}) });
     } catch (err) {
       console.log("Failed to fetch full exam detail, using list row:", err);
