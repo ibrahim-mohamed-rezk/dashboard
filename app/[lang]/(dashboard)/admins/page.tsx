@@ -403,7 +403,7 @@ function BasicDataTable() {
   const handleTeacherSelect = (teacher: Teacher) => {
     const isAlreadyInFormData = formData.teachers.includes(teacher.user.id);
     const isAlreadyInSelectedTeachers = selectedTeachers.some(
-      (t) => t.id === teacher.user.id
+      (t) => t.user.id === teacher.user.id
     );
     if (!isAlreadyInFormData && !isAlreadyInSelectedTeachers) {
       setSelectedTeachers((prev) => [...prev, teacher]);
@@ -411,20 +411,11 @@ function BasicDataTable() {
     }
   };
 
-  const handleTeacherRemove = (teacherId: number) => {
-    const teacherIndex = formData.teachers.indexOf(teacherId);
-    setSelectedTeachers((prev) => prev.filter((t) => t.id !== teacherId));
-    setFormData((prev) => {
-      const updatedTeachers = prev.teachers.filter((id) => id !== teacherId);
-      const updatedTeacherModules = prev.teacher_modules.filter(
-        (_, index) => index !== teacherIndex
-      );
-      return {
-        ...prev,
-        teachers: updatedTeachers,
-        teacher_modules: updatedTeacherModules,
-      };
-    });
+  const handleTeacherRemove = (teacherUserId: number) => {
+    setSelectedTeachers((prev) =>
+      prev.filter((t) => t.user.id !== teacherUserId)
+    );
+    handleTeacherChange(teacherUserId, false);
   };
 
   const handleAddAllTeachers = () => {
@@ -817,9 +808,11 @@ function BasicDataTable() {
                             {teacher.user.full_name}
                             <button
                               type="button"
-                              onClick={() =>
-                                handleTeacherRemove(teacher.user.id)
-                              }
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleTeacherRemove(teacher.user.id);
+                              }}
                               className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                             >
                               <X className="h-3 w-3" />

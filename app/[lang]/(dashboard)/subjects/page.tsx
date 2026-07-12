@@ -628,3 +628,5 @@ function SubjectsDataTable() {
 }
 
 export default SubjectsDataTable;
+
+export default SubjectsDataTable;
