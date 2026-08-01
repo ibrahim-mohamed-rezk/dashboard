@@ -343,20 +343,26 @@ function BasicDataTable() {
   const handleEdit = (admin: AdminTypes) => {
     setEditingAdmin(admin);
     setSearchQuery("");
-    const validTeachers = admin.teachers.filter((t) => t.id !== null);
-    const teacherIds = validTeachers.map((t) => t.id);
-    const currentTeacherIds = teachers?.map((t) => t.id) || [];
-    const difference = teacherIds.filter(
-      (id) => !currentTeacherIds.includes(id)
+    const adminTeachers = Array.isArray(admin.teachers) ? admin.teachers : [];
+    const validTeachers = adminTeachers.filter(
+      (t) => t && t.id !== null && t.id !== undefined
+    );
+    // Prefer user.id when present — form/selection state uses user ids.
+    const teacherIds = validTeachers.map(
+      (t) => t.user?.id ?? t.id
     );
     const teacherModules = validTeachers.map((t) => {
       const uniqueModuleIds = [
-        ...new Set((t.modules || []).filter((m) => m.access).map((m) => m.id)),
+        ...new Set(
+          (Array.isArray(t.modules) ? t.modules : [])
+            .filter((m) => m?.access)
+            .map((m) => m.id)
+        ),
       ];
       return uniqueModuleIds;
     });
-    const adminModuleIds = (admin.modules || [])
-      .filter((m) => m.access)
+    const adminModuleIds = (Array.isArray(admin.modules) ? admin.modules : [])
+      .filter((m) => m?.access)
       .map((m) => m.id);
     setFormData({
       full_name: admin.full_name,
@@ -369,30 +375,38 @@ function BasicDataTable() {
       admin_modules: adminModuleIds,
     });
     const selectedTeachersList = validTeachers.map((adminTeacher) => {
+      const teacherUserId = adminTeacher.user?.id ?? adminTeacher.id;
       const existingTeacher = teachers?.find(
-        (t) => t.user.id === adminTeacher.id
+        (t) =>
+          t.user?.id === teacherUserId ||
+          t.id === adminTeacher.id ||
+          t.id === teacherUserId
       );
       if (existingTeacher) {
         return existingTeacher;
       }
       return {
-        id: adminTeacher.user?.id || adminTeacher.id,
+        id: adminTeacher.id ?? teacherUserId,
         user: {
-          id: adminTeacher.user?.id || adminTeacher.id,
-          full_name: adminTeacher.name || "Unknown Teacher",
-          email: `teacher${
-            adminTeacher.user?.id || adminTeacher.id
-          }@example.com`,
-          phone: "",
-          avatar: "",
+          id: teacherUserId,
+          full_name:
+            adminTeacher.user?.full_name ||
+            adminTeacher.name ||
+            "Unknown Teacher",
+          email:
+            adminTeacher.user?.email ||
+            `teacher${teacherUserId}@example.com`,
+          phone: adminTeacher.user?.phone || "",
+          avatar: adminTeacher.user?.avatar || "",
         },
-        modules: adminTeacher.modules || [],
+        modules: Array.isArray(adminTeacher.modules)
+          ? adminTeacher.modules
+          : [],
       } as Teacher;
     });
     setSelectedTeachers(selectedTeachersList);
     setIsEdit(true);
     setIsOpen(true);
-    return difference;
   };
 
   const filteredTeachers = teachers?.filter((teacher) => {

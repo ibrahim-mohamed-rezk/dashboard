@@ -200,8 +200,8 @@ export interface AdminTypes {
   gender: string | null;
   email: string;
   role: string;
-  teachers: Teacher[];
-  modules: Module[];
+  teachers?: Teacher[];
+  modules?: Module[];
 }
 
 export interface SubscriptionCodeTypes {
